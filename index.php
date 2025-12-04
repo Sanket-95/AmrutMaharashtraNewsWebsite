@@ -26,6 +26,7 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
     }
 }
 
+
 // Define categories array
 $categories = [
     ['label' => 'मुख्यपृष्ठ', 'value' => 'home'],
