@@ -26,6 +26,7 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
     }
 }
 
+
 // Define categories array
 $categories = [
     ['label' => 'मुख्यपृष्ठ', 'value' => 'home'],
@@ -51,6 +52,9 @@ $categories = [
     border-top: 1px solid #dee2e6;
     border-bottom: 1px solid #dee2e6;
     background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
 .categories-container {
@@ -238,14 +242,13 @@ $categories = [
     <div class="container-fluid px-3">
         <div class="categories-container d-none d-md-flex">
             <?php foreach ($categories as $index => $category): ?>
-                <a href="#" 
+                <a href="javascript:void(0);" 
                    class="category-link <?php echo $index === 0 ? 'active' : ''; ?>" 
-                   data-category="<?php echo htmlspecialchars($category['value']); ?>"
-                   onclick="filterNews('<?php echo $category['value']; ?>', '<?php echo htmlspecialchars($category['label']); ?>')">
+                   data-category="<?php echo htmlspecialchars($category['value']); ?>">
                     <?php echo htmlspecialchars($category['label']); ?>
                 </a>
             <?php endforeach; ?>
-            <a href="#" class="contact-btn" onclick="goToContact()">
+            <a href="javascript:void(0);" class="contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
             </a>
         </div>
@@ -255,14 +258,13 @@ $categories = [
         </button>
         <div class="mobile-categories-menu" id="mobileCategoriesMenu">
             <?php foreach ($categories as $index => $category): ?>
-                <a href="#" 
+                <a href="javascript:void(0);" 
                    class="category-link <?php echo $index === 0 ? 'active' : ''; ?>" 
-                   data-category="<?php echo htmlspecialchars($category['value']); ?>"
-                   onclick="filterNews('<?php echo $category['value']; ?>', '<?php echo htmlspecialchars($category['label']); ?>')">
+                   data-category="<?php echo htmlspecialchars($category['value']); ?>">
                     <?php echo htmlspecialchars($category['label']); ?>
                 </a>
             <?php endforeach; ?>
-            <a href="#" class="mobile-contact-btn" onclick="goToContact()">
+            <a href="javascript:void(0);" class="mobile-contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
             </a>
         </div>
@@ -274,21 +276,10 @@ $categories = [
     <?php 
     // Pass $top_news to the component
     include 'components/top_news_carousel.php'; 
-
-
-
-
-
-
-    //  <!-- Include Category Cards Component -->
-    include 'components/category_cards.php'; 
-    include 'components/remaining_categories.php'; 
-
-
-
-
-    
     ?>
+    
+    <!-- Include Dynamic Category Sections -->
+    <?php include 'components/dynamic_category_sections.php'; ?>
 </main>
 
 <script>
@@ -296,7 +287,12 @@ $categories = [
 const categoriesData = <?php echo json_encode($categories); ?>;
 
 // Function to filter news based on category
-function filterNews(categoryValue, marathiLabel = '') {
+function filterNews(categoryValue, marathiLabel = '', event = null) {
+    // Prevent default anchor behavior
+    if (event) {
+        event.preventDefault();
+    }
+    
     const categoryLinks = document.querySelectorAll('.category-link');
     categoryLinks.forEach(link => {
         link.classList.remove('active');
@@ -312,6 +308,32 @@ function filterNews(categoryValue, marathiLabel = '') {
     
     console.log('Selected Category:', marathiLabel, 'DB Value:', categoryValue);
     
+    // Handle navigation
+    if (categoryValue === 'home') {
+        // Scroll to top for home
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        // Scroll to dynamic category section
+        if (typeof scrollToDynamicCategory === 'function') {
+            scrollToDynamicCategory(categoryValue);
+        } else {
+            // Fallback navigation
+            const sectionId = 'category-' + categoryValue;
+            const section = document.getElementById(sectionId);
+            if (section) {
+                const navbar = document.querySelector('.categories-navbar');
+                const navbarHeight = navbar ? navbar.offsetHeight : 80;
+                const elementPosition = section.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - navbarHeight - 10;
+                
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }
+    
     // Close mobile menu if open
     const mobileMenu = document.getElementById('mobileCategoriesMenu');
     const toggleButton = document.getElementById('mobileCategoriesToggle');
@@ -319,10 +341,15 @@ function filterNews(categoryValue, marathiLabel = '') {
         mobileMenu.style.display = 'none';
         toggleButton.classList.remove('active');
     }
+    
+    // Return false to prevent default behavior
+    return false;
 }
 
-function goToContact() {
+function goToContact(event) {
+    if (event) event.preventDefault();
     alert('संपर्क पृष्ठावर नेण्यात येत आहे...');
+    return false;
 }
 
 // Mobile Categories Toggle
@@ -331,7 +358,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileMenu = document.getElementById('mobileCategoriesMenu');
     
     if (toggleButton && mobileMenu) {
-        toggleButton.addEventListener('click', function() {
+        toggleButton.addEventListener('click', function(e) {
+            e.preventDefault();
             if (mobileMenu.style.display === 'block') {
                 mobileMenu.style.display = 'none';
                 toggleButton.classList.remove('active');
@@ -342,6 +370,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Update category link event listeners to prevent default behavior
+    document.querySelectorAll('.category-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const categoryValue = this.getAttribute('data-category');
+            const marathiLabel = this.textContent;
+            filterNews(categoryValue, marathiLabel, e);
+        });
+    });
+    
+    // Update contact button event listeners
+    document.querySelectorAll('.contact-btn, .mobile-contact-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            goToContact(e);
+        });
+    });
+    
     document.addEventListener('click', function(event) {
         if (mobileMenu && mobileMenu.style.display === 'block') {
             if (!mobileMenu.contains(event.target) && !toggleButton.contains(event.target)) {
@@ -351,8 +396,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Set default active category to home
     filterNews('home');
 });
+
+// Handle hash changes in URL
+window.addEventListener('hashchange', function() {
+    const hash = window.location.hash.substring(1);
+    if (hash && hash !== 'home') {
+        // Extract category value from hash (remove 'category-' prefix if present)
+        const categoryValue = hash.startsWith('category-') ? hash.substring(9) : hash;
+        if (categoryValue && categoriesData.find(cat => cat.value === categoryValue)) {
+            setTimeout(() => {
+                const categoryLinks = document.querySelectorAll('.category-link');
+                categoryLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('data-category') === categoryValue) {
+                        link.classList.add('active');
+                    }
+                });
+                
+                if (typeof scrollToDynamicCategory === 'function') {
+                    scrollToDynamicCategory(categoryValue);
+                }
+            }, 100);
+        }
+    }
+});
+
+// Handle initial page load with hash
+if (window.location.hash) {
+    const hash = window.location.hash.substring(1);
+    if (hash && hash !== 'home') {
+        const categoryValue = hash.startsWith('category-') ? hash.substring(9) : hash;
+        if (categoryValue && categoriesData.find(cat => cat.value === categoryValue)) {
+            setTimeout(() => {
+                const categoryLinks = document.querySelectorAll('.category-link');
+                categoryLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('data-category') === categoryValue) {
+                        link.classList.add('active');
+                    }
+                });
+                
+                if (typeof scrollToDynamicCategory === 'function') {
+                    scrollToDynamicCategory(categoryValue);
+                }
+            }, 300);
+        }
+    }
+}
 </script>
 
 <?php 
