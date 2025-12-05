@@ -13,7 +13,7 @@ if ($news_id <= 0) {
     exit();
 }
 
-// Fetch news details from database - Fix the query (remove status condition or use correct column name)
+// Fetch news details from database
 $query = "SELECT 
     news_id,
     district_name,
@@ -24,9 +24,10 @@ $query = "SELECT
     summary,
     content,
     published_by,
-    published_date
+    published_date,
+    view
 FROM news_articles 
-WHERE news_id = ?"; // Removed status condition
+WHERE news_id = ?";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $news_id);
@@ -44,6 +45,24 @@ $news = $result->fetch_assoc();
 // Format dates
 $published_date = date('d-m-Y', strtotime($news['published_date']));
 $published_time = date('h:i A', strtotime($news['published_date']));
+
+// Fetch only APPROVED comments (approve = 1) with LIMIT 15
+$comments_query = "SELECT 
+    comment_id, 
+    name, 
+    email, 
+    comment, 
+    DATE_FORMAT(comment_date, '%d-%m-%Y %h:%i %p') as formatted_date
+FROM news_comments 
+WHERE news_id = ? 
+    AND approve = 1 
+ORDER BY comment_date DESC 
+LIMIT 15";
+
+$comments_stmt = $conn->prepare($comments_query);
+$comments_stmt->bind_param("i", $news_id);
+$comments_stmt->execute();
+$comments_result = $comments_stmt->get_result();
 
 // Marathi category names mapping
 $marathi_categories = [
@@ -76,6 +95,16 @@ $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https"
 // Default images
 $default_cover_image = 'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+
+// Get total approved comments count
+$count_query = "SELECT COUNT(*) as total_comments FROM news_comments WHERE news_id = ? AND approve = 1";
+$count_stmt = $conn->prepare($count_query);
+$count_stmt->bind_param("i", $news_id);
+$count_stmt->execute();
+$count_result = $count_stmt->get_result();
+$count_row = $count_result->fetch_assoc();
+$total_approved_comments = $count_row['total_comments'];
+$count_stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -85,6 +114,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($news['title']); ?> - अमृत महाराष्ट्र</title>
     
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     
     <style>
         .news-detail-container {
@@ -98,7 +129,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        .news-publish{
+        
+        .news-publish {
             border-top: 3px solid #ff6600;
             padding-top: 20px;
             margin-top: 30px;
@@ -113,17 +145,110 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
         
         .news-meta {
-            color: #666;
-            font-size: 16px;
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
+            position: relative;
         }
         
-        .news-meta i {
+        .news-meta .meta-item {
+            position: relative;
+            display: inline-block;
+            margin: 0 15px;
+            cursor: help;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .news-meta .meta-item:hover {
+            background: rgba(255, 102, 0, 0.1);
+        }
+        
+        .news-meta .meta-item i {
             color: #ff6600;
             margin-right: 8px;
+        }
+        
+        .news-meta .meta-item strong {
+            color: #2c3e50;
+        }
+        
+        .news-meta .meta-item .meta-value {
+            color: #666;
+        }
+        
+        /* Tooltip styles */
+        .meta-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .meta-tooltip:after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: #2c3e50 transparent transparent transparent;
+        }
+        
+        .news-meta .meta-item:hover .meta-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Divider between items */
+        .meta-divider {
+            color: #ccc;
+            display: inline-block;
+            margin: 0 5px;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #f1982bff 0%, #f3cc59ff 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(255, 152, 0, 0.3);
+            background: linear-gradient(135deg, #FF9800 0%, #d3b17dff 100%);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 10px rgba(255, 152, 0, 0.2);
+        }
+        
+        .submit-btn:disabled {
+            background: #cccccc !important;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
         }
         
         .news-image {
@@ -221,6 +346,106 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             margin-top: 30px;
         }
         
+        /* Comments list styles */
+        .comments-list {
+            margin-bottom: 30px;
+        }
+        
+        .comment-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid #ff6600;
+        }
+        
+        .comment-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .comment-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ff6600, #ff9933);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+        
+        .comment-author {
+            flex: 1;
+        }
+        
+        .comment-author h6 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        
+        .comment-date {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .comment-text {
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .no-comments {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .comments-count {
+            color: #ff6600;
+            font-weight: bold;
+            background: #fff3e0;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        /* Custom Toastify styles */
+        .custom-toast {
+            border-radius: 8px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .toast-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+        
+        .toast-error {
+            background: linear-gradient(135deg, #dc3545, #e83e8c);
+            color: white;
+        }
+        
+        .toast-info {
+            background: linear-gradient(135deg, #17a2b8, #20c997);
+            color: white;
+        }
+        
+        .toast-warning {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+            color: #212529;
+        }
+        
         @media (max-width: 768px) {
             .news-title {
                 font-size: 1.5rem;
@@ -235,6 +460,23 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 height: 45px;
                 font-size: 18px;
             }
+            
+            .news-meta .meta-item {
+                display: block;
+                margin: 5px 0;
+                text-align: center;
+            }
+            
+            .meta-divider {
+                display: none;
+            }
+        }
+        
+        /* Loading spinner */
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
         }
     </style>
 </head>
@@ -283,36 +525,62 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             <?php echo nl2br(htmlspecialchars($news['content'])); ?>
         </div>
 
-         <!-- News Header -->
+        <!-- News Meta Information -->
         <div class="news-publish">
             <div class="news-meta">
-                <div class="row">
-                    <div class="col-md-4">
-                        <p class="mb-1"><i class="bi bi-person-fill"></i> <strong>प्रकाशक:</strong>
-                        <?php echo htmlspecialchars($news['published_by']); ?></p>
-                    </div>
-                    <div class="col-md-4">
-                        <p class="mb-1"><i class="bi bi-calendar-event"></i> <strong>तारीख:</strong>
-                        <?php echo $published_date; ?></p>
-                    </div>
-                    <div class="col-md-4">
-                        <p class="mb-1"><i class="bi bi-clock"></i> <strong>वेळ:</strong>
-                        <?php echo $published_time; ?></p>
-                    </div>
+                <div class="text-center">
+                    <!-- Publisher -->
+                    <span class="meta-item">
+                        <i class="bi bi-person-fill"></i>
+                        <strong>प्रकाशक:</strong>
+                        <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                        <span class="meta-tooltip">बातमी प्रकाशकाचे नाव</span>
+                    </span>
+                    
+                    <span class="meta-divider">|</span>
+                    
+                    <!-- Date -->
+                    <span class="meta-item">
+                        <i class="bi bi-calendar-event"></i>
+                        <strong>तारीख:</strong>
+                        <span class="meta-value"><?php echo $published_date; ?></span>
+                        <span class="meta-tooltip">बातमी प्रकाशित झाल्याची तारीख</span>
+                    </span>
+                    
+                    <span class="meta-divider">|</span>
+                    
+                    <!-- Time -->
+                    <span class="meta-item">
+                        <i class="bi bi-clock"></i>
+                        <strong>वेळ:</strong>
+                        <span class="meta-value"><?php echo $published_time; ?></span>
+                        <span class="meta-tooltip">बातमी प्रकाशित झाल्याचा वेळ</span>
+                    </span>
+                    
+                    <span class="meta-divider">|</span>
+                    
+                    <!-- Views -->
+                    <span class="meta-item">
+                        <i class="bi bi-eye-fill"></i>
+                        <strong>दृश्ये:</strong>
+                        <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                        <span class="meta-tooltip">ही बातमी किती वेळा पाहिली गेली</span>
+                    </span>
+                    
+                    <?php if (!empty($news['district_name'])): ?>
+                    <span class="meta-divider">|</span>
+                    
+                    <!-- District -->
+                    <span class="meta-item">
+                        <i class="bi bi-geo-alt"></i>
+                        <strong>जिल्हा:</strong>
+                        <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                        <span class="meta-tooltip">बातमीशी संबंधित जिल्हा</span>
+                    </span>
+                    <?php endif; ?>
                 </div>
-                
-                <?php if (!empty($news['district_name'])): ?>
-                <div class="row mt-2">
-                    <div class="col-12">
-                        <p class="mb-0"><i class="bi bi-geo-alt"></i> <strong>जिल्हा:</strong>
-                        <?php echo htmlspecialchars($news['district_name']); ?></p>
-                    </div>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
-       
-            
 
         <!-- Social Share Section -->
         <div class="social-share">
@@ -363,43 +631,65 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
 
         <!-- Comments Section -->
         <div class="comments-section">
-            <h3 class="mb-4 border-bottom pb-2"><i class="bi bi-chat-left-text"></i> प्रतिक्रिया</h3>
+            <h3 class="mb-4 border-bottom pb-2">
+                <i class="bi bi-chat-left-text"></i> प्रतिक्रिया 
+                <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> प्रतिक्रिया</span>
+            </h3>
             
-            <div class="no-comments text-center py-5">
-                <i class="bi bi-chat-left-text display-1 text-muted"></i>
-                <h4 class="mt-3 text-muted">अद्याप कोणतीही प्रतिक्रिया नाही</h4>
-                <p class="text-muted">तुम्ही चर्चा सुरु करू शकता</p>
+            <!-- Comments List -->
+            <div class="comments-list" id="commentsContainer">
+                <?php if ($comments_result->num_rows > 0): ?>
+                    <?php while ($comment = $comments_result->fetch_assoc()): ?>
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <div class="comment-avatar">
+                                    <?php echo mb_substr(htmlspecialchars($comment['name']), 0, 1); ?>
+                                </div>
+                                <div class="comment-author">
+                                    <h6><?php echo htmlspecialchars($comment['name']); ?></h6>
+                                    <div class="comment-date">
+                                        <i class="bi bi-clock"></i> <?php echo $comment['formatted_date']; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="comment-text"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <div class="no-comments text-center py-5" id="noCommentsMessage">
+                        <i class="bi bi-chat-left-text display-1 text-muted"></i>
+                        <h4 class="mt-3 text-muted">अद्याप कोणतीही प्रतिक्रिया नाही</h4>
+                        <p class="text-muted">तुम्ही चर्चा सुरु करू शकता</p>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- Comment Form -->
             <div class="comment-form">
                 <h5 class="mb-4"><i class="bi bi-pencil-square"></i> प्रतिक्रिया लिहा</h5>
                 
-                <form id="commentForm">
+                <form id="commentForm" method="POST">
+                    <input type="hidden" name="news_id" id="news_id" value="<?php echo $news_id; ?>">
+                    
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label for="name" class="form-label">नाव <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" required>
+                            <input type="text" class="form-control" id="name" name="name" required>
                         </div>
                         
                         <div class="col-md-6">
                             <label for="email" class="form-label">ईमेल <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="email" required>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label for="website" class="form-label">वेबसाइट (ऐच्छिक)</label>
-                            <input type="url" class="form-control" id="website">
+                            <input type="email" class="form-control" id="email" name="email" required>
                         </div>
                         
                         <div class="col-12">
                             <label for="comment" class="form-label">तुमची प्रतिक्रिया <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="comment" rows="5" required></textarea>
+                            <textarea class="form-control" id="comment" name="comment" rows="5" required></textarea>
                         </div>
                         
                         <div class="col-12">
                             <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="saveInfo">
+                                <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
                                 <label class="form-check-label" for="saveInfo">
                                     पुढच्या वेळीसाठी माझे नाव, ईमेल आणि वेबसाइट सेव्ह करा
                                 </label>
@@ -407,9 +697,14 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         </div>
                         
                         <div class="col-12">
-                            <button type="submit" class="btn btn-primary px-4 py-2">
+                            <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
                                 <i class="bi bi-send"></i> प्रतिक्रिया पोस्ट करा
                             </button>
+                            <div id="loadingSpinner" class="d-none">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">लोड करत आहे...</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -417,10 +712,33 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         </div>
     </div>
 
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-    // Copy to clipboard function
+    // Toastify notification function - SET TO 3 SECONDS ONLY
+    function showToast(message, type = 'info') {
+        const toastClass = `toast-${type}`;
+        
+        Toastify({
+            text: message,
+            duration: 3000,
+            gravity: "top",
+            position: "right",
+            className: `custom-toast ${toastClass}`,
+            stopOnFocus: true,
+            escapeMarkup: false,
+            style: {
+                background: type === 'success' ? 'linear-gradient(135deg, #28a745, #20c997)' :
+                         type === 'error' ? 'linear-gradient(135deg, #dc3545, #e83e8c)' :
+                         type === 'warning' ? 'linear-gradient(135deg, #ffc107, #fd7e14)' :
+                         'linear-gradient(135deg, #17a2b8, #20c997)'
+            }
+        }).showToast();
+    }
+    
+    // Copy to clipboard function with toast
     function copyToClipboard() {
         const url = "<?php echo $current_url; ?>";
         
@@ -437,43 +755,166 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         // Remove temporary input
         document.body.removeChild(tempInput);
         
-        // Show success message
-        const successMsg = document.getElementById('copy-success');
-        successMsg.style.display = 'block';
-        setTimeout(() => {
-            successMsg.style.display = 'none';
-        }, 3000);
+        // Show success toast for 3 seconds
+        showToast('लिंक कॉपी झाला!', 'success');
     }
     
-    // Handle comment form submission
+    // Handle comment form submission with AJAX
     document.getElementById('commentForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Get form values
-        const name = document.getElementById('name').value;
-        const email = document.getElementById('email').value;
-        const comment = document.getElementById('comment').value;
+        // Get form data
+        const formData = new FormData(this);
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const comment = document.getElementById('comment').value.trim();
         
         // Basic validation
         if (!name || !email || !comment) {
-            alert('कृपया सर्व आवश्यक फील्ड भरा');
+            showToast('कृपया सर्व आवश्यक फील्ड भरा', 'error');
             return;
         }
         
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            alert('कृपया वैध ईमेल पत्ता टाका');
+            showToast('कृपया वैध ईमेल पत्ता टाका', 'error');
             return;
         }
         
-        // Here you would send data to server via AJAX
-        // For demo, show success message
-        alert('तुमची प्रतिक्रिया सबमिट झाली आहे! लवकरच ती प्रदर्शित केली जाईल.');
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> सबमिट करत आहे...';
+        submitBtn.disabled = true;
         
-        // Reset form
-        this.reset();
+        // Send AJAX request
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'save_comment.php', true);
+        
+        xhr.onload = function() {
+            // Reset button state
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    
+                    if (response.success) {
+                        // Show success message
+                        showToast(response.message, 'success');
+                        
+                        // Clear form
+                        document.getElementById('name').value = '';
+                        document.getElementById('email').value = '';
+                        document.getElementById('comment').value = '';
+                        document.getElementById('saveInfo').checked = false;
+                        
+                        // Add new comment to the list
+                        addCommentToList({
+                            name: name,
+                            comment: comment,
+                            formatted_date: 'आत्ताच'
+                        });
+                        
+                        // Hide "no comments" message if it exists
+                        const noCommentsMessage = document.getElementById('noCommentsMessage');
+                        if (noCommentsMessage) {
+                            noCommentsMessage.style.display = 'none';
+                        }
+                        
+                        // Update comments count
+                        updateCommentsCount();
+                        
+                        // Scroll to the new comment
+                        setTimeout(() => {
+                            const commentsContainer = document.getElementById('commentsContainer');
+                            const firstComment = commentsContainer.querySelector('.comment-item');
+                            if (firstComment) {
+                                firstComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 500);
+                    } else {
+                        showToast(response.message, 'error');
+                    }
+                } catch (e) {
+                    showToast('त्रुटी: अवैध प्रतिसाद', 'error');
+                    console.error('Parse error:', e);
+                }
+            } else {
+                showToast('सर्व्हर त्रुटी: ' + xhr.status, 'error');
+            }
+        };
+        
+        xhr.onerror = function() {
+            submitBtn.innerHTML = originalBtnText;
+            submitBtn.disabled = false;
+            showToast('नेटवर्क त्रुटी', 'error');
+        };
+        
+        // Send the request
+        xhr.send(formData);
     });
+    
+    // Function to add new comment to the list
+    function addCommentToList(commentData) {
+        const commentsContainer = document.getElementById('commentsContainer');
+        
+        // Create new comment element
+        const commentElement = document.createElement('div');
+        commentElement.className = 'comment-item';
+        commentElement.innerHTML = `
+            <div class="comment-header">
+                <div class="comment-avatar">
+                    ${commentData.name.charAt(0)}
+                </div>
+                <div class="comment-author">
+                    <h6>${commentData.name}</h6>
+                    <div class="comment-date">
+                        <i class="bi bi-clock"></i> ${commentData.formatted_date}
+                    </div>
+                </div>
+            </div>
+            <p class="comment-text">${commentData.comment}</p>
+        `;
+        
+        // Insert at the top
+        commentsContainer.insertBefore(commentElement, commentsContainer.firstChild);
+        
+        // Remove comments if more than 15
+        removeExtraComments();
+    }
+    
+    // Function to remove extra comments if more than 15
+    function removeExtraComments() {
+        const commentsContainer = document.getElementById('commentsContainer');
+        const comments = commentsContainer.querySelectorAll('.comment-item');
+        
+        if (comments.length > 15) {
+            for (let i = 15; i < comments.length; i++) {
+                commentsContainer.removeChild(comments[i]);
+            }
+        }
+    }
+    
+    // Function to update comments count
+    function updateCommentsCount() {
+        const commentsCountElement = document.querySelector('.comments-count');
+        if (commentsCountElement) {
+            const currentCount = parseInt(commentsCountElement.textContent.split(' ')[0]) || 0;
+            commentsCountElement.textContent = (currentCount + 1) + ' प्रतिक्रिया';
+        }
+    }
+    
+    // Clear form function with toast
+    function clearForm() {
+        document.getElementById('name').value = '';
+        document.getElementById('email').value = '';
+        document.getElementById('comment').value = '';
+        document.getElementById('saveInfo').checked = false;
+        showToast('फॉर्म क्लियर झाला', 'info');
+    }
     
     // Handle keyboard shortcuts
     document.addEventListener('keydown', function(e) {
@@ -485,7 +926,12 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         // Escape to clear form
         if (e.key === 'Escape') {
-            document.getElementById('commentForm').reset();
+            clearForm();
+        }
+        
+        // Ctrl/Cmd + Enter to submit form
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            document.getElementById('commentForm').submit();
         }
     });
     
@@ -524,6 +970,30 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 handleImageError(this);
             });
         });
+        
+        // Add click handlers to share buttons with toast
+        const shareButtons = document.querySelectorAll('.share-btn');
+        shareButtons.forEach(button => {
+            if (button.tagName === 'A') {
+                button.addEventListener('click', function() {
+                    const platform = this.classList.contains('facebook') ? 'Facebook' :
+                                  this.classList.contains('twitter') ? 'Twitter' :
+                                  this.classList.contains('linkedin') ? 'LinkedIn' :
+                                  'WhatsApp';
+                    showToast(`${platform} वर शेअर करत आहे...`, 'info');
+                });
+            }
+        });
+        
+        // Add toast for save info checkbox
+        const saveInfoCheckbox = document.getElementById('saveInfo');
+        if (saveInfoCheckbox) {
+            saveInfoCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    showToast('तुमची माहिती पुढील वेळीसाठी सेव्ह केली जाईल', 'info');
+                }
+            });
+        }
     });
     </script>
 
@@ -538,7 +1008,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
 </html>
 
 <?php
+// Close database connections
 $stmt->close();
+$comments_stmt->close();
 $conn->close();
 include 'components/footer.php';
 ?>
