@@ -63,7 +63,7 @@ if (!empty($date_filter)) {
 
 $stmt->execute();
 $news_result = $stmt->get_result();
-git add .
+
 $news_articles = [];
 if ($news_result && $news_result->num_rows > 0) {
     while($row = $news_result->fetch_assoc()) {
