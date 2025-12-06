@@ -278,7 +278,7 @@ function getImageUrl($url) {
         height: 40px;
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(249, 115, 22, 0.8);
+        background: rgba(13, 110, 253, 0.8);
         border-radius: 50%;
         opacity: 0.8;
         border: 2px solid white;
@@ -290,7 +290,7 @@ function getImageUrl($url) {
         height: 40px;
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(249, 115, 22, 0.8);
+        background: rgba(13, 110, 253, 0.8);
         border-radius: 50%;
         opacity: 0.8;
         border: 2px solid white;
@@ -307,7 +307,7 @@ function getImageUrl($url) {
     
     .carousel-control-prev:hover,
     .carousel-control-next:hover {
-        background: rgba(249, 115, 22, 1);
+        background: rgba(13, 110, 253, 1);
         opacity: 1;
     }
     
@@ -333,7 +333,7 @@ function getImageUrl($url) {
     .card {
         border: 1px solid #e9ecef !important;
         height: auto;
-        min-height: 320px;
+        min-height: 320px; /* Increased from 280px */
         transition: all 0.3s ease;
     }
     
@@ -348,7 +348,7 @@ function getImageUrl($url) {
     }
     
     .publisher-name:hover .hover-primary {
-        color: #f97316 !important;
+        color: #0d6efd !important;
         transform: translateX(3px);
     }
     
@@ -359,10 +359,10 @@ function getImageUrl($url) {
     }
     
     .read-more-btn:hover {
-        background-color: #f97316;
+        background-color: #0d6efd;
         color: white !important;
         transform: translateX(5px);
-        box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
+        box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
     }
     
     /* Share button styling */
@@ -456,22 +456,22 @@ function getImageUrl($url) {
         }
         
         .image-container img {
-            min-height: 250px;
-            max-height: 250px;
+            min-height: 250px; /* Increased from 200px */
+            max-height: 250px; /* Increased from 200px */
             border-radius: 0 0 0.5rem 0.5rem;
         }
         
         .card-body {
-            padding: 1.25rem !important;
+            padding: 1.25rem !important; /* Increased padding */
         }
         
         .publisher-section {
-            margin-top: 1.25rem !important;
-            padding-top: 1.25rem !important;
+            margin-top: 1.25rem !important; /* Increased margin */
+            padding-top: 1.25rem !important; /* Increased padding */
         }
         
         .btn {
-            padding: 0.375rem 0.75rem;
+            padding: 0.375rem 0.75rem; /* Slightly larger buttons */
             font-size: 0.875rem;
         }
         
@@ -492,13 +492,13 @@ function getImageUrl($url) {
     
     @media (min-width: 768px) {
         .card {
-            height: 320px;
+            height: 320px; /* Increased from 280px */
         }
         
         .image-container img {
             border-radius: 0.375rem 0 0 0.375rem;
-            min-height: 320px;
-            max-height: 320px;
+            min-height: 320px; /* Increased from 280px */
+            max-height: 320px; /* Increased from 280px */
         }
         
         .card-body {
@@ -507,8 +507,28 @@ function getImageUrl($url) {
         
         /* More content space */
         .news-content {
-            max-height: 160px;
+            max-height: 160px; /* Increased from 120px */
             overflow: hidden;
+        }
+    }
+    
+    /* Desktop specific optimizations */
+    @media (min-width: 992px) {
+        .carousel-control-prev {
+            left: 15px;
+            width: 45px; /* Slightly larger */
+            height: 45px;
+        }
+        
+        .carousel-control-next {
+            right: 15px;
+            width: 45px; /* Slightly larger */
+            height: 45px;
+        }
+        
+        .card-title {
+            font-size: 1.6rem; /* Slightly larger */
+            line-height: 1.3;
         }
         
         /* Card hover effect */
@@ -518,33 +538,13 @@ function getImageUrl($url) {
         
         .carousel-item:hover .card {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(249, 115, 22, 0.1) !important;
-            border-color: #f97316 !important;
+            box-shadow: 0 10px 25px rgba(13, 110, 253, 0.1) !important;
+            border-color: #0d6efd !important;
         }
         
         /* Button hover effects for desktop */
         .share-btn:hover, .read-more-btn:hover {
             transform: translateY(-3px);
-        }
-    }
-    
-    /* Desktop specific optimizations */
-    @media (min-width: 992px) {
-        .carousel-control-prev {
-            left: 15px;
-            width: 45px;
-            height: 45px;
-        }
-        
-        .carousel-control-next {
-            right: 15px;
-            width: 45px;
-            height: 45px;
-        }
-        
-        .card-title {
-            font-size: 1.6rem;
-            line-height: 1.3;
         }
     }
     
@@ -562,21 +562,21 @@ function getImageUrl($url) {
     
     /* Consistent theme colors */
     .text-primary {
-        color: #f97316 !important;
+        color: #0d6efd !important;
     }
     
     .btn-outline-primary {
-        color: #f97316;
-        border-color: #f97316;
+        color: #0d6efd;
+        border-color: #0d6efd;
     }
     
     .btn-outline-primary:hover {
-        background-color: #f97316;
-        border-color: #f97316;
+        background-color: #0d6efd;
+        border-color: #0d6efd;
     }
     
     .border-primary {
-        border-color: #f97316 !important;
+        border-color: #0d6efd !important;
     }
 </style>
 
@@ -681,23 +681,23 @@ function shareNews(event, newsId, newsTitle, shareUrl) {
 
 // Function to show share modal
 function showShareModal(newsTitle, shareUrl) {
-    // Create modal HTML with updated colors
+    // Create modal HTML
     const modalHTML = `
         <div class="modal fade" id="shareModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title text-dark fw-bold">
+                        <h5 class="modal-title text-primary">
                             <i class="bi bi-share-fill me-2"></i> Share News
                         </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-dark">Share this news:</label>
+                            <label class="form-label fw-bold">Share this news:</label>
                             <div class="input-group mb-3">
                                 <input type="text" class="form-control" id="shareUrlInput" value="${shareUrl}" readonly>
-                                <button class="btn btn-dark" type="button" id="copyUrlBtn">
+                                <button class="btn btn-outline-primary" type="button" id="copyUrlBtn">
                                     <i class="bi bi-clipboard"></i> Copy
                                 </button>
                             </div>
@@ -705,19 +705,19 @@ function showShareModal(newsTitle, shareUrl) {
                         </div>
                         
                         <div class="share-buttons d-flex gap-3 justify-content-center">
-                            <button class="btn btn-primary share-facebook" data-platform="facebook">
+                            <button class="btn btn-outline-primary share-facebook" data-platform="facebook">
                                 <i class="bi bi-facebook"></i> Facebook
                             </button>
-                            <button class="btn btn-info text-white share-twitter" data-platform="twitter">
+                            <button class="btn btn-outline-info share-twitter" data-platform="twitter">
                                 <i class="bi bi-twitter"></i> Twitter
                             </button>
-                            <button class="btn btn-success share-whatsapp" data-platform="whatsapp">
+                            <button class="btn btn-outline-success share-whatsapp" data-platform="whatsapp">
                                 <i class="bi bi-whatsapp"></i> WhatsApp
                             </button>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
             </div>
@@ -757,13 +757,13 @@ function showShareModal(newsTitle, shareUrl) {
                 // Show feedback
                 const originalText = copyBtn.innerHTML;
                 copyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Copied!';
-                copyBtn.classList.remove('btn-dark');
+                copyBtn.classList.remove('btn-outline-primary');
                 copyBtn.classList.add('btn-success');
                 
                 setTimeout(() => {
                     copyBtn.innerHTML = originalText;
                     copyBtn.classList.remove('btn-success');
-                    copyBtn.classList.add('btn-dark');
+                    copyBtn.classList.add('btn-outline-primary');
                 }, 2000);
             });
         }

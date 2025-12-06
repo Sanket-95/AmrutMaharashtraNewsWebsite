@@ -27,34 +27,34 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
 }
 
 
-// Define categories array
+// Define categories array - WITHOUT about_us
 $categories = [
     ['label' => 'मुख्यपृष्ठ', 'value' => 'home'],
-    ['label' => 'दिनदिशेष', 'value' => 'today_special'],
     ['label' => 'अमृत घडामोडी', 'value' => 'amrut_events'],
     ['label' => 'लाभार्थी स्टोरी', 'value' => 'beneficiary_story'],
+    ['label' => 'दिनविशेष', 'value' => 'today_special'],
     ['label' => 'यशस्वी उद्योजक', 'value' => 'successful_entrepreneur'],
-    ['label' => 'शब्दामृत', 'value' => 'words_amrut'],
+    ['label' => 'शब्दांमृत', 'value' => 'words_amrut'],
     ['label' => 'स्मार्ट शेतकरी', 'value' => 'smart_farmer'],
-    ['label' => 'सक्षम दिद्यार्थी', 'value' => 'capable_student'],
+    ['label' => 'सक्षम विद्यार्थी', 'value' => 'capable_student'],
     ['label' => 'अध्यात्म', 'value' => 'spirituality'],
-    ['label' => 'सामाजिक परिस्थिती', 'value' => 'social_situation'],
+    ['label' => 'सामाजिक परिवर्तक', 'value' => 'social_situation'],
     ['label' => 'स्त्रीशक्ती', 'value' => 'women_power'],
     ['label' => 'पर्यटन', 'value' => 'tourism'],
-    ['label' => 'अमृत सेवा कार्य', 'value' => 'amrut_service'],
-    ['label' => 'आमच्या दिशयी', 'value' => 'about_us']
+    ['label' => 'अमृत सेवा कार्य', 'value' => 'amrut_service']
+    // Removed about_us from array - will be added manually
 ];
 ?>
 
 <style>
-/* Categories Navbar Styles Only */
+/* Categories Navbar Styles Only - WITH LIGHTER ORANGE THEME */
 .categories-navbar {
-    border-top: 1px solid #dee2e6;
-    border-bottom: 1px solid #dee2e6;
-    background: #f8f9fa;
+    border-top: 1px solid #fed7aa;
+    border-bottom: 2px solid #fed7aa;
+    background: #fffaf0; /* Lighter orange shade */
     position: sticky;
-    top: 0;
-    z-index: 1000;
+    top: 120px; /* CHANGED: Position below navbar */
+    z-index: 900; /* CHANGED: Lower than navbar z-index */
 }
 
 .categories-container {
@@ -67,23 +67,25 @@ $categories = [
 }
 
 .category-link {
-    color: #333;
+    color: #7c2d12;
     text-decoration: none;
     font-weight: 500;
-    padding: 6px 8px;
+    padding: 6px 10px;
     position: relative;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
     font-size: 14px;
     display: inline-block;
     flex-shrink: 0;
     white-space: nowrap;
     margin: 0 4px;
     cursor: pointer;
+    border-radius: 4px;
 }
 
 .category-link.active {
-    color: #ff6600;
+    color: #c2410c;
     font-weight: 600;
+    background-color: rgba(249, 115, 22, 0.08); /* Lighter background */
 }
 
 .category-link.active:after,
@@ -91,41 +93,43 @@ $categories = [
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
-    width: 100%;
+    left: 10%;
+    width: 80%;
     height: 2px;
-    background-color: #ff6600;
-    transform-origin: left;
+    background-color: #f97316;
+    transform-origin: center;
     animation: underlineAnimation 0.3s ease forwards;
 }
 
 .category-link:hover {
-    color: #ff6600;
+    color: #ea580c;
+    background-color: rgba(249, 115, 22, 0.03); /* Lighter hover */
+    transform: translateY(-1px);
 }
 
 .category-link:after {
     content: '';
     position: absolute;
     bottom: 0;
-    left: 0;
+    left: 10%;
     width: 0;
     height: 2px;
-    background-color: #ff6600;
+    background-color: #f97316;
     transition: width 0.3s ease;
 }
 
 .category-link:hover:after {
-    width: 100%;
+    width: 80%;
 }
 
 .contact-btn {
-    background: transparent;
-    border: 1px solid #ff6600;
-    color: #333;
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    border: 1px solid #fb923c;
+    color: white;
     text-decoration: none;
     font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 7px 14px;
+    border-radius: 6px;
     transition: all 0.3s ease;
     font-size: 14px;
     display: inline-flex;
@@ -133,22 +137,23 @@ $categories = [
     justify-content: center;
     flex-shrink: 0;
     white-space: nowrap;
-    margin-left: 8px;
+    margin-left: 12px;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
 }
 
 .contact-btn i {
     margin-right: 6px;
-    color: #ff6600;
+    color: white;
     transition: all 0.3s ease;
 }
 
 .contact-btn:hover {
-    background: #ff6600;
+    background: linear-gradient(135deg, #f97316, #ea580c);
     color: white;
-    border-color: #ff6600;
+    border-color: #f97316;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(255, 102, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
 }
 
 .contact-btn:hover i {
@@ -157,17 +162,18 @@ $categories = [
 
 .mobile-contact-btn {
     display: none;
-    background: #ff6600;
+    background: linear-gradient(135deg, #fb923c, #f97316);
     color: white;
     border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
+    padding: 12px 15px;
+    border-radius: 6px;
     margin-top: 10px;
     width: 100%;
     text-align: center;
     font-weight: 500;
     text-decoration: none;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
 }
 
 .mobile-contact-btn i {
@@ -179,61 +185,173 @@ $categories = [
     to { transform: scaleX(1); }
 }
 
+/* HAMBURGER MENU STYLES - TEXT REMOVED, ONLY ICON */
 .mobile-categories-toggle {
     display: none;
-    background: none;
-    border: none;
-    color: #333;
+    background: #fffaf0; /* Same lighter orange as navbar */
+    border: 1px solid #fed7aa;
+    color: #7c2d12;
     font-size: 16px;
     cursor: pointer;
-    padding: 10px;
+    padding: 10px 12px;
+    width: 50px;
+    height: 50px;
+    font-weight: 600;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    align-items: center;
+    justify-content: center;
+    margin: 5px auto;
+}
+
+.hamburger-icon {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 24px;
+    height: 20px;
+}
+
+.hamburger-icon span {
+    display: block;
+    height: 3px;
     width: 100%;
-    font-weight: 500;
-    text-align: left;
+    background-color: #c2410c; /* Orange color */
+    border-radius: 2px;
+    transition: all 0.3s ease;
 }
 
-.mobile-categories-toggle i {
-    margin-left: 8px;
-    transition: transform 0.3s ease;
-    float: right;
+.hamburger-icon span:nth-child(1) {
+    transform-origin: top left;
 }
 
-.mobile-categories-toggle.active i {
-    transform: rotate(180deg);
+.hamburger-icon span:nth-child(2) {
+    transform-origin: center;
+}
+
+.hamburger-icon span:nth-child(3) {
+    transform-origin: bottom left;
+}
+
+.mobile-categories-toggle.active .hamburger-icon span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, -1px);
+}
+
+.mobile-categories-toggle.active .hamburger-icon span:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.mobile-categories-toggle.active .hamburger-icon span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, 1px);
 }
 
 .mobile-categories-menu {
     display: none;
     background: white;
-    border-top: 1px solid #dee2e6;
-    padding: 10px 15px;
+    border-top: 2px solid #fed7aa;
+    padding: 15px;
     max-height: 400px;
     overflow-y: auto;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .mobile-categories-menu .category-link {
     display: block;
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
+    padding: 12px 15px;
+    border-bottom: 1px solid #fed7aa;
     white-space: normal;
     font-size: 15px;
     margin: 0;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    transition: all 0.3s ease;
 }
 
 .mobile-categories-menu .category-link:last-child {
     border-bottom: none;
 }
 
+.mobile-categories-menu .category-link:hover {
+    background-color: rgba(249, 115, 22, 0.05); /* Lighter hover */
+    transform: translateX(5px);
+}
+
+.mobile-categories-menu .category-link.active {
+    background-color: rgba(249, 115, 22, 0.1); /* Lighter active */
+    border-left: 4px solid #f97316;
+}
+
+/* Responsive adjustments for top value */
 @media (max-width: 768px) {
+    .categories-navbar {
+        top: 110px; /* Smaller navbar height on mobile */
+        background: #fffaf0; /* Same lighter orange */
+        padding: 5px 0;
+    }
     .categories-container { display: none; }
     .contact-btn { display: none; }
     .mobile-contact-btn { display: inline-flex; }
-    .mobile-categories-toggle { display: block; }
+    .mobile-categories-toggle { 
+        display: flex;
+    }
+}
+
+@media (max-width: 576px) {
+    .categories-navbar {
+        top: 100px; /* Even smaller navbar on mobile */
+    }
+    .mobile-categories-toggle {
+        padding: 8px 10px;
+        width: 45px;
+        height: 45px;
+    }
+    .hamburger-icon {
+        width: 22px;
+        height: 18px;
+    }
 }
 
 @media (min-width: 769px) {
     .mobile-categories-menu { display: none !important; }
     .mobile-contact-btn { display: none !important; }
+    .mobile-categories-toggle { display: none !important; }
+}
+
+/* DARKER GRAY BACKGROUND FOR DYNAMIC CATEGORY SECTIONS */
+.category-section {
+    background-color: #f1f5f9 !important; /* Darker gray */
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.category-section .section-header {
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 15px;
+    margin-bottom: 25px;
+}
+
+.category-section .section-title {
+    color: #334155;
+    font-weight: 700;
+}
+
+.category-section .news-item {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.category-section .news-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #cbd5e1;
 }
 </style>
 
@@ -248,13 +366,21 @@ $categories = [
                     <?php echo htmlspecialchars($category['label']); ?>
                 </a>
             <?php endforeach; ?>
+            <!-- MANUALLY ADDED: About Us link with redirect -->
+            <a href="about_us.php" class="category-link">
+                आमच्या विषयी
+            </a>
             <a href="javascript:void(0);" class="contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
             </a>
         </div>
-        <button class="mobile-categories-toggle d-md-none" id="mobileCategoriesToggle">
-            <span>श्रेण्या</span>
-            <i class="bi bi-chevron-down"></i>
+        <!-- HAMBURGER BUTTON - NO TEXT, ONLY ICON -->
+        <button class="mobile-categories-toggle d-md-none" id="mobileCategoriesToggle" title="श्रेण्या दाखवा/लपवा" aria-label="श्रेण्या मेनू">
+            <div class="hamburger-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
         </button>
         <div class="mobile-categories-menu" id="mobileCategoriesMenu">
             <?php foreach ($categories as $index => $category): ?>
@@ -264,6 +390,10 @@ $categories = [
                     <?php echo htmlspecialchars($category['label']); ?>
                 </a>
             <?php endforeach; ?>
+            <!-- MANUALLY ADDED: About Us link with redirect -->
+            <a href="about_us.php" class="category-link">
+                आमच्या विषयी
+            </a>
             <a href="javascript:void(0);" class="mobile-contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
             </a>
@@ -283,7 +413,7 @@ $categories = [
 </main>
 
 <script>
-// Store categories data
+// Store categories data (without about_us)
 const categoriesData = <?php echo json_encode($categories); ?>;
 
 // Function to filter news based on category
@@ -293,7 +423,8 @@ function filterNews(categoryValue, marathiLabel = '', event = null) {
         event.preventDefault();
     }
     
-    const categoryLinks = document.querySelectorAll('.category-link');
+    // Only update active state for links with data-category attribute
+    const categoryLinks = document.querySelectorAll('.category-link[data-category]');
     categoryLinks.forEach(link => {
         link.classList.remove('active');
         if (link.getAttribute('data-category') === categoryValue) {
@@ -370,8 +501,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Update category link event listeners to prevent default behavior
-    document.querySelectorAll('.category-link').forEach(link => {
+    // Update category link event listeners - ONLY for links with data-category attribute
+    document.querySelectorAll('.category-link[data-category]').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const categoryValue = this.getAttribute('data-category');
@@ -408,7 +539,7 @@ window.addEventListener('hashchange', function() {
         const categoryValue = hash.startsWith('category-') ? hash.substring(9) : hash;
         if (categoryValue && categoriesData.find(cat => cat.value === categoryValue)) {
             setTimeout(() => {
-                const categoryLinks = document.querySelectorAll('.category-link');
+                const categoryLinks = document.querySelectorAll('.category-link[data-category]');
                 categoryLinks.forEach(link => {
                     link.classList.remove('active');
                     if (link.getAttribute('data-category') === categoryValue) {
@@ -431,7 +562,7 @@ if (window.location.hash) {
         const categoryValue = hash.startsWith('category-') ? hash.substring(9) : hash;
         if (categoryValue && categoriesData.find(cat => cat.value === categoryValue)) {
             setTimeout(() => {
-                const categoryLinks = document.querySelectorAll('.category-link');
+                const categoryLinks = document.querySelectorAll('.category-link[data-category]');
                 categoryLinks.forEach(link => {
                     link.classList.remove('active');
                     if (link.getAttribute('data-category') === categoryValue) {

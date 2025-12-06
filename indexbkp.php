@@ -34,15 +34,15 @@ $categories = [
     ['label' => 'अमृत घडामोडी', 'value' => 'amrut_events'],
     ['label' => 'लाभार्थी स्टोरी', 'value' => 'beneficiary_story'],
     ['label' => 'यशस्वी उद्योजक', 'value' => 'successful_entrepreneur'],
-    ['label' => 'शब्दामृत', 'value' => 'words_amrut'],
+    ['label' => 'शब्दांमृत', 'value' => 'words_amrut'],
     ['label' => 'स्मार्ट शेतकरी', 'value' => 'smart_farmer'],
-    ['label' => 'सक्षम दिद्यार्थी', 'value' => 'capable_student'],
+    ['label' => 'सक्षम विद्यार्थी', 'value' => 'capable_student'],
     ['label' => 'अध्यात्म', 'value' => 'spirituality'],
     ['label' => 'सामाजिक परिस्थिती', 'value' => 'social_situation'],
     ['label' => 'स्त्रीशक्ती', 'value' => 'women_power'],
     ['label' => 'पर्यटन', 'value' => 'tourism'],
     ['label' => 'अमृत सेवा कार्य', 'value' => 'amrut_service'],
-    ['label' => 'आमच्या दिशयी', 'value' => 'about_us']
+    ['label' => 'आमच्या विषयी', 'value' => 'about_us']
 ];
 ?>
 

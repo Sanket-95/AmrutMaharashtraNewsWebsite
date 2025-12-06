@@ -1,37 +1,84 @@
-<!-- components/navbar.php -->
+<!-- Navbar Component -->
 <style>
     /* Custom styles for navbar */
     :root {
         --orange-color: #f97316;
         --dark-orange: #d35400;
+        --light-orange: #ffedd5;
+        --very-light-orange: #fff7ed;
         --light-bg: #f8f9fa;
     }
     
-    /* Navbar styling */
+    /* Navbar styling - STICKY TO TOP */
     .navbar-custom {
         background-color: white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        position: relative;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        width: 100%;
     }
     
-    /* Row 1 styling - MORE COMPACT */
+    /* Container with small left margin only */
+    .navbar-custom .container,
+    .navbar-custom .container-fluid {
+        padding-left: 10px !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    
+    /* Row with no margins */
+    .navbar-custom .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        --bs-gutter-x: 0 !important;
+    }
+    
+    /* Column padding - minimal left, no right */
+    .navbar-custom .col,
+    .navbar-custom [class*="col-"] {
+        padding-left: 5px !important;
+        padding-right: 0 !important;
+    }
+    
+    /* Row 1 styling - ADDED ORANGE-THEMED BACKGROUND */
     .row-1 {
-        background: linear-gradient(to right, #f8f9fa, #e9ecef, #f8f9fa);
-        padding: 6px 0;
-        border-bottom: 1px solid #dee2e6;
+        background: linear-gradient(to right, var(--very-light-orange), #ffe4cc, var(--very-light-orange));
+        padding: 8px 0;
+        border-bottom: 1px solid #fecba1;
+        margin: 0;
+        width: 100%;
+    }
+    
+    .row-1 .container-fluid {
+        width: 100%;
+        max-width: 100%;
     }
     
     .emblem-logo {
         height: 35px;
         width: auto;
+        margin-right: 10px;
     }
     
     .main-heading {
         font-size: 0.9rem;
         font-weight: 600;
-        text-align: center;
         margin: 0;
         line-height: 1.2;
+        display: inline;
+    }
+    
+    /* NEW: Separate heading parts for better mobile control */
+    .heading-main-part {
+        font-weight: 700;
+        color: #333;
+    }
+    
+    .heading-secondary-part {
+        font-weight: 500;
+        color: #555;
     }
     
     .amrut-orange {
@@ -39,351 +86,615 @@
         font-weight: 700;
     }
     
-    /* Row 2 styling - MORE COMPACT WITH ORANGE */
+    .heading-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 0;
+        text-align: center;
+        width: 100%;
+    }
+    
+    /* Row 2 styling - HORIZONTAL LAYOUT - ADDED LIGHT ORANGE BACKGROUND */
     .row-2 {
-        padding: 12px 0;
-        background-color: white;
+        padding: 12px 0 12px 0;
+        background: linear-gradient(135deg, #fff, var(--light-orange));
         position: relative;
+        margin: 0;
+        width: 100%;
+        border-bottom: 2px solid #fed7aa;
+    }
+    
+    .row-2 .container-fluid {
+        width: 100%;
+        max-width: 100%;
+        padding-right: 0 !important;
     }
     
     .side-logo {
         height: 50px;
         width: auto;
+        margin: 0;
+        display: block;
+        filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1));
+    }
+    
+    /* Left Logo - SMALL LEFT MARGIN */
+    .left-logo {
+        padding-left: 5px !important;
+        padding-right: 0 !important;
+        margin: 0 !important;
+        text-align: left;
+        display: flex;
+        align-items: center;
+    }
+    
+    .left-logo img {
+        margin-left: 0 !important;
+    }
+    
+    /* Center Content - JUST TEXT NOW */
+    .center-content {
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+        margin: 0 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
     }
     
     .center-title {
         color: var(--orange-color);
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         font-weight: 800;
-        text-align: center;
         margin: 0;
         text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        line-height: 1.1;
     }
     
     .subtitle {
-        color: #666;
-        font-size: 0.9rem;
-        text-align: center;
+        color: #c2410c;
+        font-size: 0.85rem;
         margin: 2px 0 0 0;
         font-style: italic;
+        font-weight: 500;
     }
     
-    /* ATTRACTIVE RIGHT-END NOTCH */
-    .right-notch-container {
-        position: absolute;
-        right: 20px;
-        bottom: -8px;
-        z-index: 100;
+    /* Social Media Icons Container - HORIZONTAL GROUP */
+    .social-container {
         display: flex;
+        justify-content: center;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
+        flex-wrap: nowrap;
+        padding-right: 8px;
     }
     
-    .notch-label {
-        font-size: 0.7rem;
-        color: #666;
-        background: white;
-        padding: 1px 6px;
-        border-radius: 10px;
-        border: 1px solid #ddd;
-        white-space: nowrap;
-        opacity: 0;
-        transform: translateX(10px);
-        transition: all 0.3s ease;
-    }
-    
-    .right-notch-container:hover .notch-label {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    
-    .notch-btn-right {
-        background: linear-gradient(135deg, var(--orange-color), var(--dark-orange));
-        color: white;
-        border: none;
+    .social-circle {
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        color: white;
+        font-size: 1rem;
+        text-decoration: none;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
         position: relative;
         overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid white;
     }
     
-    .notch-btn-right:before {
+    .social-circle:before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
     }
     
-    .notch-btn-right:hover {
-        transform: scale(1.1) rotate(5deg);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+    .social-circle:hover {
+        transform: translateY(-2px) scale(1.1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
-    .notch-btn-right:active {
-        transform: scale(0.95);
+    /* Different colors for each social media */
+    .social-fb {
+        background: linear-gradient(135deg, #1877F2, #0d5cb6);
     }
     
-    .notch-btn-right .bi {
-        font-size: 0.9rem;
-        transition: transform 0.3s ease;
+    .social-tw {
+        background: linear-gradient(135deg, #1DA1F2, #0c85d0);
     }
     
-    .notch-btn-right.collapsed .bi {
-        transform: rotate(180deg);
+    .social-ig {
+        background: linear-gradient(135deg, #E4405F, #c13584);
     }
     
-    /* Row 3 styling - COMPLETELY HIDABLE */
-    .row-3 {
-        background-color: var(--light-bg);
-        padding: 6px 0;
-        border-top: 1px solid #dee2e6;
-        border-bottom: 2px solid var(--orange-color);
-        position: relative;
-        max-height: 50px;
-        opacity: 1;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    .social-yt {
+        background: linear-gradient(135deg, #FF0000, #cc0000);
     }
     
-    .row-3.collapsed {
-        max-height: 0;
-        padding: 0;
-        opacity: 0;
-        border: none;
-        margin: 0;
+    .social-in {
+        background: linear-gradient(135deg, #0A66C2, #004182);
     }
     
-    /* Social icons */
-    .social-icons-container {
+    /* Hover color changes */
+    .social-fb:hover {
+        background: linear-gradient(135deg, #0d5cb6, #1877F2);
+    }
+    
+    .social-tw:hover {
+        background: linear-gradient(135deg, #0c85d0, #1DA1F2);
+    }
+    
+    .social-ig:hover {
+        background: linear-gradient(135deg, #c13584, #E4405F);
+    }
+    
+    .social-yt:hover {
+        background: linear-gradient(135deg, #cc0000, #FF0000);
+    }
+    
+    .social-in:hover {
+        background: linear-gradient(135deg, #004182, #0A66C2);
+    }
+    
+    /* Right Content - SOCIAL ICONS + LOGO IN SAME COLUMN */
+    .right-content {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin: 0 !important;
         display: flex;
-        justify-content: flex-end;
-        gap: 12px;
         align-items: center;
-        transition: opacity 0.3s ease;
+        justify-content: flex-end;
+        gap: 10px;
+        height: 100%;
     }
     
-    .social-icon {
-        color: #555;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-        text-decoration: none;
+    /* Right Logo */
+    .right-logo {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
     }
     
-    .social-icon:hover {
-        color: var(--orange-color);
-        transform: translateY(-2px);
+    .right-logo img {
+        margin-right: 0 !important;
+        height: 50px;
+        width: auto;
+        filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1));
     }
     
-    .social-divider {
-        color: #999;
-        font-size: 0.8rem;
-    }
-    
-    /* Responsive */
+    /* MOBILE VIEW STYLES */
     @media (max-width: 768px) {
+        .navbar-custom {
+            position: sticky;
+            top: 0;
+        }
+        
+        .navbar-custom .container,
+        .navbar-custom .container-fluid {
+            padding-left: 8px !important;
+            padding-right: 0 !important;
+        }
+        
+        .navbar-custom .col,
+        .navbar-custom [class*="col-"] {
+            padding-left: 4px !important;
+            padding-right: 0 !important;
+        }
+        
+        /* Row 1 - MOBILE - IMPROVED TEXT WRAPPING */
+        .row-1 {
+            padding: 6px 0;
+            background: linear-gradient(to right, var(--very-light-orange), #ffedd5, var(--very-light-orange));
+            border-bottom: 1px solid #fed7aa;
+        }
+        
+        .heading-container {
+            flex-direction: column;
+            text-align: center;
+        }
+        
         .emblem-logo {
+            margin-right: 0;
+            margin-bottom: 8px;
             height: 30px;
         }
         
-        .main-heading {
+        /* Mobile: Split heading into 3 lines */
+        .mobile-heading-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .mobile-heading-line-1 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+        
+        .mobile-heading-line-2 {
+            font-weight: 700;
+            color: #333;
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+            line-height: 1.2;
+            text-align: center;
+        }
+        
+        .mobile-heading-line-3 {
+            font-weight: 500;
+            color: #555;
             font-size: 0.8rem;
+            line-height: 1.2;
+            text-align: center;
+        }
+        
+        /* Hide desktop heading on mobile */
+        .main-heading {
+            display: none;
+        }
+        
+        /* Row 2 - MOBILE REARRANGEMENT */
+        .row-2 {
+            padding: 8px 0;
+            background: linear-gradient(135deg, #fff, var(--light-orange));
+            border-bottom: 2px solid #fed7aa;
         }
         
         .side-logo {
             height: 40px;
         }
         
+        /* Mobile: First Row - Logos only */
+        .mobile-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .left-logo {
+            padding-left: 0 !important;
+            order: 1;
+            flex: 1;
+            justify-content: flex-start;
+        }
+        
+        .right-logo {
+            padding-right: 0 !important;
+            order: 3;
+            flex: 1;
+            justify-content: flex-end;
+        }
+        
+        /* Center content - MOBILE */
+        .center-content {
+            order: 2;
+            flex: 2;
+            padding: 0 !important;
+        }
+        
         .center-title {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
+            line-height: 1;
         }
         
         .subtitle {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            margin-top: 1px;
+            color: #c2410c;
         }
         
-        .logo-container {
-            text-align: center;
-            margin-bottom: 5px;
-        }
-        
-        .social-icons-container {
+        /* Social Media - MOBILE: BELOW LOGOS */
+        .right-content {
+            order: 4;
+            width: 100%;
             justify-content: center;
-            margin-top: 5px;
-            gap: 10px;
+            margin-top: 8px !important;
+            gap: 8px;
         }
         
-        .row-3 {
-            padding: 4px 0;
+        .social-container {
+            gap: 5px;
+            padding-right: 0;
+            justify-content: center;
         }
         
-        .right-notch-container {
-            right: 10px;
-            bottom: -6px;
-        }
-        
-        .notch-btn-right {
-            width: 24px;
-            height: 24px;
-        }
-        
-        .notch-btn-right .bi {
-            font-size: 0.8rem;
-        }
-        
-        .notch-label {
-            font-size: 0.65rem;
-            padding: 1px 5px;
+        .social-circle {
+            width: 32px;
+            height: 32px;
+            font-size: 0.9rem;
+            border: 2px solid white;
         }
     }
     
     @media (max-width: 576px) {
+        .navbar-custom .container,
+        .navbar-custom .container-fluid {
+            padding-left: 6px !important;
+            padding-right: 0 !important;
+        }
+        
+        .navbar-custom .col,
+        .navbar-custom [class*="col-"] {
+            padding-left: 3px !important;
+            padding-right: 0 !important;
+        }
+        
+        /* Mobile heading adjustments */
+        .mobile-heading-line-2 {
+            font-size: 0.8rem;
+        }
+        
+        .mobile-heading-line-3 {
+            font-size: 0.75rem;
+        }
+        
+        .emblem-logo {
+            height: 28px;
+            margin-bottom: 6px;
+        }
+        
         .center-title {
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
         
         .subtitle {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            color: #c2410c;
         }
         
-        .row-1 {
-            padding: 4px 0;
+        .side-logo {
+            height: 35px;
         }
         
-        .row-2 {
-            padding: 8px 0;
+        .social-circle {
+            width: 30px;
+            height: 30px;
+            font-size: 0.85rem;
+            border: 2px solid white;
         }
         
-        .row-3 {
-            padding: 3px 0;
+        .right-content {
+            gap: 6px;
+            margin-top: 6px !important;
         }
         
-        .right-notch-container {
-            right: 8px;
-            bottom: -5px;
-        }
-        
-        .notch-btn-right {
-            width: 22px;
-            height: 22px;
-        }
-        
-        .notch-btn-right .bi {
-            font-size: 0.75rem;
-        }
-        
-        .notch-label {
-            font-size: 0.6rem;
-            padding: 0 4px;
+        .social-container {
+            gap: 4px;
         }
     }
     
     @media (max-width: 400px) {
-        .right-notch-container {
-            right: 5px;
+        .navbar-custom .container,
+        .navbar-custom .container-fluid {
+            padding-left: 4px !important;
+            padding-right: 0 !important;
         }
         
-        .notch-label {
-            display: none; /* Hide label on very small screens */
+        /* Mobile heading adjustments */
+        .mobile-heading-line-2 {
+            font-size: 0.75rem;
+        }
+        
+        .mobile-heading-line-3 {
+            font-size: 0.7rem;
+        }
+        
+        .emblem-logo {
+            height: 26px;
+            margin-bottom: 5px;
+        }
+        
+        .center-title {
+            font-size: 0.9rem;
+        }
+        
+        .subtitle {
+            font-size: 0.65rem;
+            color: #c2410c;
+        }
+        
+        .side-logo {
+            height: 30px;
+        }
+        
+        .social-circle {
+            width: 28px;
+            height: 28px;
+            font-size: 0.8rem;
+            border: 2px solid white;
+        }
+        
+        .right-content {
+            gap: 4px;
+            margin-top: 5px !important;
+        }
+        
+        .social-container {
+            gap: 3px;
+        }
+    }
+    
+    @media (max-width: 350px) {
+        .navbar-custom .container,
+        .navbar-custom .container-fluid {
+            padding-left: 3px !important;
+            padding-right: 0 !important;
+        }
+        
+        /* Mobile heading adjustments */
+        .mobile-heading-line-2 {
+            font-size: 0.7rem;
+        }
+        
+        .mobile-heading-line-3 {
+            font-size: 0.65rem;
+        }
+        
+        .center-title {
+            font-size: 0.85rem;
+        }
+        
+        .side-logo {
+            height: 28px;
+        }
+        
+        .social-circle {
+            width: 26px;
+            height: 26px;
+            font-size: 0.75rem;
+            border: 2px solid white;
+        }
+        
+        .social-container {
+            gap: 2px;
         }
     }
 </style>
 
-<!-- Navbar with 3 rows -->
+<!-- Navbar with 2 rows -->
 <nav class="navbar-custom">
-    <!-- Row 1: National Emblem + Heading -->
+    <!-- Row 1: Logo + Heading -->
     <div class="row-1">
-        <div class="container">
-            <div class="row align-items-center">
-                <!-- Three Lion Emblem (National Emblem of India) -->
-                <div class="col-md-2 col-12 logo-container">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
-                         alt="National Emblem of India" 
-                         class="emblem-logo img-fluid">
-                </div>
-                
-                <!-- Main Heading Text -->
-                <div class="col-md-8 col-12 text-center">
-                    <h2 class="main-heading">
-                        महाराष्ट्र शासन निती शिक्षण पद्घती <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था  
-                    </h2>
-                </div>
-                
-                <!-- Empty column for alignment -->
-                <div class="col-md-2 d-none d-md-block"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Row 2: Left Logo, Center Title with Subtitle, Right Logo -->
-    <div class="row-2">
-        <div class="container">
-            <div class="row align-items-center justify-content-center">
-                <!-- Left Logo (Indian Flag) -->
-                <div class="col-md-3 col-4 text-center text-md-start">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
-                         alt="Indian Flag" 
-                         class="side-logo img-fluid">
-                </div>
-                
-                <!-- Center Title with Subtitle -->
-                <div class="col-md-6 col-12 text-center">
-                    <h1 class="center-title">अमृत महाराष्ट्र</h1>
-                    <p class="subtitle">श्रमेव जयते</p>
-                </div>
-                
-                <!-- Right Logo (Maharashtra Emblem) -->
-                <div class="col-md-3 col-4 text-center text-md-end">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Seal_of_Maharashtra.svg/240px-Seal_of_Maharashtra.svg.png" 
-                         alt="Maharashtra Government Emblem" 
-                         class="side-logo img-fluid">
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ATTRACTIVE RIGHT-END NOTCH -->
-    <div class="right-notch-container">
-        <span class="notch-label" id="notchLabel">Toggle Social</span>
-        <button class="notch-btn-right" id="notchBtn" title="Toggle social media row">
-            <i class="bi bi-chevron-up"></i>
-        </button>
-    </div>
-    
-    <!-- Row 3: Hidable Row with Social Icons -->
-    <div class="row-3" id="socialRow">
-        <!-- Social Media Icons -->
-        <div class="container">
+        <div class="container-fluid">
             <div class="row">
                 <div class="col-12">
-                    <div class="social-icons-container">
-                        <a href="#" class="social-icon" title="Facebook">
+                    <div class="heading-container">
+                        <!-- Logo (visible on all devices) -->
+                        <div class="mobile-heading-line-1">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                 alt="National Emblem of India" 
+                                 class="emblem-logo img-fluid">
+                        </div>
+                        
+                        <!-- Desktop Heading (hidden on mobile) -->
+                        <h2 class="main-heading d-none d-md-block">
+                            महाराष्ट्र शंशोधन उन्नती प्रशिक्षण प्रबोधीनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
+                        </h2>
+                        
+                        <!-- Mobile Heading (3 lines, visible only on mobile) -->
+                        <div class="d-md-none mobile-heading-wrapper">
+                            <!-- Line 2: Main part (bold) -->
+                            <div class="mobile-heading-line-2">
+                                महाराष्ट्र शंशोधन उन्नती प्रशिक्षण प्रबोधीनी <span class="amrut-orange">(अमृत)</span>
+                            </div>
+                            
+                            <!-- Line 3: Secondary part (lighter) -->
+                            <div class="mobile-heading-line-3">
+                                महाराष्ट्र शासनाची स्वायत्त संस्था
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Row 2: Desktop and Mobile Layouts -->
+    <div class="row-2">
+        <div class="container-fluid">
+            <!-- Desktop View (768px and above) -->
+            <div class="d-none d-md-block">
+                <div class="row align-items-center justify-content-center">
+                    <!-- 1st: Left Logo -->
+                    <div class="col-md-3 left-logo">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
+                             alt="Indian Flag" 
+                             class="side-logo img-fluid">
+                    </div>
+                    
+                    <!-- 2nd: Center Content -->
+                    <div class="col-md-6 center-content text-center">
+                        <h1 class="center-title">अमृत महाराष्ट्र</h1>
+                        <p class="subtitle">श्रमेव जयते</p>
+                    </div>
+                    
+                    <!-- 3rd: Right Content -->
+                    <div class="col-md-3 right-content">
+                        <div class="social-container">
+                            <a href="#" class="social-circle social-fb" title="Facebook">
+                                <i class="bi bi-facebook"></i>
+                            </a>
+                            <a href="#" class="social-circle social-tw" title="Twitter">
+                                <i class="bi bi-twitter"></i>
+                            </a>
+                            <a href="#" class="social-circle social-ig" title="Instagram">
+                                <i class="bi bi-instagram"></i>
+                            </a>
+                            <a href="#" class="social-circle social-yt" title="YouTube">
+                                <i class="bi bi-youtube"></i>
+                            </a>
+                            <a href="#" class="social-circle social-in" title="LinkedIn">
+                                <i class="bi bi-linkedin"></i>
+                            </a>
+                        </div>
+                        
+                        <div class="right-logo">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
+                                 alt="Indian Flag" 
+                                 class="side-logo img-fluid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile View (below 768px) -->
+            <div class="d-md-none">
+                <!-- Top Row: Left Logo + Center Text + Right Logo -->
+                <div class="mobile-top-row">
+                    <div class="left-logo">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
+                             alt="Indian Flag" 
+                             class="side-logo img-fluid">
+                    </div>
+                    
+                    <div class="center-content text-center">
+                        <h1 class="center-title">अमृत महाराष्ट्र</h1>
+                        <p class="subtitle">श्रमेव जयते</p>
+                    </div>
+                    
+                    <div class="right-logo">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
+                             alt="Indian Flag" 
+                             class="side-logo img-fluid">
+                    </div>
+                </div>
+                
+                <!-- Bottom Row: Social Media Icons (Centered) -->
+                <div class="right-content">
+                    <div class="social-container">
+                        <a href="#" class="social-circle social-fb" title="Facebook">
                             <i class="bi bi-facebook"></i>
                         </a>
-                        <a href="#" class="social-icon" title="Twitter">
+                        <a href="#" class="social-circle social-tw" title="Twitter">
                             <i class="bi bi-twitter"></i>
                         </a>
-                        <a href="#" class="social-icon" title="Instagram">
+                        <a href="#" class="social-circle social-ig" title="Instagram">
                             <i class="bi bi-instagram"></i>
                         </a>
-                        <a href="#" class="social-icon" title="YouTube">
+                        <a href="#" class="social-circle social-yt" title="YouTube">
                             <i class="bi bi-youtube"></i>
                         </a>
-                        <a href="#" class="social-icon" title="LinkedIn">
+                        <a href="#" class="social-circle social-in" title="LinkedIn">
                             <i class="bi bi-linkedin"></i>
-                        </a>
-                        <span class="social-divider ms-1 me-1">|</span>
-                        <a href="#" class="social-icon" title="Share">
-                            <i class="bi bi-share"></i>
                         </a>
                     </div>
                 </div>
@@ -391,66 +702,3 @@
         </div>
     </div>
 </nav>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const notchBtn = document.getElementById('notchBtn');
-    const notchLabel = document.getElementById('notchLabel');
-    const socialRow = document.getElementById('socialRow');
-    
-    // Check localStorage for saved state
-    let isCollapsed = localStorage.getItem('socialRowCollapsed') === 'true';
-    
-    // Initialize state
-    function updateUI() {
-        if (isCollapsed) {
-            socialRow.classList.add('collapsed');
-            notchBtn.classList.add('collapsed');
-            notchBtn.title = "Show social media row";
-            notchLabel.textContent = "Show Social";
-        } else {
-            socialRow.classList.remove('collapsed');
-            notchBtn.classList.remove('collapsed');
-            notchBtn.title = "Hide social media row";
-            notchLabel.textContent = "Hide Social";
-        }
-    }
-    
-    updateUI();
-    
-    // Toggle function
-    function toggleSocialRow() {
-        isCollapsed = !isCollapsed;
-        localStorage.setItem('socialRowCollapsed', isCollapsed);
-        updateUI();
-    }
-    
-    // Add click event to notch button
-    notchBtn.addEventListener('click', toggleSocialRow);
-    
-    // Accessibility: Add keyboard support
-    notchBtn.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggleSocialRow();
-        }
-    });
-    
-    // Initialize ARIA attributes
-    notchBtn.setAttribute('aria-label', 'Toggle social media row');
-    notchBtn.setAttribute('aria-expanded', !isCollapsed);
-    notchBtn.setAttribute('aria-controls', 'socialRow');
-    
-    // Add hover effect for label
-    const rightNotchContainer = document.querySelector('.right-notch-container');
-    rightNotchContainer.addEventListener('mouseenter', function() {
-        notchLabel.style.opacity = '1';
-        notchLabel.style.transform = 'translateX(0)';
-    });
-    
-    rightNotchContainer.addEventListener('mouseleave', function() {
-        notchLabel.style.opacity = '0';
-        notchLabel.style.transform = 'translateX(10px)';
-    });
-});
-</script>
