@@ -525,16 +525,16 @@ $count_stmt->close();
             <?php echo nl2br(htmlspecialchars($news['content'])); ?>
         </div>
 
-        <!-- News Meta Information -->
+       <!-- News Meta Information -->
         <div class="news-publish">
             <div class="news-meta">
                 <div class="text-center">
                     <!-- Publisher -->
                     <span class="meta-item">
                         <i class="bi bi-person-fill"></i>
-                        <strong>प्रकाशक:</strong>
+                        <strong>Publisher:</strong>
                         <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
-                        <span class="meta-tooltip">बातमी प्रकाशकाचे नाव</span>
+                        <span class="meta-tooltip">News publisher name</span>
                     </span>
                     
                     <span class="meta-divider">|</span>
@@ -542,9 +542,9 @@ $count_stmt->close();
                     <!-- Date -->
                     <span class="meta-item">
                         <i class="bi bi-calendar-event"></i>
-                        <strong>तारीख:</strong>
+                        <strong>Date:</strong>
                         <span class="meta-value"><?php echo $published_date; ?></span>
-                        <span class="meta-tooltip">बातमी प्रकाशित झाल्याची तारीख</span>
+                        <span class="meta-tooltip">News publication date</span>
                     </span>
                     
                     <span class="meta-divider">|</span>
@@ -552,9 +552,9 @@ $count_stmt->close();
                     <!-- Time -->
                     <span class="meta-item">
                         <i class="bi bi-clock"></i>
-                        <strong>वेळ:</strong>
+                        <strong>Time:</strong>
                         <span class="meta-value"><?php echo $published_time; ?></span>
-                        <span class="meta-tooltip">बातमी प्रकाशित झाल्याचा वेळ</span>
+                        <span class="meta-tooltip">News publication time</span>
                     </span>
                     
                     <span class="meta-divider">|</span>
@@ -562,9 +562,9 @@ $count_stmt->close();
                     <!-- Views -->
                     <span class="meta-item">
                         <i class="bi bi-eye-fill"></i>
-                        <strong>दृश्ये:</strong>
+                        <strong>Views:</strong>
                         <span class="meta-value"><?php echo number_format($news['view']); ?></span>
-                        <span class="meta-tooltip">ही बातमी किती वेळा पाहिली गेली</span>
+                        <span class="meta-tooltip">Number of times this news has been viewed</span>
                     </span>
                     
                     <?php if (!empty($news['district_name'])): ?>
@@ -573,9 +573,9 @@ $count_stmt->close();
                     <!-- District -->
                     <span class="meta-item">
                         <i class="bi bi-geo-alt"></i>
-                        <strong>जिल्हा:</strong>
+                        <strong>District:</strong>
                         <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
-                        <span class="meta-tooltip">बातमीशी संबंधित जिल्हा</span>
+                        <span class="meta-tooltip">Related district of the news</span>
                     </span>
                     <?php endif; ?>
                 </div>
@@ -630,86 +630,86 @@ $count_stmt->close();
         </div>
 
         <!-- Comments Section -->
-        <div class="comments-section">
-            <h3 class="mb-4 border-bottom pb-2">
-                <i class="bi bi-chat-left-text"></i> प्रतिक्रिया 
-                <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> प्रतिक्रिया</span>
-            </h3>
-            
-            <!-- Comments List -->
-            <div class="comments-list" id="commentsContainer">
-                <?php if ($comments_result->num_rows > 0): ?>
-                    <?php while ($comment = $comments_result->fetch_assoc()): ?>
-                        <div class="comment-item">
-                            <div class="comment-header">
-                                <div class="comment-avatar">
-                                    <?php echo mb_substr(htmlspecialchars($comment['name']), 0, 1); ?>
-                                </div>
-                                <div class="comment-author">
-                                    <h6><?php echo htmlspecialchars($comment['name']); ?></h6>
-                                    <div class="comment-date">
-                                        <i class="bi bi-clock"></i> <?php echo $comment['formatted_date']; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            <p class="comment-text"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+       <div class="comments-section">
+    <h3 class="mb-4 border-bottom pb-2">
+        <i class="bi bi-chat-left-text"></i> Comments 
+        <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> Comments</span>
+    </h3>
+    
+    <!-- Comments List -->
+    <div class="comments-list" id="commentsContainer">
+        <?php if ($comments_result->num_rows > 0): ?>
+            <?php while ($comment = $comments_result->fetch_assoc()): ?>
+                <div class="comment-item">
+                    <div class="comment-header">
+                        <div class="comment-avatar">
+                            <?php echo mb_substr(htmlspecialchars($comment['name']), 0, 1); ?>
                         </div>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <div class="no-comments text-center py-5" id="noCommentsMessage">
-                        <i class="bi bi-chat-left-text display-1 text-muted"></i>
-                        <h4 class="mt-3 text-muted">अद्याप कोणतीही प्रतिक्रिया नाही</h4>
-                        <p class="text-muted">तुम्ही चर्चा सुरु करू शकता</p>
+                        <div class="comment-author">
+                            <h6><?php echo htmlspecialchars($comment['name']); ?></h6>
+                            <div class="comment-date">
+                                <i class="bi bi-clock"></i> <?php echo $comment['formatted_date']; ?>
+                            </div>
+                        </div>
                     </div>
-                <?php endif; ?>
+                    <p class="comment-text"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <div class="no-comments text-center py-5" id="noCommentsMessage">
+                <i class="bi bi-chat-left-text display-1 text-muted"></i>
+                <h4 class="mt-3 text-muted">No comments yet</h4>
+                <p class="text-muted">You can start the discussion</p>
             </div>
+        <?php endif; ?>
+    </div>
 
-            <!-- Comment Form -->
-            <div class="comment-form">
-                <h5 class="mb-4"><i class="bi bi-pencil-square"></i> प्रतिक्रिया लिहा</h5>
+    <!-- Comment Form -->
+    <div class="comment-form">
+        <h5 class="mb-4"><i class="bi bi-pencil-square"></i> Write a Comment</h5>
+        
+        <form id="commentForm" method="POST">
+            <input type="hidden" name="news_id" id="news_id" value="<?php echo $news_id; ?>">
+            
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
                 
-                <form id="commentForm" method="POST">
-                    <input type="hidden" name="news_id" id="news_id" value="<?php echo $news_id; ?>">
-                    
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="name" class="form-label">नाव <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="name" name="name" required>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="email" class="form-label">ईमेल <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
-                        
-                        <div class="col-12">
-                            <label for="comment" class="form-label">तुमची प्रतिक्रिया <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="comment" name="comment" rows="5" required></textarea>
-                        </div>
-                        
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
-                                <label class="form-check-label" for="saveInfo">
-                                    पुढच्या वेळीसाठी माझे नाव, ईमेल आणि वेबसाइट सेव्ह करा
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="col-12">
-                            <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
-                                <i class="bi bi-send"></i> प्रतिक्रिया पोस्ट करा
-                            </button>
-                            <div id="loadingSpinner" class="d-none">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">लोड करत आहे...</span>
-                                </div>
-                            </div>
+                <div class="col-md-6">
+                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                
+                <div class="col-12">
+                    <label for="comment" class="form-label">Your Comment <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="comment" name="comment" rows="5" required></textarea>
+                </div>
+                
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
+                        <label class="form-check-label" for="saveInfo">
+                            Save my name, email, and website for next time
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
+                        <i class="bi bi-send"></i> Post Comment
+                    </button>
+                    <div id="loadingSpinner" class="d-none">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+        </form>
+    </div>
+</div>
     </div>
 
     <!-- Toastify JS -->
