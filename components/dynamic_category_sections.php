@@ -82,12 +82,12 @@ function getLatestNewsByCategory($conn) {
                   SELECT category_name, MAX(DATE(published_date)) as latest_date 
                   FROM news_articles 
                   WHERE DATE(published_date) <= CURDATE() 
-                  AND is_aproved = 1 
+                  AND is_approved = 1 
                   GROUP BY category_name
               ) n2 ON n1.category_name = n2.category_name 
                      AND DATE(n1.published_date) = n2.latest_date 
               WHERE DATE(n1.published_date) <= CURDATE() 
-              AND n1.is_aproved = 1 
+              AND n1.is_approved = 1 
               ORDER BY n1.category_name, n1.published_date DESC";
     
     $result = $conn->query($query);
@@ -126,7 +126,7 @@ function getLatestNewsByCategory($conn) {
 function getTotalNewsCountByCategory($conn) {
     $query = "SELECT category_name, COUNT(*) as total_count 
               FROM news_articles 
-              WHERE is_aproved = 1 
+              WHERE is_approved = 1 
               GROUP BY category_name";
     
     $result = $conn->query($query);

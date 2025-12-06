@@ -15,7 +15,7 @@ $sql = "SELECT
             published_by,
             published_date
         FROM news_articles
-        WHERE category_name = 'today_special'
+        WHERE category_name = 'today_special' AND is_approved = 1
         ORDER BY published_date DESC
         LIMIT 10";
 
