@@ -174,9 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     published_date, 
                     created_at, 
                     updated_at, 
-                    is_aproved, 
+                    is_approved, 
                     view
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), 0, 0)";
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), 1, 0)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {

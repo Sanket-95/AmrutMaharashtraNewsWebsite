@@ -178,11 +178,11 @@ $user_roll = $_SESSION['roll'] ?? '';
                               name="news_summary" 
                               rows="3" 
                               placeholder="बातमीचा संक्षिप्त सारांश लिहा (जास्तीत जास्त ३०० अक्षरे)"
-                              maxlength="300"
+                              maxlength="1000"
                               required
                               style="border-color: #FFA500; font-family: 'Mukta', sans-serif; font-size: 16px;"></textarea>
                     <div class="form-text text-end" style="font-family: 'Mukta', sans-serif;">
-                        <span id="charCount">०</span> / ३०० अक्षरे
+                        <span id="charCount">०</span> / 1000 अक्षरे
                     </div>
                 </div>
                 
@@ -556,7 +556,8 @@ $user_roll = $_SESSION['roll'] ?? '';
                 {value: 'dhule', text: 'धुळे'},
                 {value: 'nandurbar', text: 'नंदुरबार'},
                 {value: 'ahmednagar', text: 'अहमदनगर'},
-                {value: 'jalgaon', text: 'जळगाव'}
+                {value: 'jalgaon', text: 'जळगाव'},
+                {value: 'ahilyanagar', text: 'अहिल्यानगर'}
             ],
             'amaravati': [
                 {value: 'amaravati', text: 'अमरावती'},

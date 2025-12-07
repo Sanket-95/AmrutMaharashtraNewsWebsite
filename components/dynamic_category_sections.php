@@ -59,16 +59,16 @@ $professional_colors = [
     '#34495e', // Charcoal Gray
 ];
 
-// Advertisement images
+// Advertisement images - UPDATED WITH YOUR IMAGES
 $advertisements = [
     [
-        'image' => 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-        'link' => '#',
+        'image' => 'components/assets/add1.jpeg', // Your first ad image
+        'link' => 'https://amrutpeth.com/', // Redirect to your website
         'alt' => 'Advertisement 1'
     ],
     [
-        'image' => 'https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-        'link' => '#',
+        'image' => 'components/assets/add2.png', // Your second ad image
+        'link' => 'https://amrutpeth.com/', // Redirect to your website
         'alt' => 'Advertisement 2'
     ]
 ];
@@ -325,15 +325,21 @@ function generateNewsCard($news) {
             <div class="ad-section py-5">
                 <div class="container">
                     <div class="row g-4 justify-content-center">
-                        <?php foreach ($advertisements as $ad): ?>
+                        <?php foreach ($advertisements as $index => $ad): ?>
                             <div class="col-md-6">
-                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" class="ad-card d-block ad-hover" target="_blank">
-                                    <div class="card border-0 shadow-sm ad-image-card">
-                                        <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
-                                             class="card-img-top" 
-                                             alt="<?php echo htmlspecialchars($ad['alt']); ?>"
-                                             style="height: 200px; object-fit: cover;"
-                                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'">
+                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                                   class="ad-card d-block ad-hover" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   title="Click to visit amrutpeth.com">
+                                    <div class="card border-0 shadow-sm ad-image-card" style="height: 220px; overflow: hidden; background-color: #f8f9fa;">
+                                        <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
+                                            <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                                                 class="img-fluid" 
+                                                 alt="<?php echo htmlspecialchars($ad['alt']); ?>"
+                                                 style="max-height: 100%; max-width: 100%; object-fit: contain;"
+                                                 onerror="this.onerror=null; this.src='<?php echo $index == 0 ? 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' : 'https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'; ?>'">
+                                        </div>
                                     </div>
                                 </a>
                             </div>
@@ -446,7 +452,7 @@ function generateNewsCard($news) {
     text-decoration: none;
 }
 
-/* ADVERTISEMENT SECTION */
+/* ADVERTISEMENT SECTION - SHOW FULL IMAGE */
 .ad-section {
     padding: 40px 0;
     background: #fff;
@@ -533,6 +539,15 @@ function generateNewsCard($news) {
     }
     
     .card-img-top {
+        height: 180px !important;
+    }
+    
+    .ad-section {
+        padding: 30px 0;
+        margin: 20px 0;
+    }
+    
+    .ad-image-card {
         height: 180px !important;
     }
 }
@@ -644,6 +659,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset to original color (will be set by inline style)
             h2.style.color = '';
             h2.style.transform = 'translateX(0)';
+        });
+    });
+    
+    // Advertisement hover effects
+    const adCards = document.querySelectorAll('.ad-card');
+    adCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
         });
     });
 });

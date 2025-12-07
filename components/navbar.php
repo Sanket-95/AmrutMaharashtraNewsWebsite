@@ -60,6 +60,7 @@
         height: 35px;
         width: auto;
         margin-right: 10px;
+        object-fit: contain;
     }
     
     .main-heading {
@@ -113,11 +114,11 @@
     }
     
     .side-logo {
-        height: 50px;
         width: auto;
         margin: 0;
         display: block;
         filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1));
+        object-fit: contain;
     }
     
     /* Left Logo - SMALL LEFT MARGIN */
@@ -128,10 +129,33 @@
         text-align: left;
         display: flex;
         align-items: center;
+        justify-content: center;
+        height: 60px; /* Fixed height for consistent alignment */
     }
     
     .left-logo img {
         margin-left: 0 !important;
+        max-height: 100%;
+        max-width: 100%;
+        height: auto;
+        width: auto;
+    }
+    
+    /* Custom logo container for consistent sizing */
+    .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 60px; /* Fixed height */
+        width: 100%;
+    }
+    
+    .left-logo-container {
+        justify-content: flex-start;
+    }
+    
+    .right-logo-container {
+        justify-content: flex-end;
     }
     
     /* Center Content - JUST TEXT NOW */
@@ -267,13 +291,17 @@
         margin: 0 !important;
         display: flex;
         align-items: center;
+        justify-content: center;
+        height: 60px; /* Fixed height for consistent alignment */
     }
     
     .right-logo img {
         margin-right: 0 !important;
-        height: 50px;
+        max-height: 100%;
+        max-width: 100%;
+        height: auto;
         width: auto;
-        filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.1));
+        object-fit: contain;
     }
     
     /* MOBILE VIEW STYLES */
@@ -358,7 +386,8 @@
         }
         
         .side-logo {
-            height: 40px;
+            height: auto;
+            max-height: 45px; /* Reduced for mobile */
         }
         
         /* Mobile: First Row - Logos only */
@@ -375,6 +404,11 @@
             order: 1;
             flex: 1;
             justify-content: flex-start;
+            height: 45px; /* Reduced for mobile */
+        }
+        
+        .left-logo img {
+            max-height: 45px;
         }
         
         .right-logo {
@@ -382,6 +416,11 @@
             order: 3;
             flex: 1;
             justify-content: flex-end;
+            height: 45px; /* Reduced for mobile */
+        }
+        
+        .right-logo img {
+            max-height: 45px;
         }
         
         /* Center content - MOBILE */
@@ -423,6 +462,11 @@
             font-size: 0.9rem;
             border: 2px solid white;
         }
+        
+        /* Logo container for mobile */
+        .logo-container {
+            height: 45px; /* Reduced for mobile */
+        }
     }
     
     @media (max-width: 576px) {
@@ -462,7 +506,23 @@
         }
         
         .side-logo {
-            height: 35px;
+            max-height: 40px;
+        }
+        
+        .left-logo {
+            height: 40px;
+        }
+        
+        .left-logo img {
+            max-height: 40px;
+        }
+        
+        .right-logo {
+            height: 40px;
+        }
+        
+        .right-logo img {
+            max-height: 40px;
         }
         
         .social-circle {
@@ -479,6 +539,10 @@
         
         .social-container {
             gap: 4px;
+        }
+        
+        .logo-container {
+            height: 40px;
         }
     }
     
@@ -513,7 +577,23 @@
         }
         
         .side-logo {
-            height: 30px;
+            max-height: 35px;
+        }
+        
+        .left-logo {
+            height: 35px;
+        }
+        
+        .left-logo img {
+            max-height: 35px;
+        }
+        
+        .right-logo {
+            height: 35px;
+        }
+        
+        .right-logo img {
+            max-height: 35px;
         }
         
         .social-circle {
@@ -530,6 +610,10 @@
         
         .social-container {
             gap: 3px;
+        }
+        
+        .logo-container {
+            height: 35px;
         }
     }
     
@@ -554,7 +638,23 @@
         }
         
         .side-logo {
-            height: 28px;
+            max-height: 30px;
+        }
+        
+        .left-logo {
+            height: 30px;
+        }
+        
+        .left-logo img {
+            max-height: 30px;
+        }
+        
+        .right-logo {
+            height: 30px;
+        }
+        
+        .right-logo img {
+            max-height: 30px;
         }
         
         .social-circle {
@@ -566,6 +666,10 @@
         
         .social-container {
             gap: 2px;
+        }
+        
+        .logo-container {
+            height: 30px;
         }
     }
 </style>
@@ -614,11 +718,13 @@
             <!-- Desktop View (768px and above) -->
             <div class="d-none d-md-block">
                 <div class="row align-items-center justify-content-center">
-                    <!-- 1st: Left Logo -->
+                    <!-- 1st: Left Logo - Your custom Amrutmh.jpeg -->
                     <div class="col-md-3 left-logo">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
-                             alt="Indian Flag" 
-                             class="side-logo img-fluid">
+                        <div class="logo-container left-logo-container">
+                            <img src="components/assets/Amrutmh.jpeg" 
+                                 alt="Amrut Maharashtra Left Logo" 
+                                 class="side-logo img-fluid">
+                        </div>
                     </div>
                     
                     <!-- 2nd: Center Content -->
@@ -647,10 +753,13 @@
                             </a>
                         </div>
                         
+                        <!-- Right Logo - Your custom Amrut logo -->
                         <div class="right-logo">
-                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
-                                 alt="Indian Flag" 
-                                 class="side-logo img-fluid">
+                            <div class="logo-container right-logo-container">
+                                <img src="components/assets/Amrut.png" 
+                                     alt="Amrut Maharashtra Right Logo" 
+                                     class="side-logo img-fluid">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -661,9 +770,11 @@
                 <!-- Top Row: Left Logo + Center Text + Right Logo -->
                 <div class="mobile-top-row">
                     <div class="left-logo">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
-                             alt="Indian Flag" 
-                             class="side-logo img-fluid">
+                        <div class="logo-container left-logo-container">
+                            <img src="components/assets/Amrutmh.jpeg" 
+                                 alt="Amrut Maharashtra Left Logo" 
+                                 class="side-logo img-fluid">
+                        </div>
                     </div>
                     
                     <div class="center-content text-center">
@@ -672,9 +783,11 @@
                     </div>
                     
                     <div class="right-logo">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/320px-Flag_of_India.svg.png" 
-                             alt="Indian Flag" 
-                             class="side-logo img-fluid">
+                        <div class="logo-container right-logo-container">
+                            <img src="components/assets/Amrut.png" 
+                                 alt="Amrut Maharashtra Right Logo" 
+                                 class="side-logo img-fluid">
+                        </div>
                     </div>
                 </div>
                 

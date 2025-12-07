@@ -1,9 +1,19 @@
 <?php
-// components/carousel.php
+// components/top_news_carousel.php
+
+// Remove header() call for components
+if (function_exists('mb_internal_encoding')) {
+    mb_internal_encoding('UTF-8');
+}
 
 // Include database configuration if not already included
 if (!isset($conn)) {
-    require_once 'components/db_config.php';
+    require_once 'db_config.php';
+    
+    // Ensure UTF-8 connection
+    if (method_exists($conn, 'set_charset')) {
+        $conn->set_charset("utf8mb4");
+    }
 }
 
 // Fetch featured news from database
@@ -15,7 +25,7 @@ $sql = "SELECT
             published_by,
             published_date
         FROM news_articles
-        WHERE category_name = 'today_special' AND is_approved = 1
+        WHERE category_name = 'home' AND is_approved = 1
         ORDER BY published_date DESC
         LIMIT 10";
 
@@ -33,35 +43,19 @@ if ($result) {
     $result->free();
 }
 
-// If no data found, use fallback
-if (empty($slides)) {
-    $slides = [
-        [
-            'news_id' => 1,
-            'title' => 'Government Initiative Launch for Maharashtra',
-            'cover_photo_url' => 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-            'summary' => 'New development project announced for Maharashtra infrastructure growth with focus on sustainable development and rural connectivity.',
-            'published_by' => 'Government Press Bureau',
-            'published_date' => date('Y-m-d H:i:s', strtotime('-2 hours'))
-        ],
-        [
-            'news_id' => 2,
-            'title' => 'Economic Development Milestone Achieved',
-            'cover_photo_url' => 'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-            'summary' => 'Maharashtra records 15% growth in industrial sector this quarter, creating over 50,000 new jobs.',
-            'published_by' => 'Economic Affairs Department',
-            'published_date' => date('Y-m-d H:i:s', strtotime('-5 hours'))
-        ],
-        [
-            'news_id' => 3,
-            'title' => 'Health Ministry Announces New Facilities',
-            'cover_photo_url' => 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-            'summary' => 'New healthcare facilities to be established across rural Maharashtra, benefiting over 2 million citizens.',
-            'published_by' => 'Health Department',
-            'published_date' => date('Y-m-d H:i:s', strtotime('-1 day'))
-        ]
-    ];
-}
+// Array of fallback Unsplash images
+$fallbackImages = [
+    'https://images.unsplash.com/photo-1495020689067-958852a7765e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1542744095-fcf48d80b0fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1574267432644-f410f8e6b74c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1540206395-68808572332f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+];
 
 // Function to format date with month name
 function formatDateWithMonth($dateString) {
@@ -75,22 +69,72 @@ function formatTime($dateString) {
     return $date->format('h:i A');
 }
 
-// Function to check and get image URL
-function getImageUrl($url) {
-    if (empty($url) || $url === null) {
-        return 'https://images.unsplash.com/photo-1495020689067-958852a7765e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+// Function to check and get image URL with fallback
+function getImageUrl($url, $newsId, $fallbackImages) {
+    if (!empty($url) && $url !== null && $url !== '') {
+        if (filter_var($url, FILTER_VALIDATE_URL)) {
+            return $url;
+        }
+        
+        if (strpos($url, 'http') !== 0 && strpos($url, '//') !== 0) {
+            if (file_exists($url)) {
+                return $url;
+            }
+            
+            $basePath = $_SERVER['DOCUMENT_ROOT'] . '/AmrutMaharashtra/';
+            $fullPath = $basePath . ltrim($url, '/');
+            
+            if (file_exists($fullPath)) {
+                return $url;
+            }
+        }
     }
     
-    if (filter_var($url, FILTER_VALIDATE_URL)) {
-        return $url;
+    $fallbackIndex = ($newsId % count($fallbackImages));
+    return $fallbackImages[$fallbackIndex];
+}
+
+// Function to safely output text
+function safeOutput($text) {
+    if ($text === null) {
+        return '';
     }
     
-    if (strpos($url, 'http') !== 0) {
-        $url = ltrim($url, '/');
-        return '/' . $url;
+    if (!mb_check_encoding($text, 'UTF-8')) {
+        $text = mb_convert_encoding($text, 'UTF-8', 'auto');
     }
     
-    return $url;
+    return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+// If no data found, use fallback
+if (empty($slides)) {
+    $slides = [
+        [
+            'news_id' => 1,
+            'title' => 'Government Initiative Launch for Maharashtra',
+            'cover_photo_url' => '',
+            'summary' => 'New development project announced for Maharashtra infrastructure growth with focus on sustainable development and rural connectivity.',
+            'published_by' => 'Government Press Bureau',
+            'published_date' => date('Y-m-d H:i:s', strtotime('-2 hours'))
+        ],
+        [
+            'news_id' => 2,
+            'title' => 'Economic Development Milestone Achieved',
+            'cover_photo_url' => '',
+            'summary' => 'Maharashtra records 15% growth in industrial sector this quarter, creating over 50,000 new jobs.',
+            'published_by' => 'Economic Affairs Department',
+            'published_date' => date('Y-m-d H:i:s', strtotime('-5 hours'))
+        ],
+        [
+            'news_id' => 3,
+            'title' => 'Health Ministry Announces New Facilities',
+            'cover_photo_url' => '',
+            'summary' => 'New healthcare facilities to be established across rural Maharashtra, benefiting over 2 million citizens.',
+            'published_by' => 'Health Department',
+            'published_date' => date('Y-m-d H:i:s', strtotime('-1 day'))
+        ]
+    ];
 }
 ?>
 
@@ -103,73 +147,78 @@ function getImageUrl($url) {
             <?php if (!empty($slides)): ?>
                 <?php foreach ($slides as $index => $slide): ?>
                     <?php 
-                    $imageUrl = getImageUrl($slide['cover_photo_url']);
+                    $imageUrl = getImageUrl($slide['cover_photo_url'], $slide['news_id'], $fallbackImages);
                     $formattedDate = formatDateWithMonth($slide['published_date']);
                     $formattedTime = formatTime($slide['published_date']);
                     $isActive = $index === 0 ? 'active' : '';
                     $newsId = $slide['news_id'];
-                    // Generate share URL
-                    $shareUrl = "news.php?id=" . $newsId;
-                    $fullShareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]" . dirname($_SERVER['PHP_SELF']) . "/news.php?id=" . $newsId;
+                    
+                    // Generate URLs
+                    $baseUrl = '/AmrutMaharashtra/';
+                    $viewsUrl = $baseUrl . 'backend/views.php?id=' . $newsId;
+                    $fullShareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
+                                   "://$_SERVER[HTTP_HOST]" . $baseUrl . "backend/views.php?id=" . $newsId;
+                    
+                    // Prepare safe output
+                    $title = safeOutput($slide['title']);
+                    $summary = safeOutput($slide['summary']);
+                    $publishedBy = safeOutput($slide['published_by']);
                     ?>
                     
                     <!-- Slide <?php echo $index + 1; ?> -->
                     <div class="carousel-item <?php echo $isActive; ?>" data-bs-interval="3000">
                         <div class="card border-0 overflow-hidden">
                             <div class="row g-0 flex-md-row flex-column-reverse">
-                                <!-- Desktop: Image on Left, Content on Right -->
-                                <!-- Mobile: Content on Top, Image on Bottom -->
-                                
-                                <!-- Image Section (Desktop Left / Mobile Bottom) -->
+                                <!-- Image Section -->
                                 <div class="col-md-6 order-md-1 order-2">
                                     <div class="image-container position-relative h-100">
-                                        <img src="<?php echo htmlspecialchars($imageUrl); ?>" 
+                                        <img src="<?php echo $imageUrl; ?>" 
                                              class="img-fluid w-100 h-100" 
-                                             alt="<?php echo htmlspecialchars($slide['title']); ?>" 
+                                             alt="<?php echo $title; ?>" 
                                              style="object-fit: cover; min-height: 320px; max-height: 320px;"
-                                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1495020689067-958852a7765e?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';">
-                                        <!-- Overlay Gradient for better text readability on image -->
+                                             onerror="this.onerror=null; this.src='<?php echo $fallbackImages[0]; ?>';">
+                                        <!-- Overlay Gradient -->
                                         <div class="position-absolute bottom-0 start-0 end-0 bg-gradient-to-top from-black/50 to-transparent p-3 d-md-none">
-                                            <h5 class="text-white mb-1 fw-bold"><?php echo htmlspecialchars($slide['title']); ?></h5>
+                                            <h5 class="text-white mb-1 fw-bold"><?php echo $title; ?></h5>
                                             <small class="text-white-80"><?php echo $formattedDate; ?> • <?php echo $formattedTime; ?></small>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- News Content Section (Desktop Right / Mobile Top) -->
+                                <!-- News Content Section -->
                                 <div class="col-md-6 order-md-2 order-1">
                                     <div class="card-body p-3 p-md-4 h-100 d-flex flex-column position-relative">
-                                        <!-- विशेष Badge - Top Right Corner -->
+                                        <!-- विशेष Badge -->
                                         <div class="special-badge position-absolute top-0 end-0 m-3">
                                             <span class="badge bg-warning text-dark fs-6 px-3 py-2 fw-bold">
                                                 विशेष
                                             </span>
                                         </div>
                                         
-                                        <!-- News Title (Hidden on mobile - shown on image overlay) -->
+                                        <!-- News Title -->
                                         <h4 class="card-title text-primary fw-bold mb-3 mt-2 d-none d-md-block">
-                                            <?php echo htmlspecialchars($slide['title']); ?>
+                                            <?php echo $title; ?>
                                         </h4>
                                         
                                         <!-- News Content/Summary -->
                                         <div class="news-content flex-grow-1 mt-2 mt-md-0">
                                             <p class="card-text fs-5 d-none d-md-block" style="text-align: justify; line-height: 1.6; color: #495057;">
                                                 <?php 
-                                                $summary = htmlspecialchars($slide['summary']);
-                                                if (strlen($summary) > 220) { // Increased character limit for taller cards
-                                                    $summary = substr($summary, 0, 220) . '...';
+                                                if (mb_strlen($summary) > 220) {
+                                                    echo mb_substr($summary, 0, 220) . '...';
+                                                } else {
+                                                    echo $summary;
                                                 }
-                                                echo $summary;
                                                 ?>
                                             </p>
-                                            <!-- Mobile Summary (shorter) -->
+                                            <!-- Mobile Summary -->
                                             <p class="card-text d-md-none" style="line-height: 1.5; color: #495057;">
                                                 <?php 
-                                                $summary = htmlspecialchars($slide['summary']);
-                                                if (strlen($summary) > 150) { // Increased for mobile too
-                                                    $summary = substr($summary, 0, 150) . '...';
+                                                if (mb_strlen($summary) > 150) {
+                                                    echo mb_substr($summary, 0, 150) . '...';
+                                                } else {
+                                                    echo $summary;
                                                 }
-                                                echo $summary;
                                                 ?>
                                             </p>
                                         </div>
@@ -186,12 +235,12 @@ function getImageUrl($url) {
                                                         <div class="w-100">
                                                             <a href="#" class="publisher-name text-decoration-none" 
                                                                data-news-id="<?php echo $newsId; ?>"
-                                                               onclick="viewPublisherNews(event, <?php echo $newsId; ?>, '<?php echo htmlspecialchars(addslashes($slide['published_by'])); ?>')">
+                                                               onclick="viewPublisherNews(event, <?php echo $newsId; ?>, '<?php echo addslashes($publishedBy); ?>')">
                                                                 <p class="mb-0 fw-bold text-truncate text-dark hover-primary">
-                                                                    <?php echo htmlspecialchars($slide['published_by']); ?>
+                                                                    <?php echo $publishedBy; ?>
                                                                 </p>
                                                             </a>
-                                                            <!-- Date & Time in same line -->
+                                                            <!-- Date & Time -->
                                                             <div class="d-flex align-items-center mt-1">
                                                                 <i class="bi bi-calendar3 text-secondary me-2"></i>
                                                                 <span class="text-muted small">
@@ -208,15 +257,15 @@ function getImageUrl($url) {
                                                         <!-- Share Button -->
                                                         <button class="share-btn btn btn-sm btn-outline-secondary" 
                                                                 data-news-id="<?php echo $newsId; ?>"
-                                                                data-news-title="<?php echo htmlspecialchars($slide['title']); ?>"
+                                                                data-news-title="<?php echo $title; ?>"
                                                                 data-share-url="<?php echo $fullShareUrl; ?>"
-                                                                onclick="shareNews(event, <?php echo $newsId; ?>, '<?php echo htmlspecialchars(addslashes($slide['title'])); ?>', '<?php echo $fullShareUrl; ?>')"
+                                                                onclick="shareNews(event, <?php echo $newsId; ?>, '<?php echo addslashes($title); ?>', '<?php echo $fullShareUrl; ?>')"
                                                                 title="Share this news">
                                                             <i class="bi bi-share me-1"></i> Share
                                                         </button>
                                                         
                                                         <!-- Read More Button -->
-                                                        <a href="news.php?id=<?php echo $newsId; ?>" 
+                                                        <a href="<?php echo $viewsUrl; ?>" 
                                                            class="read-more-btn btn btn-sm btn-outline-primary"
                                                            data-news-id="<?php echo $newsId; ?>"
                                                            onclick="viewNewsDetail(event, <?php echo $newsId; ?>)">
@@ -250,7 +299,7 @@ function getImageUrl($url) {
             <?php endif; ?>
         </div>
         
-        <!-- Navigation Arrows (only show if there are slides) -->
+        <!-- Navigation Arrows -->
         <?php if (count($slides) > 1): ?>
             <button class="carousel-control-prev" type="button" data-bs-target="#newsCarousel" data-bs-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>
@@ -329,7 +378,7 @@ function getImageUrl($url) {
         background: linear-gradient(135deg, #ff5722, #ff9800);
     }
     
-    /* Card styling - Increased height */
+    /* Card styling */
     .card {
         border: 1px solid #e9ecef !important;
         height: auto;
@@ -582,58 +631,34 @@ function getImageUrl($url) {
 
 <!-- JavaScript for Carousel, Navigation, and Share Functionality -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const carousel = document.getElementById('newsCarousel');
-    const slides = <?php echo count($slides); ?>;
-    
-    if (slides > 1) {
-        // Pause carousel on hover (desktop only)
-        if (window.innerWidth >= 768) {
-            carousel.addEventListener('mouseenter', function() {
-                const carouselInstance = bootstrap.Carousel.getInstance(carousel);
-                if (carouselInstance) {
-                    carouselInstance.pause();
-                }
-            });
-            
-            carousel.addEventListener('mouseleave', function() {
-                const carouselInstance = bootstrap.Carousel.getInstance(carousel);
-                if (carouselInstance) {
-                    carouselInstance.cycle();
-                }
-            });
-        }
-        
-        // Initialize carousel with options
-        new bootstrap.Carousel(carousel, {
-            interval: 6000,
-            wrap: true,
-            touch: true,
-            pause: window.innerWidth >= 768 ? 'hover' : false
-        });
-    }
-    
-    // Adjust carousel for mobile/desktop on resize
-    window.addEventListener('resize', function() {
-        const carouselInstance = bootstrap.Carousel.getInstance(carousel);
-        if (carouselInstance) {
-            carouselInstance._config.pause = window.innerWidth >= 768 ? 'hover' : false;
-        }
-    });
-});
+// Global flag to prevent double navigation
+let isNavigating = false;
 
 // Function to handle Read More button click
 function viewNewsDetail(event, newsId) {
     event.preventDefault();
     
-    // Get the current news ID
+    // Prevent multiple clicks
+    if (isNavigating) {
+        console.log('Already navigating, please wait...');
+        return;
+    }
+    
+    isNavigating = true;
+    
     console.log('Viewing news detail for ID:', newsId);
     
-    // Construct the URL
-    const newsUrl = `news.php?id=${newsId}`;
+    // Get the URL from the clicked button
+    const button = event.currentTarget;
+    const newsUrl = button.getAttribute('href');
     
     // Redirect to news detail page
     window.location.href = newsUrl;
+    
+    // Reset navigation flag after 2 seconds (in case redirect fails)
+    setTimeout(() => {
+        isNavigating = false;
+    }, 2000);
 }
 
 // Function to handle Publisher name click
@@ -648,7 +673,7 @@ function viewPublisherNews(event, newsId, publisherName) {
     // window.location.href = `publisher.php?name=${encodeURIComponent(publisherName)}`;
 }
 
-// Function to share news
+// Function to share news - FIXED VERSION
 function shareNews(event, newsId, newsTitle, shareUrl) {
     event.preventDefault();
     event.stopPropagation();
@@ -679,9 +704,17 @@ function shareNews(event, newsId, newsTitle, shareUrl) {
     }
 }
 
-// Function to show share modal
+// Function to show share modal - FIXED VERSION
 function showShareModal(newsTitle, shareUrl) {
-    // Create modal HTML with updated colors
+    console.log('Showing share modal for:', newsTitle);
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('shareModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create modal HTML
     const modalHTML = `
         <div class="modal fade" id="shareModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -690,7 +723,7 @@ function showShareModal(newsTitle, shareUrl) {
                         <h5 class="modal-title text-dark fw-bold">
                             <i class="bi bi-share-fill me-2"></i> Share News
                         </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
@@ -724,12 +757,6 @@ function showShareModal(newsTitle, shareUrl) {
         </div>
     `;
     
-    // Remove existing modal if any
-    const existingModal = document.getElementById('shareModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
     // Add modal to body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
@@ -738,90 +765,166 @@ function showShareModal(newsTitle, shareUrl) {
     const modal = new bootstrap.Modal(modalElement);
     modal.show();
     
-    // Focus on input
-    setTimeout(() => {
-        const input = document.getElementById('shareUrlInput');
-        if (input) input.select();
-    }, 500);
-    
-    // Add event listeners after modal is shown
+    // Set up modal event listeners after it's shown
     modalElement.addEventListener('shown.bs.modal', function() {
+        console.log('Share modal shown');
+        
+        // Focus and select the URL input
+        const urlInput = document.getElementById('shareUrlInput');
+        if (urlInput) {
+            urlInput.focus();
+            urlInput.select();
+        }
+        
         // Copy URL button
         const copyBtn = document.getElementById('copyUrlBtn');
         if (copyBtn) {
             copyBtn.addEventListener('click', function() {
                 const input = document.getElementById('shareUrlInput');
-                input.select();
-                document.execCommand('copy');
-                
-                // Show feedback
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Copied!';
-                copyBtn.classList.remove('btn-dark');
-                copyBtn.classList.add('btn-success');
-                
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalText;
-                    copyBtn.classList.remove('btn-success');
-                    copyBtn.classList.add('btn-dark');
-                }, 2000);
+                if (input) {
+                    input.select();
+                    navigator.clipboard.writeText(input.value).then(() => {
+                        // Show feedback
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Copied!';
+                        copyBtn.classList.remove('btn-dark');
+                        copyBtn.classList.add('btn-success');
+                        
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                            copyBtn.classList.remove('btn-success');
+                            copyBtn.classList.add('btn-dark');
+                        }, 2000);
+                    }).catch(err => {
+                        // Fallback for older browsers
+                        document.execCommand('copy');
+                        
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<i class="bi bi-check-circle"></i> Copied!';
+                        copyBtn.classList.remove('btn-dark');
+                        copyBtn.classList.add('btn-success');
+                        
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                            copyBtn.classList.remove('btn-success');
+                            copyBtn.classList.add('btn-dark');
+                        }, 2000);
+                    });
+                }
             });
         }
         
-        // Social share buttons
-        document.querySelectorAll('.share-facebook').forEach(btn => {
-            btn.addEventListener('click', function() {
+        // Facebook share button
+        const facebookBtn = modalElement.querySelector('.share-facebook');
+        if (facebookBtn) {
+            facebookBtn.addEventListener('click', function() {
                 const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
                 window.open(url, '_blank', 'width=600,height=400');
             });
-        });
+        }
         
-        document.querySelectorAll('.share-twitter').forEach(btn => {
-            btn.addEventListener('click', function() {
+        // Twitter share button
+        const twitterBtn = modalElement.querySelector('.share-twitter');
+        if (twitterBtn) {
+            twitterBtn.addEventListener('click', function() {
                 const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(newsTitle)}&url=${encodeURIComponent(shareUrl)}`;
                 window.open(url, '_blank', 'width=600,height=400');
             });
-        });
+        }
         
-        document.querySelectorAll('.share-whatsapp').forEach(btn => {
-            btn.addEventListener('click', function() {
+        // WhatsApp share button
+        const whatsappBtn = modalElement.querySelector('.share-whatsapp');
+        if (whatsappBtn) {
+            whatsappBtn.addEventListener('click', function() {
                 const url = `https://wa.me/?text=${encodeURIComponent(newsTitle + ' ' + shareUrl)}`;
                 window.open(url, '_blank', 'width=600,height=400');
             });
-        });
+        }
     });
     
     // Clean up modal when closed
     modalElement.addEventListener('hidden.bs.modal', function() {
-        modalElement.remove();
+        console.log('Share modal hidden');
+        if (modalElement && modalElement.parentNode) {
+            modalElement.parentNode.removeChild(modalElement);
+        }
     });
 }
 
-// Add click event listeners to all Read More buttons
-document.querySelectorAll('.read-more-btn').forEach(button => {
-    button.addEventListener('click', function(e) {
-        const newsId = this.getAttribute('data-news-id');
-        viewNewsDetail(e, newsId);
+// Initialize carousel when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const carousel = document.getElementById('newsCarousel');
+    const slides = <?php echo count($slides); ?>;
+    
+    console.log('Carousel initialized with', slides, 'slides');
+    
+    if (slides > 1) {
+        // Pause carousel on hover (desktop only)
+        if (window.innerWidth >= 768) {
+            carousel.addEventListener('mouseenter', function() {
+                const carouselInstance = bootstrap.Carousel.getInstance(carousel);
+                if (carouselInstance) {
+                    carouselInstance.pause();
+                }
+            });
+            
+            carousel.addEventListener('mouseleave', function() {
+                const carouselInstance = bootstrap.Carousel.getInstance(carousel);
+                if (carouselInstance) {
+                    carouselInstance.cycle();
+                }
+            });
+        }
+        
+        // Initialize carousel with options
+        const carouselInstance = new bootstrap.Carousel(carousel, {
+            interval: 6000,
+            wrap: true,
+            touch: true,
+            pause: window.innerWidth >= 768 ? 'hover' : false
+        });
+        
+        console.log('Carousel instance created');
+    }
+    
+    // Adjust carousel for mobile/desktop on resize
+    window.addEventListener('resize', function() {
+        const carouselInstance = bootstrap.Carousel.getInstance(carousel);
+        if (carouselInstance) {
+            carouselInstance._config.pause = window.innerWidth >= 768 ? 'hover' : false;
+        }
     });
-});
-
-// Add click event listeners to all Share buttons
-document.querySelectorAll('.share-btn').forEach(button => {
-    button.addEventListener('click', function(e) {
-        const newsId = this.getAttribute('data-news-id');
-        const newsTitle = this.getAttribute('data-news-title');
-        const shareUrl = this.getAttribute('data-share-url');
-        shareNews(e, newsId, newsTitle, shareUrl);
+    
+    // Add click event listeners to all Read More buttons
+    document.querySelectorAll('.read-more-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const newsId = this.getAttribute('data-news-id');
+            console.log('Read More clicked for ID:', newsId);
+            viewNewsDetail(e, newsId);
+        });
     });
-});
-
-// Add click event listeners to all Publisher names
-document.querySelectorAll('.publisher-name').forEach(link => {
-    link.addEventListener('click', function(e) {
-        const newsId = this.getAttribute('data-news-id');
-        const publisherName = this.querySelector('.hover-primary').textContent;
-        viewPublisherNews(e, newsId, publisherName);
+    
+    // Add click event listeners to all Share buttons
+    document.querySelectorAll('.share-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const newsId = this.getAttribute('data-news-id');
+            const newsTitle = this.getAttribute('data-news-title');
+            const shareUrl = this.getAttribute('data-share-url');
+            console.log('Share clicked for ID:', newsId, 'Title:', newsTitle);
+            shareNews(e, newsId, newsTitle, shareUrl);
+        });
     });
+    
+    // Add click event listeners to all Publisher names
+    document.querySelectorAll('.publisher-name').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const newsId = this.getAttribute('data-news-id');
+            const publisherName = this.querySelector('.hover-primary').textContent;
+            viewPublisherNews(e, newsId, publisherName);
+        });
+    });
+    
+    console.log('Event listeners attached');
 });
 
 // Keyboard navigation support
@@ -829,7 +932,7 @@ document.addEventListener('keydown', function(e) {
     const carousel = document.getElementById('newsCarousel');
     const carouselInstance = bootstrap.Carousel.getInstance(carousel);
     
-    if (carouselInstance && slides > 1) {
+    if (carouselInstance && <?php echo count($slides); ?> > 1) {
         if (e.key === 'ArrowLeft') {
             e.preventDefault();
             carouselInstance.prev();
@@ -848,6 +951,13 @@ document.addEventListener('keydown', function(e) {
                 modalInstance.hide();
             }
         }
+    }
+});
+
+// Handle page visibility to reset navigation flag
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        isNavigating = false;
     }
 });
 </script>

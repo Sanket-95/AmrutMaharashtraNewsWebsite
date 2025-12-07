@@ -47,11 +47,11 @@ $categories = [
 ?>
 
 <style>
-/* Categories Navbar Styles Only - WITH LIGHTER ORANGE THEME */
+/* Categories Navbar Styles Only - MODIFIED TO ORANGE BACKGROUND */
 .categories-navbar {
-    border-top: 1px solid #fed7aa;
-    border-bottom: 2px solid #fed7aa;
-    background: #fffaf0; /* Lighter orange shade */
+    border-top: 1px solid #f97316;
+    border-bottom: 2px solid #f97316;
+    background: #f97316; /* CHANGED: Orange background */
     position: sticky;
     top: 120px; /* CHANGED: Position below navbar */
     z-index: 900; /* CHANGED: Lower than navbar z-index */
@@ -67,7 +67,7 @@ $categories = [
 }
 
 .category-link {
-    color: #7c2d12;
+    color: #000000; /* CHANGED: Black text color */
     text-decoration: none;
     font-weight: 500;
     padding: 6px 10px;
@@ -83,9 +83,9 @@ $categories = [
 }
 
 .category-link.active {
-    color: #c2410c;
+    color: #ffffff; /* CHANGED: White text for active */
     font-weight: 600;
-    background-color: rgba(249, 115, 22, 0.08); /* Lighter background */
+    background-color: rgba(255, 255, 255, 0.15); /* Light white overlay */
 }
 
 .category-link.active:after,
@@ -96,14 +96,14 @@ $categories = [
     left: 10%;
     width: 80%;
     height: 2px;
-    background-color: #f97316;
+    background-color: #ffffff; /* CHANGED: White underline */
     transform-origin: center;
     animation: underlineAnimation 0.3s ease forwards;
 }
 
 .category-link:hover {
-    color: #ea580c;
-    background-color: rgba(249, 115, 22, 0.03); /* Lighter hover */
+    color: #ffffff; /* CHANGED: White text on hover */
+    background-color: rgba(255, 255, 255, 0.1); /* Light white overlay */
     transform: translateY(-1px);
 }
 
@@ -114,7 +114,7 @@ $categories = [
     left: 10%;
     width: 0;
     height: 2px;
-    background-color: #f97316;
+    background-color: #ffffff; /* CHANGED: White underline */
     transition: width 0.3s ease;
 }
 
@@ -123,11 +123,11 @@ $categories = [
 }
 
 .contact-btn {
-    background: linear-gradient(135deg, #fb923c, #f97316);
-    border: 1px solid #fb923c;
-    color: white;
+    background: linear-gradient(135deg, #ffffff, #f0f0f0); /* Light gradient */
+    border: 1px solid #ffffff;
+    color: #f97316; /* Orange text color */
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600; /* Made bolder */
     padding: 7px 14px;
     border-radius: 6px;
     transition: all 0.3s ease;
@@ -139,30 +139,30 @@ $categories = [
     white-space: nowrap;
     margin-left: 12px;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .contact-btn i {
     margin-right: 6px;
-    color: white;
+    color: #f97316; /* Orange icon color */
     transition: all 0.3s ease;
 }
 
 .contact-btn:hover {
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    color: white;
+    background: linear-gradient(135deg, #f97316, #ea580c); /* Orange gradient on hover */
+    color: #ffffff; /* White text on hover */
     border-color: #f97316;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
+    box-shadow: 0 4px 8px rgba(249, 115, 22, 0.4);
 }
 
 .contact-btn:hover i {
-    color: white;
+    color: #ffffff; /* White icon on hover */
 }
 
 .mobile-contact-btn {
     display: none;
-    background: linear-gradient(135deg, #fb923c, #f97316);
+    background: linear-gradient(135deg, #f97316, #ea580c); /* Orange gradient */
     color: white;
     border: none;
     padding: 12px 15px;
@@ -170,14 +170,15 @@ $categories = [
     margin-top: 10px;
     width: 100%;
     text-align: center;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
+    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
 }
 
 .mobile-contact-btn i {
     margin-right: 8px;
+    color: white;
 }
 
 @keyframes underlineAnimation {
@@ -188,9 +189,9 @@ $categories = [
 /* HAMBURGER MENU STYLES - TEXT REMOVED, ONLY ICON */
 .mobile-categories-toggle {
     display: none;
-    background: #fffaf0; /* Same lighter orange as navbar */
-    border: 1px solid #fed7aa;
-    color: #7c2d12;
+    background: #f97316; /* CHANGED: Same orange as navbar */
+    border: 1px solid #ffffff;
+    color: #ffffff;
     font-size: 16px;
     cursor: pointer;
     padding: 10px 12px;
@@ -198,7 +199,7 @@ $categories = [
     height: 50px;
     font-weight: 600;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     align-items: center;
     justify-content: center;
     margin: 5px auto;
@@ -216,7 +217,7 @@ $categories = [
     display: block;
     height: 3px;
     width: 100%;
-    background-color: #c2410c; /* Orange color */
+    background-color: #ffffff; /* CHANGED: White color */
     border-radius: 2px;
     transition: all 0.3s ease;
 }
@@ -248,25 +249,26 @@ $categories = [
 
 .mobile-categories-menu {
     display: none;
-    background: white;
-    border-top: 2px solid #fed7aa;
+    background: #f97316; /* CHANGED: Orange background */
+    border-top: 2px solid #ffffff;
     padding: 15px;
     max-height: 400px;
     overflow-y: auto;
     border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .mobile-categories-menu .category-link {
     display: block;
     padding: 12px 15px;
-    border-bottom: 1px solid #fed7aa;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3); /* Light white border */
     white-space: normal;
     font-size: 15px;
     margin: 0;
     border-radius: 6px;
     margin-bottom: 5px;
     transition: all 0.3s ease;
+    color: #000000; /* Black text */
 }
 
 .mobile-categories-menu .category-link:last-child {
@@ -274,20 +276,22 @@ $categories = [
 }
 
 .mobile-categories-menu .category-link:hover {
-    background-color: rgba(249, 115, 22, 0.05); /* Lighter hover */
+    background-color: rgba(255, 255, 255, 0.2); /* Light white overlay */
+    color: #ffffff; /* White text on hover */
     transform: translateX(5px);
 }
 
 .mobile-categories-menu .category-link.active {
-    background-color: rgba(249, 115, 22, 0.1); /* Lighter active */
-    border-left: 4px solid #f97316;
+    background-color: rgba(255, 255, 255, 0.25); /* More white overlay for active */
+    color: #ffffff; /* White text for active */
+    border-left: 4px solid #ffffff;
 }
 
 /* Responsive adjustments for top value */
 @media (max-width: 768px) {
     .categories-navbar {
         top: 110px; /* Smaller navbar height on mobile */
-        background: #fffaf0; /* Same lighter orange */
+        background: #f97316; /* Same orange */
         padding: 5px 0;
     }
     .categories-container { display: none; }
@@ -319,7 +323,7 @@ $categories = [
     .mobile-categories-toggle { display: none !important; }
 }
 
-/* DARKER GRAY BACKGROUND FOR DYNAMIC CATEGORY SECTIONS */
+/* DARKER GRAY BACKGROUND FOR DYNAMIC CATEGORY SECTIONS - KEPT SAME */
 .category-section {
     background-color: #f1f5f9 !important; /* Darker gray */
     border-radius: 10px;
