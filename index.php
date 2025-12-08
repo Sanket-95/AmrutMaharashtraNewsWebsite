@@ -3,6 +3,7 @@ include 'components/header.php';
 include 'components/navbar.php';
 include 'components/db_config.php';
 
+
 // Fetch top news for carousel
 $top_news_query = "SELECT 
     news_id,

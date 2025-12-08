@@ -171,11 +171,11 @@ if (empty($slides)) {
                             <div class="row g-0 flex-md-row flex-column-reverse">
                                 <!-- Image Section -->
                                 <div class="col-md-6 order-md-1 order-2">
-                                    <div class="image-container position-relative h-100">
+                                    <div class="image-container position-relative h-100 d-flex align-items-center justify-content-center">
                                         <img src="<?php echo $imageUrl; ?>" 
-                                             class="img-fluid w-100 h-100" 
+                                             class="img-fluid w-100" 
                                              alt="<?php echo $title; ?>" 
-                                             style="object-fit: cover; min-height: 320px; max-height: 320px;"
+                                             style="object-fit: contain; min-height: 320px; max-height: 320px;"
                                              onerror="this.onerror=null; this.src='<?php echo $fallbackImages[0]; ?>';">
                                         <!-- Overlay Gradient -->
                                         <div class="position-absolute bottom-0 start-0 end-0 bg-gradient-to-top from-black/50 to-transparent p-3 d-md-none">
@@ -437,9 +437,21 @@ if (empty($slides)) {
         transform: rotate(-20deg);
     }
     
-    /* Image container */
+    /* Image container - UPDATED FOR FULL IMAGE DISPLAY */
     .image-container {
         overflow: hidden;
+        background-color: #f8f9fa; /* Background color for empty spaces */
+        position: relative;
+    }
+    
+    .image-container img {
+        object-fit: contain !important; /* Changed from 'cover' to 'contain' */
+        width: auto;
+        max-width: 100%;
+        height: auto;
+        max-height: 320px;
+        display: block;
+        margin: 0 auto; /* Center the image */
     }
     
     /* Gradient overlay for mobile */
@@ -504,10 +516,18 @@ if (empty($slides)) {
             height: 35px;
         }
         
-        .image-container img {
+        .image-container {
             min-height: 250px;
             max-height: 250px;
             border-radius: 0 0 0.5rem 0.5rem;
+        }
+        
+        .image-container img {
+            max-height: 250px;
+            min-height: 250px;
+            object-fit: contain !important;
+            width: auto;
+            max-width: 100%;
         }
         
         .card-body {
@@ -544,10 +564,23 @@ if (empty($slides)) {
             height: 320px;
         }
         
+        .image-container {
+            border-radius: 0.375rem 0 0 0.375rem;
+            min-height: 320px;
+            max-height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+        }
+        
         .image-container img {
             border-radius: 0.375rem 0 0 0.375rem;
             min-height: 320px;
             max-height: 320px;
+            object-fit: contain !important;
+            width: auto;
+            max-width: 100%;
         }
         
         .card-body {
@@ -594,6 +627,16 @@ if (empty($slides)) {
         .card-title {
             font-size: 1.6rem;
             line-height: 1.3;
+        }
+        
+        .image-container {
+            min-height: 340px;
+            max-height: 340px;
+        }
+        
+        .image-container img {
+            min-height: 340px;
+            max-height: 340px;
         }
     }
     
