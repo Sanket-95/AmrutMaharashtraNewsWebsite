@@ -17,6 +17,6 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 // Redirect to login page with logout message
-header('Location: ../login.php?logout=1');
+header('Location: ../Login.php?logout=1');
 exit();
 ?>
