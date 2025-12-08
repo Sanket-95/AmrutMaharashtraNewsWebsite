@@ -155,7 +155,8 @@ if (empty($slides)) {
                     
                     // Generate URLs
                     $baseUrl = '/AmrutMaharashtra/';
-                    $viewsUrl = $baseUrl . 'backend/views.php?id=' . $newsId;
+                    // $viewsUrl = $baseUrl . 'backend/views.php?id=' . $newsId;
+                    $viewsUrl = 'backend/views.php?id=' . $newsId;
                     $fullShareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
                                    "://$_SERVER[HTTP_HOST]" . $baseUrl . "backend/views.php?id=" . $newsId;
                     
