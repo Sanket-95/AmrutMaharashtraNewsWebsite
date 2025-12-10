@@ -34,12 +34,12 @@
                 <ul class="list-unstyled">
                     <li class="mb-2">
                         <a href="index.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-house-door me-2"></i> मुख्यपृष्ठ
+                            <i class="bi bi-house-door me-2"></i> मुख्य पृष्ठ
                         </a>
                     </li>
                     <li class="mb-2">
                         <a href="about.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-info-circle me-2"></i> आमच्या दिशयी
+                            <i class="bi bi-info-circle me-2"></i> आमच्याविषयी
                         </a>
                     </li>
                     <li class="mb-2">

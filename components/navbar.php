@@ -691,14 +691,14 @@
                         
                         <!-- Desktop Heading (hidden on mobile) -->
                         <h2 class="main-heading d-none d-md-block">
-                            महाराष्ट्र शंशोधन उन्नती प्रशिक्षण प्रबोधीनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
+                            महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
                         </h2>
                         
                         <!-- Mobile Heading (3 lines, visible only on mobile) -->
                         <div class="d-md-none mobile-heading-wrapper">
                             <!-- Line 2: Main part (bold) -->
                             <div class="mobile-heading-line-2">
-                                महाराष्ट्र शंशोधन उन्नती प्रशिक्षण प्रबोधीनी <span class="amrut-orange">(अमृत)</span>
+                                महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span>
                             </div>
                             
                             <!-- Line 3: Secondary part (lighter) -->

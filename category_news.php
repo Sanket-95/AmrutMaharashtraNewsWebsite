@@ -7,7 +7,7 @@ include 'components/db_config.php';
 
 // Category mapping array
 $category_map = [
-    'home' => 'मुख्यपृष्ठ',
+    'home' => 'मुख्य पृष्ठ',
     'amrut_events' => 'अमृत घडामोडी',
     'beneficiary_story' => 'लाभार्थी स्टोरी',
     'today_special' => 'दिनविशेष',
@@ -163,7 +163,7 @@ if ($news_result && $news_result->num_rows > 0) {
         <!-- Home Button on Left -->
         <div>
             <a href="index.php" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-home"></i> मुख्यपृष्ठ
+                <i class="fas fa-home"></i> मुख्य पृष्ठ
             </a>
         </div>
         

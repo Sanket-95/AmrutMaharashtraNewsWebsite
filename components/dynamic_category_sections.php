@@ -149,8 +149,10 @@ $total_counts_by_category = getTotalNewsCountByCategory($conn);
 
 // Function to generate news card HTML
 function generateNewsCard($news) {
-    // Default image if URL is empty or invalid
-    $default_image = 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80';
+    // LOCAL default image path
+    $default_image = 'photos/noimg.jpeg';
+    
+    // Check if image URL is valid and not empty
     $image_url = !empty($news['cover_photo_url']) ? $news['cover_photo_url'] : $default_image;
     
     // Format date
@@ -168,12 +170,11 @@ function generateNewsCard($news) {
     return '
     <div class="col-md-6 col-lg-4 mb-4 news-item">
         <div class="card h-100 shadow-sm border-0 news-card card-hover">
-            <div class="position-relative overflow-hidden">
+            <div class="position-relative overflow-hidden card-image-container">
                 <img src="' . htmlspecialchars($image_url) . '" 
-                     class="card-img-top" 
+                     class="card-img-top news-image" 
                      alt="' . htmlspecialchars($news['title']) . '" 
-                     style="height: 220px; object-fit: cover;"
-                     onerror="this.src=\'' . $default_image . '\'">
+                     onerror="this.onerror=null; this.src=\'' . $default_image . '\'">
                 <div class="image-overlay"></div>
             </div>
             <div class="card-body p-4" style="min-height: 280px;">
@@ -312,7 +313,7 @@ function generateNewsCard($news) {
                                   overflow: hidden;
                                   text-decoration: none;">
                             <i class="bi bi-newspaper me-2"></i>
-                            या श्रेणीच्या सर्व बातम्या पहा
+                            या विभागातील सर्व मजकूर पाहा
                             <i class="bi bi-arrow-right-circle ms-2"></i>
                         </a>
                     </div>
@@ -338,7 +339,7 @@ function generateNewsCard($news) {
                                                  class="img-fluid" 
                                                  alt="<?php echo htmlspecialchars($ad['alt']); ?>"
                                                  style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                                 onerror="this.onerror=null; this.src='<?php echo $index == 0 ? 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' : 'https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'; ?>'">
+                                                 onerror="this.onerror=null; this.src='<?php echo $index == 0 ? 'photos/noimg.jpeg' : 'photos/noimg.jpeg'; ?>'">
                                         </div>
                                     </div>
                                 </a>
@@ -419,6 +420,31 @@ function generateNewsCard($news) {
     transition: all 0.3s ease;
 }
 
+/* Image Container and Image Styles - FIXED */
+.card-image-container {
+    height: 220px;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background-color: #f8f9fa; /* Light background for images with transparency */
+}
+
+.news-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Changed to cover for better cropping */
+    transition: transform 0.5s ease;
+    background-color: #f8f9fa; /* Fallback background */
+}
+
+/* Center images with "contain" for certain aspect ratios */
+.news-image[src*="noimg.jpeg"],
+.news-image[onerror*="noimg.jpeg"] {
+    object-fit: contain;
+    padding: 10px;
+    background-color: #f8f9fa;
+}
+
 /* News Cards */
 .news-card {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -426,6 +452,10 @@ function generateNewsCard($news) {
     overflow: hidden;
     border: 1px solid #dee2e6 !important;
     height: 100%;
+}
+
+.card-hover:hover .news-image {
+    transform: scale(1.05);
 }
 
 .card-hover:hover {
@@ -497,6 +527,17 @@ function generateNewsCard($news) {
     margin-bottom: 1.5rem !important;
 }
 
+/* Image fallback styling */
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 100%);
+    pointer-events: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 992px) {
     .col-lg-4 {
@@ -506,6 +547,10 @@ function generateNewsCard($news) {
     
     .section-header h2 {
         font-size: 1.7rem;
+    }
+    
+    .card-image-container {
+        height: 200px;
     }
 }
 
@@ -538,7 +583,7 @@ function generateNewsCard($news) {
         min-height: 250px !important;
     }
     
-    .card-img-top {
+    .card-image-container {
         height: 180px !important;
     }
     
@@ -576,6 +621,18 @@ body {
 
 .card-hover:hover {
     animation: float 0.3s ease-in-out;
+}
+
+/* Ensure images don't break layout */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* For better image handling */
+.news-card .card-img-top {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
 }
 </style>
 
@@ -671,6 +728,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         card.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Image error handling
+    const images = document.querySelectorAll('.news-image');
+    images.forEach(img => {
+        img.addEventListener('error', function() {
+            // Check if already using default image
+            if (!this.src.includes('noimg.jpeg')) {
+                this.src = 'photos/noimg.jpeg';
+                this.style.objectFit = 'contain';
+                this.style.padding = '10px';
+                this.style.backgroundColor = '#f8f9fa';
+            }
         });
     });
 });

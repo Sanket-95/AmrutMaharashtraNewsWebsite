@@ -79,7 +79,7 @@ $marathi_categories = [
     'tourism' => 'पर्यटन',
     'amrut_service' => 'अमृत सेवा कार्य',
     'about_us' => 'आमच्या दिशयी',
-    'home' => 'मुख्यपृष्ठ'
+    'home' => 'मुख्य पृष्ठ'
 ];
 
 // Get Marathi category name
@@ -614,7 +614,7 @@ $count_stmt->close();
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="index.php"><i class="bi bi-house-door"></i> मुख्यपृष्ठ</a>
+                    <a href="index.php"><i class="bi bi-house-door"></i> मुख्य पृष्ठ</a>
                 </li>
                 <li class="breadcrumb-item active" aria-current="page">
                     <?php echo htmlspecialchars(mb_substr($news['title'], 0, 50)) . (mb_strlen($news['title']) > 50 ? '...' : ''); ?>

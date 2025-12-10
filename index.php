@@ -30,19 +30,19 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
 
 // Define categories array - WITHOUT about_us
 $categories = [
-    ['label' => 'मुख्यपृष्ठ', 'value' => 'home'],
+    ['label' => 'मुख्य पृष्ठ', 'value' => 'home'],
     ['label' => 'अमृत घडामोडी', 'value' => 'amrut_events'],
-    ['label' => 'लाभार्थी स्टोरी', 'value' => 'beneficiary_story'],
+    ['label' => 'लाभार्थ्यांचे अनुभवामृत', 'value' => 'beneficiary_story'],
     ['label' => 'दिनविशेष', 'value' => 'today_special'],
     ['label' => 'यशस्वी उद्योजक', 'value' => 'successful_entrepreneur'],
-    ['label' => 'शब्दांमृत', 'value' => 'words_amrut'],
+    ['label' => 'शब्दामृत', 'value' => 'words_amrut'],
     ['label' => 'स्मार्ट शेतकरी', 'value' => 'smart_farmer'],
     ['label' => 'सक्षम विद्यार्थी', 'value' => 'capable_student'],
     ['label' => 'अध्यात्म', 'value' => 'spirituality'],
     ['label' => 'सामाजिक परिवर्तक', 'value' => 'social_situation'],
     ['label' => 'स्त्रीशक्ती', 'value' => 'women_power'],
     ['label' => 'पर्यटन', 'value' => 'tourism'],
-    ['label' => 'अमृत सेवा कार्य', 'value' => 'amrut_service']
+    ['label' => 'अमृत सेवाकार्य', 'value' => 'amrut_service']
     // Removed about_us from array - will be added manually
 ];
 ?>
@@ -373,7 +373,7 @@ $categories = [
             <?php endforeach; ?>
             <!-- MANUALLY ADDED: About Us link with redirect -->
             <a href="about_us.php" class="category-link">
-                आमच्या विषयी
+                आमच्याविषयी
             </a>
             <a href="javascript:void(0);" class="contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
@@ -397,7 +397,7 @@ $categories = [
             <?php endforeach; ?>
             <!-- MANUALLY ADDED: About Us link with redirect -->
             <a href="about_us.php" class="category-link">
-                आमच्या विषयी
+                आमच्याविषयी
             </a>
             <a href="javascript:void(0);" class="mobile-contact-btn">
                 <i class="bi bi-bell"></i> संपर्क साधा
