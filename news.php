@@ -85,6 +85,20 @@ $marathi_categories = [
 // Get Marathi category name
 $category_marathi = $marathi_categories[$news['category_name']] ?? 'अमृत कार्यदीप';
 
+// FETCH RELATED NEWS - योग्य क्वेरी
+$related_query = "SELECT news_id, title, cover_photo_url, category_name 
+                  FROM `news_articles` 
+                  WHERE category_name = ? 
+                  AND news_id <> ? 
+                  ORDER BY published_date DESC 
+                  LIMIT 6";
+
+$related_stmt = $conn->prepare($related_query);
+$related_stmt->bind_param("si", $news['category_name'], $news_id);
+$related_stmt->execute();
+$related_result = $related_stmt->get_result();
+$related_news_count = $related_result->num_rows;
+
 // Include header
 include 'components/header.php';
 include 'components/navbar.php';
@@ -417,6 +431,109 @@ $count_stmt->close();
             font-size: 14px;
         }
         
+        /* RELATED NEWS STYLES */
+        .related-news-section {
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 2px solid #ff6600;
+        }
+        
+        .section-title {
+            color: #2c3e50;
+            font-weight: 700;
+            margin-bottom: 30px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .section-title:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 80px;
+            height: 3px;
+            background: #ff6600;
+        }
+        
+        .related-news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .related-news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            height: 100%;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .related-news-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .related-news-image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .related-news-card:hover .related-news-image {
+            transform: scale(1.05);
+        }
+        
+        .related-news-content {
+            padding: 20px;
+        }
+        
+        .related-news-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 16px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .related-news-category {
+            display: inline-block;
+            background: #ff6600;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .no-related-news {
+            text-align: center;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            color: #666;
+        }
+        
+        .no-related-news i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #ccc;
+        }
+        
         /* Custom Toastify styles */
         .custom-toast {
             border-radius: 8px;
@@ -469,6 +586,17 @@ $count_stmt->close();
             
             .meta-divider {
                 display: none;
+            }
+            
+            .related-news-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .related-news-grid {
+                grid-template-columns: 1fr;
             }
         }
         
@@ -627,6 +755,42 @@ $count_stmt->close();
                     <i class="bi bi-check-circle-fill text-success"></i> लिंक कॉपी झाला!
                 </small>
             </div>
+        </div>
+
+        <!-- RELATED NEWS SECTION -->
+        <div class="related-news-section">
+            <h3 class="section-title">
+                <i class="bi bi-newspaper"></i> संबंधित बातम्या
+            </h3>
+            
+            <?php if ($related_news_count > 0): ?>
+                <div class="related-news-grid">
+                    <?php while ($related_news = $related_result->fetch_assoc()): ?>
+                        <a href="news.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
+                            <div class="related-news-image-container" style="overflow: hidden; height: 160px;">
+                                <img src="<?php echo !empty($related_news['cover_photo_url']) ? htmlspecialchars($related_news['cover_photo_url']) : $default_cover_image; ?>" 
+                                     alt="<?php echo htmlspecialchars($related_news['title']); ?>"
+                                     class="related-news-image"
+                                     onerror="this.onerror=null; this.src='<?php echo $default_cover_image; ?>';">
+                            </div>
+                            <div class="related-news-content">
+                                <h5 class="related-news-title">
+                                    <?php echo htmlspecialchars(mb_substr($related_news['title'], 0, 60)) . (mb_strlen($related_news['title']) > 60 ? '...' : ''); ?>
+                                </h5>
+                                <span class="related-news-category">
+                                    <?php echo $marathi_categories[$related_news['category_name']] ?? 'अमृत कार्यदीप'; ?>
+                                </span>
+                            </div>
+                        </a>
+                    <?php endwhile; ?>
+                </div>
+            <?php else: ?>
+                <div class="no-related-news">
+                    <i class="bi bi-newspaper"></i>
+                    <h5>अजून संबंधित बातम्या नाहीत</h5>
+                    <p>या श्रेणीतील इतर बातम्या उपलब्ध नाहीत</p>
+                </div>
+            <?php endif; ?>
         </div>
 
         <!-- Comments Section -->
@@ -964,7 +1128,7 @@ $count_stmt->close();
     
     // Add error handlers to images
     document.addEventListener('DOMContentLoaded', function() {
-        const images = document.querySelectorAll('.news-image');
+        const images = document.querySelectorAll('.news-image, .related-news-image');
         images.forEach(function(img) {
             img.addEventListener('error', function() {
                 handleImageError(this);
@@ -994,6 +1158,18 @@ $count_stmt->close();
                 }
             });
         }
+        
+        // Add hover effect to related news cards
+        const relatedCards = document.querySelectorAll('.related-news-card');
+        relatedCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
     });
     </script>
 
@@ -1011,6 +1187,7 @@ $count_stmt->close();
 // Close database connections
 $stmt->close();
 $comments_stmt->close();
+$related_stmt->close();
 $conn->close();
 include 'components/footer.php';
 ?>
