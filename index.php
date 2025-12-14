@@ -13,7 +13,7 @@ $top_news_query = "SELECT
     published_by,
     published_date
 FROM news_articles
-WHERE category_name = 'today_special' AND is_approved = 1
+WHERE topnews = 1 AND is_approved = 1
 ORDER BY published_date DESC
 LIMIT 10";
 
@@ -372,11 +372,12 @@ $categories = [
                 </a>
             <?php endforeach; ?>
             <!-- MANUALLY ADDED: About Us link with redirect -->
-            <a href="about_us.php" class="category-link">
+            <!-- <a href="about_us.php" class="category-link">
                 आमच्याविषयी
-            </a>
+            </a> -->
             <a href="javascript:void(0);" class="contact-btn">
-                <i class="bi bi-bell"></i> संपर्क साधा
+                <!-- <i class="bi bi-bell"></i> संपर्क साधा -->
+                 <i class="bi bi-bell"></i> संपर्क 
             </a>
         </div>
         <!-- HAMBURGER BUTTON - NO TEXT, ONLY ICON -->
@@ -482,9 +483,35 @@ function filterNews(categoryValue, marathiLabel = '', event = null) {
     return false;
 }
 
+// function goToContact(event) {
+//     if (event) event.preventDefault();
+//     // alert('संपर्क पृष्ठावर नेण्यात येत आहे...');
+//     return false;
+// }
+
 function goToContact(event) {
     if (event) event.preventDefault();
-    alert('संपर्क पृष्ठावर नेण्यात येत आहे...');
+    
+    // Get the footer element
+    const footer = document.querySelector('footer');
+    
+    if (footer) {
+        // Scroll to footer smoothly
+        footer.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start' // Aligns the footer to the top of the viewport
+        });
+        
+        // Optional: Highlight the footer briefly
+        const originalBg = footer.style.backgroundColor;
+        footer.style.transition = 'background-color 0.5s ease';
+        footer.style.backgroundColor = 'rgba(255, 102, 0, 0.1)'; // Light orange highlight
+        
+        setTimeout(() => {
+            footer.style.backgroundColor = originalBg;
+        }, 1500);
+    }
+    
     return false;
 }
 

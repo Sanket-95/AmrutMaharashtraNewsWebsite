@@ -344,9 +344,8 @@ function getMarathiRegionName($regionValue) {
                     <label class="form-label fw-bold" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                         <i class="fas fa-tags me-1"></i> वर्ग निवडा *
                     </label>
-                    <select class="form-select shadow-sm" name="category" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
+                    <select class="form-select shadow-sm" name="category" id="categorySelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                         <option value="">-- वर्ग निवडा --</option>
-                        <option value="home">मुख्यपृष्ठ</option>
                         <option value="amrut_events">अमृत घडामोडी</option>
                         <option value="beneficiary_story">लाभार्थी स्टोरी</option>
                         <option value="today_special">दिनविशेष</option>
@@ -359,6 +358,19 @@ function getMarathiRegionName($regionValue) {
                         <option value="women_power">स्त्रीशक्ती</option>
                         <option value="tourism">पर्यटन</option>
                     </select>
+                </div>
+                
+                <!-- Top News Checkbox -->
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="topnews" id="topNewsCheckbox" value="1" style="transform: scale(1.2);">
+                        <label class="form-check-label fw-bold" for="topNewsCheckbox" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                            <i class="fas fa-star me-1"></i> मुख्य पृष्ठाची टॉप बातमी
+                        </label>
+                        <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                            <i class="fas fa-info-circle"></i> टिक करल्यास ही बातमी मुख्य पृष्ठावर टॉप बातमी म्हणून दिसेल
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- News Title -->
@@ -655,6 +667,17 @@ function getMarathiRegionName($regionValue) {
         background-color: #f8f9fa !important;
         cursor: not-allowed !important;
     }
+    
+    /* Top News checkbox styling */
+    .form-check-input:checked {
+        background-color: #FF6600;
+        border-color: #FF6600;
+    }
+    
+    .form-check-input:focus {
+        border-color: #FFA500;
+        box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25);
+    }
 </style>
 
 <script>
@@ -890,6 +913,9 @@ function getMarathiRegionName($regionValue) {
                     if (publisherInput && !<?php echo $publisher_editable ? 'false' : 'true'; ?>) {
                         publisherInput.value = '<?php echo htmlspecialchars($publisher_value); ?>';
                     }
+                    
+                    // Uncheck topnews checkbox
+                    document.getElementById('topNewsCheckbox').checked = false;
                     
                     coverPreview.style.display = 'none';
                     imagePreviewDiv.innerHTML = '';

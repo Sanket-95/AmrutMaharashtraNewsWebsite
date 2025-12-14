@@ -73,6 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $publisher_name = sanitize_input($_POST['publisher_name']);
         $publish_date = sanitize_input($_POST['publish_date']);
         
+        // Get topnews value (checkbox - 1 if checked, 0 if not)
+        $topnews = isset($_POST['topnews']) ? 1 : 0;
+        
         // Validate required fields
         if (empty($region) || empty($district) || empty($category) || empty($news_title) || 
             empty($news_summary) || empty($full_news) || empty($publisher_name) || empty($publish_date)) {
@@ -159,7 +162,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $conn->set_charset("utf8mb4");
         
-        // Prepare SQL statement
+        // Determine is_approved value based on user role
+        $is_approved = 1; // Default to approved for admin and division_head
+        if (isset($_SESSION['roll']) && $_SESSION['roll'] === 'district_user') {
+            $is_approved = 0; // Not approved for district_user
+        }
+        
+        // Prepare SQL statement - COUNT THE PLACEHOLDERS CAREFULLY
+        // We have: region, district, category, title, cover_photo_url, secondary_photo_url, 
+        // summary, content, published_by, approved_by, published_date, created_at, updated_at, 
+        // is_approved, view, topnews = 16 columns
+        // But VALUES has: ? x 14 + NOW() x 2 + 0 + ? = 16 values total
+        
         $sql = "INSERT INTO news_articles (
                     Region, 
                     district_name, 
@@ -175,17 +189,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     created_at, 
                     updated_at, 
                     is_approved, 
-                    view
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), 1, 0)";
+                    view,
+                    topnews
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), ?, 0, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            throw new Exception('SQL स्टेटमेंट तयार करताना त्रुटी');
+            throw new Exception('SQL स्टेटमेंट तयार करताना त्रुटी: ' . $conn->error);
         }
         
-        // Bind parameters
+        // Debug: Check parameter count
+        // We need 12 parameters: 10 strings + 1 integer (is_approved) + 1 integer (topnews)
+        // Let me count: 1.region(s), 2.district(s), 3.category(s), 4.title(s), 5.cover_photo_url(s), 
+        // 6.secondary_photo_url(s), 7.summary(s), 8.content(s), 9.publisher_name(s), 
+        // 10.publish_date(s), 11.is_approved(i), 12.topnews(i) = 12 total
+        
         $stmt->bind_param(
-            "ssssssssss",
+            "ssssssssssii", // 12 parameters: 10 strings + 2 integers
             $region,
             $district,
             $category,
@@ -195,12 +215,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $news_summary,
             $full_news,
             $publisher_name,
-            $publish_date
+            $publish_date,
+            $is_approved,
+            $topnews
         );
         
         // Execute statement
         if (!$stmt->execute()) {
-            throw new Exception('डेटाबेसमध्ये डेटा घालताना त्रुटी');
+            throw new Exception('डेटाबेसमध्ये डेटा घालताना त्रुटी: ' . $stmt->error);
         }
         
         $stmt->close();

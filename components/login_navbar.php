@@ -187,7 +187,19 @@ if (isset($_SESSION['user_id'])) {
                         
                         <div class="user-info-item">
                             <div class="user-info-label">Role</div>
-                            <div class="user-info-value"><?php echo htmlspecialchars(ucfirst($user_roll)); ?></div>
+                            <div class="user-info-value">
+                                <?php 
+                                if ($user_roll === 'admin') {
+                                    echo 'Admin';
+                                } elseif ($user_roll === 'division_head') {
+                                    echo 'Divisional Head';
+                                } elseif ($user_roll === 'district_user') {
+                                    echo 'Publisher';
+                                } else {
+                                    echo htmlspecialchars(ucfirst($user_roll));
+                                }
+                                ?>
+                            </div>
                         </div>
                         
                         <div class="user-info-item">

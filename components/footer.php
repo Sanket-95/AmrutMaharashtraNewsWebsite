@@ -5,10 +5,10 @@
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="footer-logo">
                     <h3 class="text-orange mb-3">
-                        <i class="bi bi-buildings-fill"></i> अमृत महाराष्ट्र
+                        <i class="bi bi-buildings-fill"></i> Amrut Maharashtra
                     </h3>
                     <p class="text-light mb-3">
-                        शासकीय बातमी व माहिती पोर्टल<br>
+                        Government News & Information Portal<br>
                         Official News & Information Portal
                     </p>
                     <div class="social-links">
@@ -28,75 +28,49 @@
                 </div>
             </div>
             
-            <!-- Column 2: Quick Links -->
+            <!-- Column 2: Quick Links - Home Page and About Us -->
             <div class="col-lg-2 col-md-6 mb-4">
-                <h5 class="text-orange mb-3">द्रुत लिंक्स</h5>
+                <h5 class="text-orange mb-3">Quick Links</h5>
                 <ul class="list-unstyled">
                     <li class="mb-2">
                         <a href="index.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-house-door me-2"></i> मुख्य पृष्ठ
+                            <i class="bi bi-house-door me-2"></i> Home Page
                         </a>
                     </li>
                     <li class="mb-2">
-                        <a href="about.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-info-circle me-2"></i> आमच्याविषयी
-                        </a>
-                    </li>
-                    <li class="mb-2">
-                        <a href="contact.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-telephone me-2"></i> संपर्क
-                        </a>
-                    </li>
-                    <li class="mb-2">
-                        <a href="news.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-newspaper me-2"></i> सर्व बातम्या
+                        <a href="http://localhost/AmrutMaharashtra/about_us.php" class="text-white text-decoration-none hover-orange">
+                            <i class="bi bi-info-circle me-2"></i> About Us
                         </a>
                     </li>
                 </ul>
             </div>
             
-            <!-- Column 3: Policies & Terms -->
+            <!-- Column 3: Policies & Terms - REMOVED -->
             <div class="col-lg-2 col-md-6 mb-4">
-                <h5 class="text-orange mb-3">धोरणे</h5>
-                <ul class="list-unstyled">
-                    <li class="mb-2">
-                        <a href="privacy_policy.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-shield-check me-2"></i> गोपनीयता धोरण
-                        </a>
-                    </li>
-                    <li class="mb-2">
-                        <a href="terms_conditions.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-file-text me-2"></i> अटी व शर्ती
-                        </a>
-                    </li>
-                    <li class="mb-2">
-                        <a href="disclaimer.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-exclamation-triangle me-2"></i> अस्वीकरण
-                        </a>
-                    </li>
-                    <li class="mb-2">
-                        <a href="accessibility.php" class="text-white text-decoration-none hover-orange">
-                            <i class="bi bi-universal-access me-2"></i> सुलभता
-                        </a>
-                    </li>
-                </ul>
+                <!-- Empty column for layout consistency -->
             </div>
             
-            <!-- Column 4: Contact Info -->
+            <!-- Column 4: Contact Info - UPDATED -->
             <div class="col-lg-4 col-md-6 mb-4">
-                <h5 class="text-orange mb-3">संपर्क माहिती</h5>
+                <h5 class="text-orange mb-3">Contact Information</h5>
                 <ul class="list-unstyled">
-                    <li class="mb-3">
-                        <i class="bi bi-geo-alt text-orange me-2"></i>
-                        <span>मंत्रालय भवन, मुंबई, महाराष्ट्र</span>
-                    </li>
                     <li class="mb-3">
                         <i class="bi bi-envelope text-orange me-2"></i>
-                        <span>contact@amrutmaharashtra.gov.in</span>
+                        <span>Email: info@mahaamrut.org.in</span>
                     </li>
                     <li class="mb-3">
-                        <i class="bi bi-telephone text-orange me-2"></i>
-                        <span>टोल फ्री: 1800-XXX-XXXX</span>
+                        <i class="bi bi-phone text-orange me-2"></i>
+                        <span>Mobile: +91 9112226524</span>
+                    </li>
+                    <li class="mb-3">
+                        <i class="bi bi-globe text-orange me-2"></i>
+                        <span>Website: https://amrutmaharashtra.org/</span>
+                    </li>
+                    <li class="mb-3">
+                        <i class="bi bi-geo-alt text-orange me-2"></i>
+                        <span>Location: Academy Of Maharashtra Research, Upliftment & Training (Amrut),<br>
+                              Maharaja Sayajirao Gaikwad Udyog Bhavan,<br>
+                              Fifth Floor, Aundh, Pune 411067.</span>
                     </li>
                 </ul>
             </div>
@@ -109,10 +83,10 @@
         <div class="row">
             <div class="col-md-6">
                 <p class="mb-0">
-                    &copy; <?php echo date('Y'); ?> अमृत महाराष्ट्र सरकार. सर्व हक्क राखीव.
+                    &copy; <?php echo date('Y'); ?> Amrut Maharashtra Government. All rights reserved.
                 </p>
                 <p class="text-light small">
-                    <i class="bi bi-info-circle"></i> ही अधिकृत शासकीय वेबसाइट आहे.
+                    <i class="bi bi-info-circle"></i> This is an official government website.
                 </p>
             </div>
            
@@ -171,6 +145,13 @@
         cursor: default;
     }
     
+    /* Location text styling */
+    ul.list-unstyled li span {
+        display: inline-block;
+        vertical-align: top;
+        width: calc(100% - 30px);
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .footer-logo h3 {
@@ -186,6 +167,12 @@
             width: 36px;
             height: 36px;
             line-height: 36px;
+            font-size: 0.9rem;
+        }
+        
+        /* Adjust location text on mobile */
+        ul.list-unstyled li span {
+            width: calc(100% - 25px);
             font-size: 0.9rem;
         }
     }
@@ -248,7 +235,7 @@
                 
                 if (!isValid) {
                     e.preventDefault();
-                    alert('कृपया सर्व आवश्यक फील्ड भरा.');
+                    alert('Please fill all required fields.');
                 }
             });
         });
@@ -260,7 +247,20 @@
                 this.style.transition = 'all 0.3s ease';
             });
         });
+        
+        // Make website links clickable
+        document.querySelectorAll('footer span').forEach(span => {
+            if (span.textContent.includes('http')) {
+                const text = span.textContent;
+                const url = text.substring(text.indexOf('http'));
+                const displayText = text.substring(0, text.indexOf('http'));
+                
+                span.innerHTML = displayText + 
+                    '<a href="' + url + '" class="text-white text-decoration-underline" target="_blank" rel="noopener noreferrer">' + 
+                    url + '</a>';
+            }
+        });
     });
 </script>
 </body>
-</html> 
+</html>

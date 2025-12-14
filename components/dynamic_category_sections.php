@@ -75,20 +75,16 @@ $advertisements = [
 
 // Function to get latest news for each category (max 3 per category)
 function getLatestNewsByCategory($conn) {
-    // Get latest date news for each category
-    $query = "SELECT n1.* 
-              FROM news_articles n1 
-              INNER JOIN (
-                  SELECT category_name, MAX(DATE(published_date)) as latest_date 
-                  FROM news_articles 
-                  WHERE DATE(published_date) <= CURDATE() 
-                  AND is_approved = 1 
-                  GROUP BY category_name
-              ) n2 ON n1.category_name = n2.category_name 
-                     AND DATE(n1.published_date) = n2.latest_date 
-              WHERE DATE(n1.published_date) <= CURDATE() 
-              AND n1.is_approved = 1 
-              ORDER BY n1.category_name, n1.published_date DESC";
+    // Get latest 3 news for each category regardless of date
+    $query = "SELECT * FROM (
+                SELECT n.*, 
+                       ROW_NUMBER() OVER (PARTITION BY category_name ORDER BY published_date DESC) as row_num
+                FROM news_articles n
+                WHERE n.is_approved = 1 
+                AND DATE(n.published_date) <= CURDATE()
+              ) ranked_news
+              WHERE row_num <= 3
+              ORDER BY category_name, published_date DESC";
     
     $result = $conn->query($query);
     
@@ -96,27 +92,17 @@ function getLatestNewsByCategory($conn) {
         return [];
     }
     
-    $all_news = [];
-    while($row = $result->fetch_assoc()) {
-        $all_news[] = $row;
-    }
-    
-    // Group by category and limit to 3 per category
     $grouped_news = [];
-    $category_counts = [];
-    
-    foreach ($all_news as $news) {
-        $category = $news['category_name'];
+    while($row = $result->fetch_assoc()) {
+        // Remove the row_num from the result
+        unset($row['row_num']);
+        $category = $row['category_name'];
         
-        if (!isset($category_counts[$category])) {
-            $category_counts[$category] = 0;
+        if (!isset($grouped_news[$category])) {
             $grouped_news[$category] = [];
         }
         
-        if ($category_counts[$category] < 3) {
-            $grouped_news[$category][] = $news;
-            $category_counts[$category]++;
-        }
+        $grouped_news[$category][] = $row;
     }
     
     return $grouped_news;
@@ -147,44 +133,102 @@ function getTotalNewsCountByCategory($conn) {
 $latest_news_by_category = getLatestNewsByCategory($conn);
 $total_counts_by_category = getTotalNewsCountByCategory($conn);
 
+// Function to clean text encoding issues
+function cleanText($text) {
+    if (empty($text)) return '';
+    
+    // Convert to UTF-8 if not already
+    if (!mb_detect_encoding($text, 'UTF-8', true)) {
+        $text = mb_convert_encoding($text, 'UTF-8', 'auto');
+    }
+    
+    // Remove any invalid UTF-8 characters
+    $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+    
+    // Remove replacement characters and other invalid sequences
+    $text = preg_replace('/[^\x{0000}-\x{FFFF}]/u', '', $text);
+    
+    // Trim and return
+    return trim($text);
+}
+
+// Function to check if image exists and is valid
+function isValidImage($url) {
+    if (empty($url) || $url === null) {
+        return false;
+    }
+    
+    $url = trim($url);
+    
+    // Check if it's a valid URL format
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        // Check if it's a local file path
+        if (file_exists($url)) {
+            // Check if it's an image file
+            $imageInfo = @getimagesize($url);
+            return $imageInfo !== false;
+        }
+        return false;
+    }
+    
+    // For remote URLs, we'll check with JavaScript
+    // Return true initially and let JS handle errors
+    return true;
+}
+
 // Function to generate news card HTML
 function generateNewsCard($news) {
-    // LOCAL default image path
-    $default_image = 'photos/noimg.jpeg';
-    
-    // Check if image URL is valid and not empty
-    $image_url = !empty($news['cover_photo_url']) ? $news['cover_photo_url'] : $default_image;
+    // Check if image URL is valid
+    $has_image = !empty($news['cover_photo_url']) && isValidImage($news['cover_photo_url']);
+    $image_url = $has_image ? $news['cover_photo_url'] : '';
     
     // Format date
     $formatted_date = date('d M Y', strtotime($news['published_date']));
     
     // Get published by
-    $published_by = !empty($news['published_by']) ? $news['published_by'] : 'अमृत महाराष्ट्र';
+    $published_by = !empty($news['published_by']) ? cleanText($news['published_by']) : 'अमृत महाराष्ट्र';
     
-    // Truncate summary if too long (show 4 lines)
-    $summary = !empty($news['summary']) ? $news['summary'] : '';
+    // Clean and truncate summary
+    $summary = !empty($news['summary']) ? cleanText($news['summary']) : '';
     if (strlen($summary) > 250) {
         $summary = substr($summary, 0, 247) . '...';
     }
     
-    return '
+    // Clean title
+    $title = cleanText($news['title']);
+    
+    // Generate unique ID for this card
+    $card_id = 'news-card-' . $news['news_id'];
+    
+    // Start building the card HTML
+    $html = '
     <div class="col-md-6 col-lg-4 mb-4 news-item">
-        <div class="card h-100 shadow-sm border-0 news-card card-hover">
-            <div class="position-relative overflow-hidden card-image-container">
-                <img src="' . htmlspecialchars($image_url) . '" 
-                     class="card-img-top news-image" 
-                     alt="' . htmlspecialchars($news['title']) . '" 
-                     onerror="this.onerror=null; this.src=\'' . $default_image . '\'">
+        <div class="card h-100 shadow-sm border-0 news-card card-hover" id="' . $card_id . '">';
+    
+    // Only add image container if image exists
+    if ($has_image) {
+        $html .= '
+            <div class="position-relative overflow-hidden card-image-container" style="height: 220px;">
+                <div class="h-100 w-100 d-flex align-items-center justify-content-center">
+                    <img src="' . htmlspecialchars($image_url) . '" 
+                         class="card-img-top news-image" 
+                         alt="' . htmlspecialchars($title) . '" 
+                         data-card-id="' . $card_id . '"
+                         onerror="handleImageError(this, \'' . $card_id . '\')">
+                </div>
                 <div class="image-overlay"></div>
-            </div>
-            <div class="card-body p-4" style="min-height: 280px;">
+            </div>';
+    }
+    
+    $html .= '
+            <div class="card-body p-4" style="' . ($has_image ? 'min-height: 280px;' : 'min-height: 380px; padding-top: 2rem !important;') . '">
                 <h6 class="card-title fw-bold text-dark mb-3" style="font-family: \'Noto Sans Devanagari\', sans-serif; font-size: 1.15rem; font-weight: 700; line-height: 1.4; min-height: 70px;">
-                    ' . htmlspecialchars($news['title']) . '
+                    ' . htmlspecialchars($title) . '
                 </h6>
-                <p class="card-text text-muted mb-3" style="font-family: \'Noto Sans Devanagari\', sans-serif; font-size: 0.95rem; line-height: 1.6; min-height: 100px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;">
+                <p class="card-text text-muted mb-3" style="font-family: \'Noto Sans Devanagari\', sans-serif; font-size: 0.95rem; line-height: 1.6; min-height: 120px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;">
                     ' . htmlspecialchars($summary) . '
                 </p>
-                <div class="d-flex justify-content-between align-items-center mt-auto">
+                <div class="d-flex justify-content-between align-items-center mt-auto pt-3" style="border-top: 1px solid #eaeaea;">
                     <div class="d-flex flex-column">
                         <div class="d-flex align-items-center mb-1">
                             <i class="bi bi-person-circle me-2" style="color: #6c757d;"></i>
@@ -201,8 +245,9 @@ function generateNewsCard($news) {
                 </div>
             </div>
         </div>
-    </div>
-    ';
+    </div>';
+    
+    return $html;
 }
 ?>
 
@@ -420,38 +465,45 @@ function generateNewsCard($news) {
     transition: all 0.3s ease;
 }
 
-/* Image Container and Image Styles - FIXED */
+/* Image Container and Image Styles - Show full photo without cropping */
 .card-image-container {
     height: 220px;
     width: 100%;
     overflow: hidden;
     position: relative;
-    background-color: #f8f9fa; /* Light background for images with transparency */
-}
-
-.news-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Changed to cover for better cropping */
-    transition: transform 0.5s ease;
-    background-color: #f8f9fa; /* Fallback background */
-}
-
-/* Center images with "contain" for certain aspect ratios */
-.news-image[src*="noimg.jpeg"],
-.news-image[onerror*="noimg.jpeg"] {
-    object-fit: contain;
-    padding: 10px;
     background-color: #f8f9fa;
 }
 
-/* News Cards */
+.card-image-container > div {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.news-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Shows full image without cropping */
+    transition: transform 0.5s ease;
+    background-color: #f8f9fa;
+}
+
+/* News Cards - Different heights based on image presence */
 .news-card {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid #dee2e6 !important;
     height: 100%;
+}
+
+/* Cards without images */
+.news-card:not(:has(.card-image-container)) .card-body {
+    padding-top: 2.5rem !important;
 }
 
 .card-hover:hover .news-image {
@@ -480,6 +532,13 @@ function generateNewsCard($news) {
     color: white;
     transform: translateX(3px);
     text-decoration: none;
+}
+
+/* Footer info */
+.news-card .card-body > div:last-child {
+    border-top: 1px solid #eaeaea;
+    padding-top: 1rem;
+    margin-top: auto;
 }
 
 /* ADVERTISEMENT SECTION - SHOW FULL IMAGE */
@@ -552,6 +611,10 @@ function generateNewsCard($news) {
     .card-image-container {
         height: 200px;
     }
+    
+    .news-card:not(:has(.card-image-container)) .card-body {
+        min-height: 360px !important;
+    }
 }
 
 @media (max-width: 768px) {
@@ -583,6 +646,11 @@ function generateNewsCard($news) {
         min-height: 250px !important;
     }
     
+    .news-card:not(:has(.card-image-container)) .card-body {
+        min-height: 340px !important;
+        padding-top: 1.5rem !important;
+    }
+    
     .card-image-container {
         height: 180px !important;
     }
@@ -610,6 +678,8 @@ html {
 
 body {
     font-family: 'Noto Sans Devanagari', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Animation for card hover */
@@ -629,14 +699,47 @@ img {
     height: auto;
 }
 
-/* For better image handling */
-.news-card .card-img-top {
-    background-color: #f8f9fa;
-    transition: all 0.3s ease;
+/* For better text rendering */
+.card-title, .card-text {
+    text-rendering: optimizeLegibility;
+}
+
+/* Card content alignment */
+.news-card .card-body {
+    display: flex;
+    flex-direction: column;
 }
 </style>
 
 <script>
+// Function to handle image loading errors by removing the entire image container
+function handleImageError(imgElement, cardId) {
+    // Find the card by ID
+    const card = document.getElementById(cardId);
+    if (card) {
+        // Find the image container
+        const imageContainer = card.querySelector('.card-image-container');
+        if (imageContainer) {
+            // Remove the entire image container
+            imageContainer.remove();
+            
+            // Adjust the card body to take full height
+            const cardBody = card.querySelector('.card-body');
+            if (cardBody) {
+                cardBody.style.minHeight = '380px';
+                cardBody.style.paddingTop = '2rem !important';
+                
+                // Adjust text container height
+                const textContainer = cardBody.querySelector('.card-text');
+                if (textContainer) {
+                    textContainer.style.minHeight = '120px';
+                    textContainer.style.webkitLineClamp = '5';
+                }
+            }
+        }
+    }
+}
+
 // Function to scroll to category
 function scrollToDynamicCategory(categoryValue) {
     const categorySection = document.getElementById(`category-${categoryValue}`);
@@ -731,18 +834,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Image error handling
+    // Pre-check images that might be broken
     const images = document.querySelectorAll('.news-image');
     images.forEach(img => {
-        img.addEventListener('error', function() {
-            // Check if already using default image
-            if (!this.src.includes('noimg.jpeg')) {
-                this.src = 'photos/noimg.jpeg';
-                this.style.objectFit = 'contain';
-                this.style.padding = '10px';
-                this.style.backgroundColor = '#f8f9fa';
-            }
-        });
+        // Add error handler if not already present
+        if (!img.hasAttribute('onerror')) {
+            const cardId = img.closest('.news-card')?.id || '';
+            img.setAttribute('onerror', `handleImageError(this, '${cardId}')`);
+        }
+        
+        // Pre-load image to check if it loads successfully
+        const tempImage = new Image();
+        tempImage.src = img.src;
+        tempImage.onerror = function() {
+            // If image fails to load, trigger error handler
+            const cardId = img.getAttribute('data-card-id') || img.closest('.news-card')?.id || '';
+            handleImageError(img, cardId);
+        };
+    });
+    
+    // Force UTF-8 encoding for Marathi text
+    document.querySelectorAll('.card-title, .card-text, small').forEach(element => {
+        const text = element.textContent;
+        if (text.includes('�')) {
+            // Try to fix encoding issues
+            element.textContent = text.replace(/�/g, '');
+        }
     });
 });
 </script>
