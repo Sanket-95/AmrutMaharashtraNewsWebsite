@@ -157,18 +157,60 @@ if (isset($_SESSION['user_id'])) {
     $user_roll = $_SESSION['roll'] ?? '';
     $user_location = $_SESSION['location'] ?? '';
     
-    $show_news_button = ($user_roll !== 'district_user');
+    // Get current page filename
+    $current_page = basename($_SERVER['PHP_SELF']);
+    
+    // Define which pages should show which buttons
+    $news_approval_pages = ['newsapproval.php', 'newsapproval_details.php'];
+    $is_news_approval_page = in_array($current_page, $news_approval_pages);
+    
+    // For district_user, only show "नवीन बातमी" button on approval pages
+    // For admin and division_head, show appropriate buttons based on page
     ?>
     
     <div class="login-navbar">
         <div class="login-navbar-content">
-            <?php if ($show_news_button): ?>
-            <a href="newsapproval.php" class="news-btn">
-                <i class="bi bi-newspaper"></i> News
-            </a>
-            <?php else: ?>
-            <div></div>
-            <?php endif; ?>
+            <?php 
+            // Check which button to show based on current page and user role
+            if ($user_roll === 'district_user') {
+                // For district_user, show "नवीन बातमी" button only on approval pages
+                if ($is_news_approval_page) {
+                    ?>
+                    <a href="post_news.php" class="news-btn">
+                        <i class="bi bi-plus-circle"></i> नवीन बातमी
+                    </a>
+                    <?php
+                } else {
+                    ?>
+                    <div></div>
+                    <?php
+                }
+            } else {
+                // For admin and division_head
+                if ($is_news_approval_page) {
+                    // On approval pages, show "नवीन बातमी" button
+                    ?>
+                    <a href="post_news.php" class="news-btn">
+                        <i class="bi bi-plus-circle"></i> नवीन बातमी
+                    </a>
+                    <?php
+                } elseif ($current_page === 'post_news.php') {
+                    // On post_news.php page, show "News" button (to go to approval page)
+                    ?>
+                    <a href="newsapproval.php" class="news-btn">
+                        <i class="bi bi-newspaper"></i> बातमी
+                    </a>
+                    <?php
+                } else {
+                    // On other pages, show "News" button
+                    ?>
+                    <a href="newsapproval.php" class="news-btn">
+                        <i class="bi bi-newspaper"></i> बातमी
+                    </a>
+                    <?php
+                }
+            }
+            ?>
             
             <div class="profile-container">
                 <button class="profile-btn" id="profileButton">
@@ -235,4 +277,3 @@ if (isset($_SESSION['user_id'])) {
     </script>
     <?php
 }
-?>
