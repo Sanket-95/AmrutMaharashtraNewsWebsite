@@ -9,81 +9,162 @@ if (!isset($_SESSION['user_id'])) {
 
 include 'components/header.php';
 include 'components/navbar.php';
+include 'components/login_navbar.php';
 include 'components/db_config.php';
 
 // Get user info for display
 $user_name = $_SESSION['name'] ?? 'User';
 $user_roll = $_SESSION['roll'] ?? '';
+$user_location = $_SESSION['location'] ?? '';
+$username = $_SESSION['username'] ?? '';
+
+// DEBUG: Check what's in session
+// echo "Debug: user_roll = $user_roll, user_location = $user_location<br>";
+
+// For division_head, location might be the region name itself, not a district
+// Let's check if location is a region or district
+function getRegionFromLocation($location) {
+    // List of all regions
+    $regions = ['kokan', 'pune', 'sambhajinagar', 'nashik', 'amaravati', 'nagpur'];
+    
+    // If location is directly a region, return it
+    if (in_array($location, $regions)) {
+        return $location;
+    }
+    
+    // Otherwise, try to map district to region
+    $districtToRegion = [
+        // Kokan region districts
+        'palghar' => 'kokan',
+        'thane' => 'kokan',
+        'mumbai_city' => 'kokan',
+        'mumbai_suburban' => 'kokan',
+        'raigad' => 'kokan',
+        'ratnagiri' => 'kokan',
+        'sindhudurg' => 'kokan',
+        
+        // Pune region districts
+        'pune' => 'pune',
+        'satara' => 'pune',
+        'kolhapur' => 'pune',
+        'sangli' => 'pune',
+        'solapur' => 'pune',
+        
+        // Sambhajinagar region districts
+        'chhatrapati_sambhajinagar' => 'sambhajinagar',
+        'beed' => 'sambhajinagar',
+        'jalna' => 'sambhajinagar',
+        'parbhani' => 'sambhajinagar',
+        'hingoli' => 'sambhajinagar',
+        'nanded' => 'sambhajinagar',
+        'latur' => 'sambhajinagar',
+        'dharashiv' => 'sambhajinagar',
+        
+        // Nashik region districts
+        'nashik' => 'nashik',
+        'dhule' => 'nashik',
+        'nandurbar' => 'nashik',
+        'ahmednagar' => 'nashik',
+        'jalgaon' => 'nashik',
+        'ahilyanagar' => 'nashik',
+        
+        // Amaravati region districts
+        'amaravati' => 'amaravati',
+        'akola' => 'amaravati',
+        'buldhana' => 'amaravati',
+        'washim' => 'amaravati',
+        'yavatmal' => 'amaravati',
+        
+        // Nagpur region districts
+        'nagpur' => 'nagpur',
+        'wardha' => 'nagpur',
+        'bhandara' => 'nagpur',
+        'gondia' => 'nagpur',
+        'chandrapur' => 'nagpur',
+        'gadchiroli' => 'nagpur'
+    ];
+    
+    return isset($districtToRegion[$location]) ? $districtToRegion[$location] : '';
+}
+
+// Determine user's region
+$user_region = '';
+if (!empty($user_location)) {
+    $user_region = getRegionFromLocation($user_location);
+}
+
+// DEBUG: Check region determination
+// echo "Debug: Determined user_region = $user_region<br>";
+
+// Determine if publisher name should be editable
+$publisher_editable = ($user_roll === 'admin');
+$publisher_value = $user_name;
+
+// Get Marathi district names for display
+function getMarathiDistrictName($districtValue) {
+    $districtMap = [
+        'palghar' => 'पालघर',
+        'thane' => 'ठाणे',
+        'mumbai_city' => 'मुंबई शहर',
+        'mumbai_suburban' => 'मुंबई उपनगर',
+        'raigad' => 'रायगड',
+        'ratnagiri' => 'रत्नागिरी',
+        'sindhudurg' => 'सिंधुदुर्ग',
+        'pune' => 'पुणे',
+        'satara' => 'सातारा',
+        'kolhapur' => 'कोल्हापूर',
+        'sangli' => 'सांगली',
+        'solapur' => 'सोलापूर',
+        'chhatrapati_sambhajinagar' => 'छत्रपती संभाजीनगर',
+        'beed' => 'बीड',
+        'jalna' => 'जालना',
+        'parbhani' => 'परभणी',
+        'hingoli' => 'हिंगोली',
+        'nanded' => 'नांदेड',
+        'latur' => 'लातूर',
+        'dharashiv' => 'धाराशिव',
+        'nashik' => 'नाशिक',
+        'dhule' => 'धुळे',
+        'nandurbar' => 'नंदुरबार',
+        'ahmednagar' => 'अहमदनगर',
+        'jalgaon' => 'जळगाव',
+        'ahilyanagar' => 'अहिल्यानगर',
+        'amaravati' => 'अमरावती',
+        'akola' => 'अकोला',
+        'buldhana' => 'बुलढाणा',
+        'washim' => 'वाशीम',
+        'yavatmal' => 'यवतमाळ',
+        'nagpur' => 'नागपूर',
+        'wardha' => 'वर्धा',
+        'bhandara' => 'भंडारा',
+        'gondia' => 'गोंदिया',
+        'chandrapur' => 'चंद्रपूर',
+        'gadchiroli' => 'गडचिरोली'
+    ];
+    
+    return isset($districtMap[$districtValue]) ? $districtMap[$districtValue] : $districtValue;
+}
+
+// Get Marathi region names for display
+function getMarathiRegionName($regionValue) {
+    $regionMap = [
+        'kokan' => 'कोकण',
+        'pune' => 'पुणे',
+        'sambhajinagar' => 'संभाजीनगर',
+        'nashik' => 'नाशिक',
+        'amaravati' => 'अमरावती',
+        'nagpur' => 'नागपूर'
+    ];
+    
+    return isset($regionMap[$regionValue]) ? $regionMap[$regionValue] : $regionValue;
+}
 ?>
 
 <div class="container mt-4 mb-5">
-    <!-- Top Bar with Logout Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">नवीन बातमी प्रकाशित करा</h2>
-        
-        <!-- User Info and Logout Button -->
-        <div class="d-flex align-items-center gap-3">
-            <!-- User Info -->
-            <div class="user-info-box" style="
-                background: linear-gradient(135deg, #FFF3E0, #FFE8D6);
-                border: 2px solid #FFD8B5;
-                border-radius: 10px;
-                padding: 8px 15px;
-                font-family: 'Mukta', sans-serif;
-            ">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-user-circle me-2" style="color: #FF6600; font-size: 20px;"></i>
-                    <div>
-                        <div style="font-weight: 600; color: #FF6600; font-size: 16px;">
-                            <?php echo htmlspecialchars($user_name); ?>
-                        </div>
-                        <div style="font-size: 12px; color: #666;">
-                            <i class="fas fa-user-tag me-1"></i>
-                            <?php echo htmlspecialchars($user_roll); ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Logout Button -->
-            <a href="backend/logout.php" class="btn logout-btn-top" style="
-                background: linear-gradient(135deg, #dc3545, #c82333);
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 8px;
-                font-family: 'Mukta', sans-serif;
-                font-weight: 600;
-                text-decoration: none;
-                transition: all 0.3s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            ">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>लॉगआउट</span>
-            </a>
-        </div>
-    </div>
-    
-    <!-- Logout Button Hover Effect -->
-    <style>
-        .logout-btn-top:hover {
-            background: linear-gradient(135deg, #c82333, #dc3545) !important;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(220, 53, 69, 0.3) !important;
-            color: white !important;
-        }
-        
-        .user-info-box {
-            transition: all 0.3s ease;
-        }
-        
-        .user-info-box:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(255, 102, 0, 0.1);
-        }
-    </style>
+    <!-- Title only -->
+    <h2 class="mb-4 text-center" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+        नवीन बातमी प्रकाशित करा
+    </h2>
     
     <div class="card shadow-lg" style="border: 3px solid #FF6600; border-radius: 15px;">
         <div class="card-header text-center py-3" style="background: linear-gradient(135deg, #FF6600, #FF8C00); color: white;">
@@ -100,24 +181,140 @@ $user_roll = $_SESSION['roll'] ?? '';
                         <label class="form-label fw-bold" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                             <i class="fas fa-globe me-1"></i> प्रदेश निवडा *
                         </label>
-                        <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
-                            <option value="">-- प्रदेश निवडा --</option>
-                            <option value="kokan">कोकण</option>
-                            <option value="pune">पुणे</option>
-                            <option value="sambhajinagar">संभाजीनगर</option>
-                            <option value="nashik">नाशिक</option>
-                            <option value="amaravati">अमरावती</option>
-                            <option value="nagpur">नागपूर</option>
-                        </select>
+                        <?php if($user_roll === 'admin'): ?>
+                            <!-- For admin - editable dropdown -->
+                            <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
+                                <option value="">-- प्रदेश निवडा --</option>
+                                <option value="kokan">कोकण</option>
+                                <option value="pune">पुणे</option>
+                                <option value="sambhajinagar">संभाजीनगर</option>
+                                <option value="nashik">नाशिक</option>
+                                <option value="amaravati">अमरावती</option>
+                                <option value="nagpur">नागपूर</option>
+                            </select>
+                        <?php elseif($user_roll === 'division_head'): ?>
+                            <!-- For division_head - auto-filled region from session, but editable -->
+                            <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
+                                <option value="">-- प्रदेश निवडा --</option>
+                                <?php 
+                                $regions = ['kokan', 'pune', 'sambhajinagar', 'nashik', 'amaravati', 'nagpur'];
+                                foreach($regions as $region): ?>
+                                    <option value="<?php echo $region; ?>" <?php echo ($user_location === $region) ? 'selected' : ''; ?>>
+                                        <?php echo getMarathiRegionName($region); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-info-circle"></i> 
+                                <?php if(!empty($user_location)): ?>
+                                    आपला प्रदेश "<?php echo getMarathiRegionName($user_location); ?>" आपोआप निवडला गेला आहे (बदलू शकता)
+                                <?php else: ?>
+                                    कृपया आपला प्रदेश निवडा
+                                <?php endif; ?>
+                            </div>
+                        <?php elseif($user_roll === 'district_user'): ?>
+                            <!-- For district_user - readonly field showing auto-filled region -->
+                            <div class="form-control shadow-sm" style="
+                                border-color: #FFA500; 
+                                font-family: 'Mukta', sans-serif; 
+                                height: 50px;
+                                background-color: #f8f9fa;
+                                display: flex;
+                                align-items: center;
+                                padding: 0.375rem 0.75rem;
+                            ">
+                                <input type="hidden" name="region" value="<?php echo $user_region; ?>">
+                                <span>
+                                    <?php echo getMarathiRegionName($user_region); ?>
+                                </span>
+                            </div>
+                            <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-info-circle"></i> आपल्या जिल्ह्याचा प्रदेश आपोआप भरला गेला आहे
+                            </div>
+                        <?php else: ?>
+                            <!-- Default dropdown for other roles -->
+                            <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
+                                <option value="">-- प्रदेश निवडा --</option>
+                                <option value="kokan">कोकण</option>
+                                <option value="pune">पुणे</option>
+                                <option value="sambhajinagar">संभाजीनगर</option>
+                                <option value="nashik">नाशिक</option>
+                                <option value="amaravati">अमरावती</option>
+                                <option value="nagpur">नागपूर</option>
+                            </select>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="col-md-6">
                         <label class="form-label fw-bold" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                             <i class="fas fa-map-marker-alt me-1"></i> जिल्हा निवडा *
                         </label>
-                        <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;" disabled>
-                            <option value="">-- प्रथम प्रदेश निवडा --</option>
-                        </select>
+                        <?php if($user_roll === 'admin'): ?>
+                            <!-- For admin - dropdown (initially disabled) -->
+                            <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;" disabled>
+                                <option value="">-- प्रथम प्रदेश निवडा --</option>
+                            </select>
+                        <?php elseif($user_roll === 'division_head'): ?>
+                            <!-- For division_head - dropdown shows districts from selected region -->
+                            <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
+                                <option value="">-- जिल्हा निवडा --</option>
+                                <?php 
+                                // Determine which region to show districts for
+                                $region_for_districts = $user_location; // For division_head, location is region
+                                $districts_for_region = [];
+                                
+                                switch($region_for_districts) {
+                                    case 'kokan':
+                                        $districts_for_region = ['palghar', 'thane', 'mumbai_city', 'mumbai_suburban', 'raigad', 'ratnagiri', 'sindhudurg'];
+                                        break;
+                                    case 'pune':
+                                        $districts_for_region = ['pune', 'satara', 'kolhapur', 'sangli', 'solapur'];
+                                        break;
+                                    case 'sambhajinagar':
+                                        $districts_for_region = ['chhatrapati_sambhajinagar', 'beed', 'jalna', 'parbhani', 'hingoli', 'nanded', 'latur', 'dharashiv'];
+                                        break;
+                                    case 'nashik':
+                                        $districts_for_region = ['nashik', 'dhule', 'nandurbar', 'ahmednagar', 'jalgaon', 'ahilyanagar'];
+                                        break;
+                                    case 'amaravati':
+                                        $districts_for_region = ['amaravati', 'akola', 'buldhana', 'washim', 'yavatmal'];
+                                        break;
+                                    case 'nagpur':
+                                        $districts_for_region = ['nagpur', 'wardha', 'bhandara', 'gondia', 'chandrapur', 'gadchiroli'];
+                                        break;
+                                    default:
+                                        $districts_for_region = [];
+                                }
+                                
+                                foreach($districts_for_region as $district): ?>
+                                    <option value="<?php echo $district; ?>"><?php echo getMarathiDistrictName($district); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php elseif($user_roll === 'district_user'): ?>
+                            <!-- For district_user - readonly field showing auto-filled district -->
+                            <div class="form-control shadow-sm" style="
+                                border-color: #FFA500; 
+                                font-family: 'Mukta', sans-serif; 
+                                height: 50px;
+                                background-color: #f8f9fa;
+                                display: flex;
+                                align-items: center;
+                                padding: 0.375rem 0.75rem;
+                            ">
+                                <input type="hidden" name="district" value="<?php echo $user_location; ?>">
+                                <span>
+                                    <?php echo getMarathiDistrictName($user_location); ?>
+                                </span>
+                            </div>
+                            <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-info-circle"></i> आपला जिल्हा आपोआप भरला गेला आहे
+                            </div>
+                        <?php else: ?>
+                            <!-- Default dropdown for other roles -->
+                            <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;" disabled>
+                                <option value="">-- प्रथम प्रदेश निवडा --</option>
+                            </select>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -129,9 +326,17 @@ $user_roll = $_SESSION['roll'] ?? '';
                     <input type="text" 
                            class="form-control shadow-sm" 
                            name="publisher_name" 
+                           value="<?php echo htmlspecialchars($publisher_value); ?>"
                            placeholder="प्रकाशकाचे नाव लिहा..." 
+                           <?php echo $publisher_editable ? '' : 'readonly'; ?>
                            required
-                           style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px; font-size: 16px;">
+                           style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px; font-size: 16px;
+                           <?php echo !$publisher_editable ? 'background-color: #f8f9fa;' : ''; ?>">
+                    <?php if(!$publisher_editable): ?>
+                        <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                            <i class="fas fa-info-circle"></i> आपले नाव आपोआप भरले गेले आहे
+                        </div>
+                    <?php endif; ?>
                 </div>
                 
                 <!-- Category Selection -->
@@ -289,6 +494,24 @@ $user_roll = $_SESSION['roll'] ?? '';
             <small style="font-family: 'Mukta', sans-serif;">
                 <i class="fas fa-info-circle me-1" style="color: #FF6600;"></i>
                 <span class="fw-bold" style="color: #FF6600;">*</span> चिन्हांकित सर्व फील्ड भरणे अनिवार्य आहे
+                <?php if($user_roll === 'division_head'): ?>
+                    <br><span style="color: #FF6600;">
+                        <i class="fas fa-user-shield"></i> प्रदेश प्रमुख: 
+                        <?php if(!empty($user_location)): ?>
+                            आपला प्रदेश "<?php echo getMarathiRegionName($user_location); ?>" आपोआप निवडला गेला आहे (बदलू शकता), जिल्हा निवडू शकता
+                        <?php else: ?>
+                            कृपया आपला प्रदेश निवडा, त्यानंतर जिल्हा निवडू शकता
+                        <?php endif; ?>
+                    </span>
+                <?php elseif($user_roll === 'district_user'): ?>
+                    <br><span style="color: #FF6600;">
+                        <i class="fas fa-map-marker-alt"></i> जिल्हा वापरकर्ता: आपले प्रदेश आणि जिल्हा आपोआप भरले गेले आहेत
+                    </span>
+                <?php elseif($user_roll === 'admin'): ?>
+                    <br><span style="color: #FF6600;">
+                        <i class="fas fa-crown"></i> प्रशासक: सर्व फील्ड संपादन करण्यायोग्य आहेत
+                    </span>
+                <?php endif; ?>
             </small>
         </div>
     </div>
@@ -371,20 +594,8 @@ $user_roll = $_SESSION['roll'] ?? '';
             padding-right: 15px !important;
         }
         
-        /* Responsive top bar */
-        .d-flex.justify-content-between {
-            flex-direction: column !important;
-            gap: 15px !important;
-        }
-        
-        .d-flex.justify-content-between > * {
-            width: 100% !important;
-            text-align: center !important;
-        }
-        
-        .user-info-box, .logout-btn-top {
-            width: 100% !important;
-            justify-content: center !important;
+        h2 {
+            font-size: 1.5rem !important;
         }
     }
     
@@ -395,7 +606,7 @@ $user_roll = $_SESSION['roll'] ?? '';
         }
         
         h2 {
-            font-size: 1.5rem !important;
+            font-size: 1.3rem !important;
         }
         
         h4 {
@@ -437,6 +648,12 @@ $user_roll = $_SESSION['roll'] ?? '';
     .toast-close-button {
         font-size: 18px !important;
         font-weight: bold !important;
+    }
+    
+    /* Role-based styling */
+    .readonly-field {
+        background-color: #f8f9fa !important;
+        cursor: not-allowed !important;
     }
 </style>
 
@@ -576,23 +793,41 @@ $user_roll = $_SESSION['roll'] ?? '';
             ]
         };
         
-        regionSelect.addEventListener('change', function() {
-            const selectedRegion = this.value;
-            districtSelect.innerHTML = '<option value="">-- जिल्हा निवडा --</option>';
+        // Only add event listener for admin (division_head doesn't need dynamic update as districts are pre-loaded)
+        if (regionSelect && districtSelect && '<?php echo $user_roll; ?>' === 'admin') {
+            regionSelect.addEventListener('change', function() {
+                const selectedRegion = this.value;
+                populateDistricts(selectedRegion);
+            });
             
-            if (selectedRegion && districtData[selectedRegion]) {
-                districtSelect.disabled = false;
-                districtData[selectedRegion].forEach(district => {
-                    const option = document.createElement('option');
-                    option.value = district.value;
-                    option.textContent = district.text;
-                    districtSelect.appendChild(option);
-                });
-            } else {
-                districtSelect.disabled = true;
-                districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
+            // Initialize districts if region is already selected
+            const selectedRegion = regionSelect.value;
+            if (selectedRegion) {
+                populateDistricts(selectedRegion);
             }
-        });
+        }
+        
+        // For division_head, districts are already pre-loaded in PHP, no JS needed
+        // For district_user, both fields are readonly
+        
+        function populateDistricts(selectedRegion) {
+            if (districtSelect) {
+                districtSelect.innerHTML = '<option value="">-- जिल्हा निवडा --</option>';
+                
+                if (selectedRegion && districtData[selectedRegion]) {
+                    districtSelect.disabled = false;
+                    districtData[selectedRegion].forEach(district => {
+                        const option = document.createElement('option');
+                        option.value = district.value;
+                        option.textContent = district.text;
+                        districtSelect.appendChild(option);
+                    });
+                } else {
+                    districtSelect.disabled = true;
+                    districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
+                }
+            }
+        }
         
         // Form validation
         const form = document.getElementById('newsForm');
@@ -628,8 +863,34 @@ $user_roll = $_SESSION['roll'] ?? '';
                 // Clear form after success
                 setTimeout(function() {
                     form.reset();
-                    districtSelect.disabled = true;
-                    districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
+                    
+                    // Reset region and district based on user role
+                    const userRoll = '<?php echo $user_roll; ?>';
+                    
+                    if (userRoll === 'admin') {
+                        // For admin, reset both dropdowns
+                        if (regionSelect) {
+                            regionSelect.value = '';
+                        }
+                        if (districtSelect) {
+                            districtSelect.disabled = true;
+                            districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
+                        }
+                    } else if (userRoll === 'division_head') {
+                        // For division_head, reset region to session location
+                        if (regionSelect) {
+                            regionSelect.value = '<?php echo $user_location; ?>';
+                            // Districts will be auto-populated by PHP on page reload
+                        }
+                    }
+                    // For district_user, no reset needed as fields are readonly
+                    
+                    // Set publisher name back to user's name
+                    const publisherInput = document.querySelector('input[name="publisher_name"]');
+                    if (publisherInput && !<?php echo $publisher_editable ? 'false' : 'true'; ?>) {
+                        publisherInput.value = '<?php echo htmlspecialchars($publisher_value); ?>';
+                    }
+                    
                     coverPreview.style.display = 'none';
                     imagePreviewDiv.innerHTML = '';
                     updateCharCount();

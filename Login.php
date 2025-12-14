@@ -13,16 +13,16 @@ $error_message = '';
 $success_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username']);
+    $email = trim($_POST['username']);
     $password = trim($_POST['password']);
     
-    if (empty($username) || empty($password)) {
+    if (empty($email) || empty($password)) {
         $error_message = 'कृपया वापरकर्तानाव आणि पासवर्ड भरा';
     } else {
-        // Query to check user credentials
-        $sql = "SELECT * FROM users WHERE username = ?";
+        // Query to check user credentials from logincrd table
+        $sql = "SELECT * FROM `logincrd` WHERE email = ?";
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $username);
+        $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -32,12 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Verify MD5 password
             if (md5($password) === $user['password']) {
                 // Set session variables
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['name'] = $user['name'];
+                $_SESSION['user_id'] = $user['uid'];
+                $_SESSION['name'] = $user['username'];
                 $_SESSION['roll'] = $user['roll'];
-                $_SESSION['region'] = $user['region'];
-                $_SESSION['district'] = $user['district'];
                 $_SESSION['username'] = $user['username'];
+                $_SESSION['email'] = $user['email'];
+                $_SESSION['location'] = $user['location'];
                 
                 // Redirect based on user role
                 switch ($user['roll']) {
@@ -102,6 +102,7 @@ $conn->close();
             display: flex;
             align-items: center;
             padding: 20px;
+            overflow-y: auto;
         }
         
         .login-container {
@@ -117,6 +118,7 @@ $conn->close();
             box-shadow: 0 15px 35px var(--shadow-orange);
             overflow: hidden;
             transition: transform 0.3s ease;
+            max-height: calc(100vh - 40px);
         }
         
         .login-card:hover {
@@ -177,6 +179,8 @@ $conn->close();
         
         .login-body {
             padding: 30px;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
         }
         
         .form-label {
@@ -268,14 +272,15 @@ $conn->close();
         
         .footer-text {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 20px;
             color: #666;
             font-size: 14px;
+            padding: 10px 0;
         }
         
         /* Decorative elements */
         .decorative-circle {
-            position: absolute;
+            position: fixed;
             border-radius: 50%;
             background: rgba(255, 102, 0, 0.1);
             z-index: -1;
@@ -297,12 +302,22 @@ $conn->close();
         
         /* Responsive adjustments */
         @media (max-width: 576px) {
-            .login-container {
+            body {
                 padding: 10px;
+                overflow-y: auto;
+            }
+            
+            .login-container {
+                padding: 0;
+            }
+            
+            .login-card {
+                max-height: calc(100vh - 20px);
             }
             
             .login-body {
                 padding: 20px;
+                max-height: calc(100vh - 200px);
             }
             
             .login-header {
@@ -321,6 +336,11 @@ $conn->close();
             .login-header h1 {
                 font-size: 24px;
             }
+            
+            .footer-text {
+                margin-top: 15px;
+                font-size: 12px;
+            }
         }
         
         /* Animation for error message */
@@ -332,6 +352,17 @@ $conn->close();
         
         .shake {
             animation: shake 0.5s ease-in-out;
+        }
+        
+        /* Media query for large screens where content fits */
+        @media (min-height: 800px) and (min-width: 992px) {
+            body {
+                overflow-y: hidden;
+            }
+            
+            .login-card {
+                max-height: 90vh;
+            }
         }
     </style>
 </head>
@@ -368,7 +399,7 @@ $conn->close();
                 <?php endif; ?>
                 
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" id="loginForm">
-                    <!-- Username Field -->
+                    <!-- Username Field (but it will check email column) -->
                     <div class="mb-4">
                         <label for="username" class="form-label">
                             <i class="fas fa-user me-1"></i> वापरकर्तानाव
@@ -488,6 +519,31 @@ $conn->close();
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('username').focus();
         });
+        
+        // Adjust body overflow based on screen size
+        function adjustBodyOverflow() {
+            const body = document.body;
+            const loginCard = document.querySelector('.login-card');
+            
+            if (window.innerHeight >= 800 && window.innerWidth >= 992) {
+                // Large screen - check if content fits
+                const cardHeight = loginCard.offsetHeight;
+                const viewportHeight = window.innerHeight;
+                
+                if (cardHeight <= viewportHeight) {
+                    body.style.overflowY = 'hidden';
+                } else {
+                    body.style.overflowY = 'auto';
+                }
+            } else {
+                // Small/medium screen - always allow scrolling
+                body.style.overflowY = 'auto';
+            }
+        }
+        
+        // Run on load and resize
+        window.addEventListener('load', adjustBodyOverflow);
+        window.addEventListener('resize', adjustBodyOverflow);
     </script>
 </body>
 </html>
