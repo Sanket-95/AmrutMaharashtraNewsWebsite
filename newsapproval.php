@@ -22,10 +22,10 @@ include 'components/db_config.php';
 
 // Get user info
 $user_roll = $_SESSION['roll'] ?? '';
-$user_region = $_SESSION['location'] ?? '';
+$user_location = $_SESSION['location'] ?? '';
 
 // DEBUG: Check session values
-// echo "Debug: user_roll = $user_roll, user_region = $user_region<br>";
+// echo "Debug: user_roll = $user_roll, user_location = $user_location<br>";
 
 // Get status filter from URL
 $status_filter = $_GET['status'] ?? 'pending'; // Default: pending
@@ -208,13 +208,13 @@ function getRegionFromLocation($location) {
 }
 
 // Determine user's region from their location
-$user_region_for_filter = '';
-if (!empty($user_region)) {
-    $user_region_for_filter = getRegionFromLocation($user_region);
+$user_region = '';
+if (!empty($user_location)) {
+    $user_region = getRegionFromLocation($user_location);
 }
 
 // DEBUG: Check region determination
-// echo "Debug: user_region_for_filter = $user_region_for_filter<br>";
+// echo "Debug: user_region = $user_region<br>";
 
 // Fetch news based on status and user role
 function fetchNews($conn, $status, $user_roll, $user_region) {
@@ -236,9 +236,6 @@ function fetchNews($conn, $status, $user_roll, $user_region) {
                 $news[] = $row;
             }
             $stmt->close();
-        } else {
-            // Handle prepare error
-            // echo "Debug: Prepare failed for admin<br>";
         }
     } elseif ($user_roll === 'division_head') {
         // Division head can see news from their region only
@@ -253,14 +250,8 @@ function fetchNews($conn, $status, $user_roll, $user_region) {
                 $news[] = $row;
             }
             $stmt->close();
-        } else {
-            // Handle prepare error
-            // echo "Debug: Prepare failed for division_head<br>";
         }
     }
-    
-    // DEBUG: Count news fetched
-    // echo "Debug: Fetched " . count($news) . " news items<br>";
     
     return $news;
 }
@@ -274,6 +265,7 @@ function getNewsCounts($conn, $user_roll, $user_region) {
     ];
     
     if ($user_roll === 'admin' || $user_roll === 'Admin') {
+        // Admin: Count all news
         $sql = "SELECT is_approved, COUNT(*) as count FROM news_articles GROUP BY is_approved";
         $result = $conn->query($sql);
         if ($result) {
@@ -285,6 +277,7 @@ function getNewsCounts($conn, $user_roll, $user_region) {
             }
         }
     } elseif ($user_roll === 'division_head') {
+        // Division Head: Count only news from their region
         $sql = "SELECT is_approved, COUNT(*) as count FROM news_articles WHERE Region = ? GROUP BY is_approved";
         $stmt = $conn->prepare($sql);
         if ($stmt) {
@@ -307,8 +300,8 @@ function getNewsCounts($conn, $user_roll, $user_region) {
     return $counts;
 }
 
-$news_items = fetchNews($conn, $current_status, $user_roll, $user_region_for_filter);
-$news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
+$news_items = fetchNews($conn, $current_status, $user_roll, $user_region);
+$news_counts = getNewsCounts($conn, $user_roll, $user_region);
 
 // DEBUG: Check news counts
 // echo "Debug: pending={$news_counts['pending']}, approved={$news_counts['approved']}, disapproved={$news_counts['disapproved']}<br>";
@@ -324,10 +317,27 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#helpModal">
                 <i class="fas fa-question-circle me-1"></i> मदत
             </button>
-            <a href="post_news.php" class="btn btn-sm" style="background: linear-gradient(135deg, #FF6600, #FF8C00); color: white;">
+            <!-- <a href="post_news.php" class="btn btn-sm" style="background: linear-gradient(135deg, #FF6600, #FF8C00); color: white;">
                 <i class="fas fa-plus me-1"></i> नवीन बातमी
-            </a>
+            </a> -->
         </div>
+    </div>
+    
+    <!-- User Role Info Badge -->
+    <div class="mb-4 text-center">
+        <span class="badge rounded-pill px-4 py-2" 
+              style="font-size: 16px; font-family: 'Mukta', sans-serif; 
+                     background: linear-gradient(135deg, #6c757d, #495057);
+                     color: white;">
+            <i class="fas fa-user-shield me-1"></i>
+            <?php 
+            if ($user_roll === 'admin' || $user_roll === 'Admin') {
+                echo 'प्रशासक - सर्व बातम्या';
+            } elseif ($user_roll === 'division_head') {
+                echo 'प्रदेश प्रमुख - ' . getMarathiRegionName($user_region) . ' विभाग';
+            }
+            ?>
+        </span>
     </div>
     
     <!-- Status Filter Tabs -->
@@ -400,7 +410,6 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
             <?php foreach ($news_items as $news): ?>
                 <div class="col">
                     <div class="card h-100 shadow news-card" 
-                         data-news-id="<?php echo $news['news_id']; ?>"
                          style="border: 2px solid <?php 
                          if($news['is_approved'] == 0) echo '#FFA500';
                          elseif($news['is_approved'] == 1) echo '#28a745';
@@ -408,7 +417,7 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                          ?>; 
                          border-radius: 12px; 
                          transition: all 0.3s ease;
-                         cursor: pointer;">
+                         cursor: default;">
                         <div class="card-header p-3" style="
                             background: linear-gradient(135deg, 
                             <?php 
@@ -476,7 +485,7 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-globe me-2" style="color: #FF6600; width: 20px;"></i>
                                         <small style="font-family: 'Mukta', sans-serif;">
-                                            <strong>प्रदेश:</strong><br>
+                                            <strong>विभाग:</strong>
                                             <?php echo getMarathiRegionName($news['Region']); ?>
                                         </small>
                                     </div>
@@ -485,7 +494,7 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-map-marker-alt me-2" style="color: #FF6600; width: 20px;"></i>
                                         <small style="font-family: 'Mukta', sans-serif;">
-                                            <strong>जिल्हा:</strong><br>
+                                            <strong>जिल्हा:</strong>
                                             <?php echo getMarathiDistrictName($news['district_name']); ?>
                                         </small>
                                     </div>
@@ -497,7 +506,7 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-tags me-2" style="color: #FF6600; width: 20px;"></i>
                                         <small style="font-family: 'Mukta', sans-serif;">
-                                            <strong>वर्ग:</strong><br>
+                                            <strong>वर्ग:</strong>
                                             <?php echo getMarathiCategoryName($news['category_name']); ?>
                                         </small>
                                     </div>
@@ -506,7 +515,7 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user me-2" style="color: #FF6600; width: 20px;"></i>
                                         <small style="font-family: 'Mukta', sans-serif;">
-                                            <strong>प्रकाशक:</strong><br>
+                                            <strong>प्रकाशक:</strong>
                                             <?php echo htmlspecialchars($news['published_by']); ?>
                                         </small>
                                     </div>
@@ -531,16 +540,19 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
                         
                         <div class="card-footer bg-transparent border-top-0 pt-0">
                             <div class="d-grid">
-                                <button type="button" class="btn btn-sm view-details-btn"
-                                        data-news-id="<?php echo $news['news_id']; ?>"
-                                        style="
-                                            background: linear-gradient(135deg, #FF6600, #FF8C00);
-                                            color: white;
-                                            font-family: 'Khand', sans-serif;
-                                            font-weight: bold;
-                                            padding: 8px 16px;">
+                                <a href="newsapproval_details.php?news_id=<?php echo $news['news_id']; ?>" 
+                                   class="btn btn-sm view-details-btn"
+                                   style="
+                                        background: linear-gradient(135deg, #FF6600, #FF8C00);
+                                        color: white;
+                                        font-family: 'Khand', sans-serif;
+                                        font-weight: bold;
+                                        padding: 8px 16px;
+                                        text-decoration: none;
+                                        text-align: center;
+                                        display: block;">
                                     <i class="fas fa-eye me-1"></i> तपशील पहा
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -756,21 +768,20 @@ $news_counts = getNewsCounts($conn, $user_roll, $user_region_for_filter);
         }
     }
 
-    // View details button click
     $(document).ready(function() {
         checkURLParameters();
         
-        $('.view-details-btn, .news-card').on('click', function(e) {
-            // Prevent multiple triggers
-            if (e.target.classList.contains('view-details-btn') || 
-                e.target.closest('.view-details-btn')) {
-                return;
-            }
-            
-            const newsId = $(this).data('news-id') || $(this).closest('.news-card').data('news-id');
-            
-            // Redirect to news approval details page
-            window.location.href = `newsapproval_details.php?news_id=${newsId}`;
+        // Only need to handle card hover effects now
+        $('.news-card').on('mouseenter', function() {
+            $(this).css({
+                'transform': 'translateY(-5px)',
+                'box-shadow': '0 10px 25px rgba(255, 102, 0, 0.2)'
+            });
+        }).on('mouseleave', function() {
+            $(this).css({
+                'transform': 'translateY(0)',
+                'box-shadow': '0 2px 5px rgba(0,0,0,0.1)'
+            });
         });
     });
 </script>
