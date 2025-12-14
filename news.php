@@ -106,6 +106,42 @@ include 'components/navbar.php';
 // Current URL for sharing
 $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
+// Function to check if image exists and is valid
+function isValidImage($url) {
+    if (empty($url) || $url === null) {
+        return false;
+    }
+    
+    $url = trim($url);
+    
+    // Check if it's a valid URL format
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        // Check if it's a local file path
+        if (file_exists($url)) {
+            // Check if it's an image file
+            $imageInfo = @getimagesize($url);
+            return $imageInfo !== false;
+        }
+        return false;
+    }
+    
+    // For remote URLs, we'll check with JavaScript
+    // Return true initially and let JS handle errors
+    return true;
+}
+
+// Check for secondary photo - use secondary_photo_url if available, otherwise use cover_photo_url
+$has_secondary_photo = false;
+$secondary_photo_url = '';
+
+if (!empty($news['secondary_photo_url']) && isValidImage($news['secondary_photo_url'])) {
+    $has_secondary_photo = true;
+    $secondary_photo_url = $news['secondary_photo_url'];
+} elseif (!empty($news['cover_photo_url']) && isValidImage($news['cover_photo_url'])) {
+    $has_secondary_photo = true;
+    $secondary_photo_url = $news['cover_photo_url'];
+}
+
 // Default images
 $default_cover_image = 'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
@@ -265,13 +301,15 @@ $count_stmt->close();
             box-shadow: none !important;
         }
         
+        /* FIXED IMAGE STYLES - Show full image without cropping */
         .news-image {
             width: 100%;
             max-height: 500px;
-            object-fit: cover;
+            object-fit: contain; /* Changed from cover to contain */
             border-radius: 10px;
             margin: 25px 0;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background-color: #f8f9fa; /* Background for transparency */
         }
         
         .news-content {
@@ -482,11 +520,25 @@ $count_stmt->close();
             color: inherit;
         }
         
-        .related-news-image {
+        /* FIXED RELATED NEWS IMAGE STYLES - Show full image without cropping */
+        .related-news-image-container {
             width: 100%;
             height: 160px;
-            object-fit: cover;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+        }
+        
+        .related-news-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; /* Changed from cover to contain */
             transition: transform 0.5s ease;
+            background-color: #f8f9fa; /* Background for transparency */
         }
         
         .related-news-card:hover .related-news-image {
@@ -592,11 +644,20 @@ $count_stmt->close();
                 grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
                 gap: 15px;
             }
+            
+            /* Mobile image adjustments */
+            .news-image {
+                max-height: 400px;
+            }
         }
         
         @media (max-width: 576px) {
             .related-news-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .news-image {
+                max-height: 350px;
             }
         }
         
@@ -636,17 +697,15 @@ $count_stmt->close();
         </div>
         <?php endif; ?>
 
-        <!-- Secondary Photo -->
+        <!-- Secondary Photo Section - Only show if photo exists -->
+        <?php if ($has_secondary_photo): ?>
         <div class="text-center">
-            <?php 
-            $secondary_photo = !empty($news['secondary_photo_url']) ? htmlspecialchars($news['secondary_photo_url']) : $default_secondary_image;
-            ?>
-            <img src="<?php echo $secondary_photo; ?>" 
+            <img src="<?php echo htmlspecialchars($secondary_photo_url); ?>" 
                  alt="<?php echo htmlspecialchars($news['title']); ?> अतिरिक्त फोटो" 
                  class="news-image"
-                 style="max-height: 400px;"
-                 onerror="this.onerror=null; this.src='<?php echo $default_secondary_image; ?>';">
+                 onerror="handleSecondaryPhotoError(this)">
         </div>
+        <?php endif; ?>
 
         <!-- Main Content -->
         <div class="news-content">
@@ -767,12 +826,20 @@ $count_stmt->close();
                 <div class="related-news-grid">
                     <?php while ($related_news = $related_result->fetch_assoc()): ?>
                         <a href="news.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
-                            <div class="related-news-image-container" style="overflow: hidden; height: 160px;">
-                                <img src="<?php echo !empty($related_news['cover_photo_url']) ? htmlspecialchars($related_news['cover_photo_url']) : $default_cover_image; ?>" 
+                            <?php 
+                            // Check if related news has cover photo
+                            $has_related_photo = !empty($related_news['cover_photo_url']) && isValidImage($related_news['cover_photo_url']);
+                            ?>
+                            
+                            <?php if ($has_related_photo): ?>
+                            <div class="related-news-image-container">
+                                <img src="<?php echo htmlspecialchars($related_news['cover_photo_url']); ?>" 
                                      alt="<?php echo htmlspecialchars($related_news['title']); ?>"
                                      class="related-news-image"
-                                     onerror="this.onerror=null; this.src='<?php echo $default_cover_image; ?>';">
+                                     onerror="handleRelatedImageError(this)">
                             </div>
+                            <?php endif; ?>
+                            
                             <div class="related-news-content">
                                 <h5 class="related-news-title">
                                     <?php echo htmlspecialchars(mb_substr($related_news['title'], 0, 60)) . (mb_strlen($related_news['title']) > 60 ? '...' : ''); ?>
@@ -921,6 +988,34 @@ $count_stmt->close();
         
         // Show success toast for 3 seconds
         showToast('लिंक कॉपी झाला!', 'success');
+    }
+    
+    // Handle image errors
+    function handleSecondaryPhotoError(img) {
+        img.onerror = null;
+        
+        // Try to use cover photo as fallback if available
+        const coverPhotoUrl = "<?php echo !empty($news['cover_photo_url']) ? htmlspecialchars($news['cover_photo_url']) : ''; ?>";
+        
+        if (coverPhotoUrl) {
+            img.src = coverPhotoUrl;
+        } else {
+            // If no cover photo either, hide the image container
+            const imageContainer = img.closest('.text-center');
+            if (imageContainer) {
+                imageContainer.style.display = 'none';
+            }
+        }
+    }
+    
+    function handleRelatedImageError(img) {
+        img.onerror = null;
+        
+        // Hide the image container for related news
+        const imageContainer = img.closest('.related-news-image-container');
+        if (imageContainer) {
+            imageContainer.style.display = 'none';
+        }
     }
     
     // Handle comment form submission with AJAX
@@ -1115,23 +1210,16 @@ $count_stmt->close();
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
     
-    // Function to handle image errors
-    function handleImageError(img) {
-        img.onerror = null;
-        if (img.classList.contains('cover-photo')) {
-            img.src = '<?php echo $default_cover_image; ?>';
-        } else {
-            img.src = '<?php echo $default_secondary_image; ?>';
-        }
-        img.alt = 'डीफॉल्ट फोटो';
-    }
-    
     // Add error handlers to images
     document.addEventListener('DOMContentLoaded', function() {
         const images = document.querySelectorAll('.news-image, .related-news-image');
         images.forEach(function(img) {
             img.addEventListener('error', function() {
-                handleImageError(this);
+                if (this.classList.contains('news-image')) {
+                    handleSecondaryPhotoError(this);
+                } else if (this.classList.contains('related-news-image')) {
+                    handleRelatedImageError(this);
+                }
             });
         });
         

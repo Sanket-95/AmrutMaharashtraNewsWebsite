@@ -25,7 +25,8 @@ $sql = "SELECT
             published_by,
             published_date
         FROM news_articles
-        WHERE category_name = 'home' AND is_approved = 1
+        WHERE category_name = 'home' AND is_approved = 1 AND cover_photo_url IS NOT NULL
+        AND cover_photo_url <> ''
         ORDER BY published_date DESC
         LIMIT 10";
 

@@ -324,19 +324,15 @@ function getMarathiRegionName($regionValue) {
                         <i class="fas fa-user-edit me-1"></i> प्रकाशकाचे नाव *
                     </label>
                     <input type="text" 
-                           class="form-control shadow-sm" 
-                           name="publisher_name" 
-                           value="<?php echo htmlspecialchars($publisher_value); ?>"
-                           placeholder="प्रकाशकाचे नाव लिहा..." 
-                           <?php echo $publisher_editable ? '' : 'readonly'; ?>
-                           required
-                           style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px; font-size: 16px;
-                           <?php echo !$publisher_editable ? 'background-color: #f8f9fa;' : ''; ?>">
-                    <?php if(!$publisher_editable): ?>
-                        <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                            <i class="fas fa-info-circle"></i> आपले नाव आपोआप भरले गेले आहे
-                        </div>
-                    <?php endif; ?>
+                        class="form-control shadow-sm" 
+                        name="publisher_name" 
+                        value="<?php echo htmlspecialchars($publisher_value); ?>"
+                        placeholder="प्रकाशकाचे नाव लिहा..." 
+                        required
+                        style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px; font-size: 16px;">
+                    <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                        <i class="fas fa-info-circle"></i> आपले नाव आपोआप भरले गेले आहे (बदलू शकता)
+                    </div>
                 </div>
                 
                 <!-- Category Selection -->
