@@ -1,7 +1,10 @@
 <?php
-include 'components/header.php';
-include 'components/navbar.php';
-include 'components/db_config.php';
+// include 'components/header.php';
+// include 'components/navbar.php';
+// include 'components/db_config.php';
+include __DIR__ . '/components/header.php';
+include __DIR__ . '/components/navbar.php';
+include __DIR__ . '/components/db_config.php';
 
 
 // Fetch top news for carousel
