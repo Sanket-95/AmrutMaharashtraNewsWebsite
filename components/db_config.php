@@ -1,6 +1,18 @@
   <?php
 // components/db_config.php
 
+// Production database configuration
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'u153621952_Amrut123');
+// define('DB_PASS', 'Mahaamrut@123');
+// define('DB_NAME', 'u153621952_Mahaamrut');
+
+
+
+
+
+
+
 // Database configuration
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');

@@ -4,7 +4,7 @@ include 'components/db_config.php';
 
 // Check if user is already logged in
 if (isset($_SESSION['user_id'])) {
-    header('Location: index.php');
+    header('Location: post_news.php');
     exit();
 }
 
