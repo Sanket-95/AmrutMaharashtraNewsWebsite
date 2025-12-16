@@ -239,7 +239,7 @@ function generateNewsCard($news) {
                             <small class="text-muted" style="font-family: \'Noto Sans Devanagari\', sans-serif;">' . $formatted_date . '</small>
                         </div>
                     </div>
-                    <a href="news.php?id=' . $news['news_id'] . '" class="btn btn-sm btn-outline-primary px-3 read-btn" style="font-family: \'Noto Sans Devanagari\', sans-serif;">
+                    <a href="backend/views.php?id=' . $news['news_id'] . '" class="btn btn-sm btn-outline-primary px-3 read-btn" style="font-family: \'Noto Sans Devanagari\', sans-serif;">
                         वाचा <i class="bi bi-arrow-right ms-1"></i>
                     </a>
                 </div>

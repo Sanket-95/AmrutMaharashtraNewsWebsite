@@ -1,5 +1,9 @@
 <?php
+echo "<script>alert('Hello from PHP');</script>";
+?>
+<?php
 // backend/views.php - SIMPLEST VERSION
+
 session_start();
 
 // Get ID from URL
@@ -11,7 +15,7 @@ if ($id > 0) {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     
     if ($conn && !$conn->connect_error) {
-        // $conn->query("UPDATE news_articles SET view = view + 1 WHERE news_id = $id");
+         $conn->query("UPDATE news_articles SET view = view + 1 WHERE news_id = $id");
         $conn->close();
     }
 }
