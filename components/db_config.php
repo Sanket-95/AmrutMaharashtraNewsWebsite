@@ -1,7 +1,7 @@
   <?php
 // components/db_config.php
 
-// Production database configuration
+// Production database configuration  for .com
 // define('DB_HOST', 'localhost');
 // define('DB_USER', 'u153621952_Amrut123');
 // define('DB_PASS', 'Mahaamrut@123');
@@ -9,15 +9,21 @@
 
 
 
+// Production database configuration   for .org
+define('DB_HOST', 'localhost');
+define('DB_USER', 'u153621952_Amrut123');
+define('DB_PASS', 'Mahaamrut@1234');
+define('DB_NAME', 'u153621952_Mahaamrutdb');
+
 
 
 
 
 // Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'amrutmaharashtra');
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'root');
+// define('DB_PASS', '');
+// define('DB_NAME', 'amrutmaharashtra');
 
 // Create connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
