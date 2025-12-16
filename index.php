@@ -38,7 +38,8 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
 $categories = [
     ['label' => 'मुख्य पृष्ठ', 'value' => 'home'],
     ['label' => 'अमृत घडामोडी', 'value' => 'amrut_events'],
-    ['label' => 'लाभार्थ्यांचे अनुभवामृत', 'value' => 'beneficiary_story'],
+    ['label' => 'लाभार्थी स्टोरी', 'value' => 'beneficiary_story'],
+    ['label' => 'ब्लॉग', 'value' => 'blog'],
     ['label' => 'दिनविशेष', 'value' => 'today_special'],
     ['label' => 'यशस्वी उद्योजक', 'value' => 'successful_entrepreneur'],
     ['label' => 'शब्दामृत', 'value' => 'words_amrut'],

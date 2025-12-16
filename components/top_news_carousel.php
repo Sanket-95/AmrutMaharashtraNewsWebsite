@@ -156,7 +156,6 @@ if (empty($slides)) {
                     
                     // Generate URLs
                     $baseUrl = '/AmrutMaharashtra/';
-                    // $viewsUrl = $baseUrl . 'backend/views.php?id=' . $newsId;
                     $viewsUrl = 'backend/views.php?id=' . $newsId;
                     $fullShareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
                                    "://$_SERVER[HTTP_HOST]" . $baseUrl . "backend/views.php?id=" . $newsId;
@@ -177,7 +176,7 @@ if (empty($slides)) {
                                         <img src="<?php echo $imageUrl; ?>" 
                                              class="img-fluid w-100" 
                                              alt="<?php echo $title; ?>" 
-                                             style="object-fit: contain; min-height: 320px; max-height: 320px;"
+                                             style="object-fit: contain; min-height: 340px; max-height: 340px;"
                                              onerror="this.onerror=null; this.src='<?php echo $fallbackImages[0]; ?>';">
                                         <!-- Overlay Gradient -->
                                         <div class="position-absolute bottom-0 start-0 end-0 bg-gradient-to-top from-black/50 to-transparent p-3 d-md-none">
@@ -204,17 +203,17 @@ if (empty($slides)) {
                                         
                                         <!-- News Content/Summary -->
                                         <div class="news-content flex-grow-1 mt-2 mt-md-0">
-                                            <p class="card-text fs-5 d-none d-md-block" style="text-align: justify; line-height: 1.6; color: #495057;">
+                                            <p class="card-text fs-5 d-none d-md-block" style="text-align: justify; line-height: 1.6; color: #495057; margin-bottom: 0.5rem;">
                                                 <?php 
-                                                if (mb_strlen($summary) > 220) {
-                                                    echo mb_substr($summary, 0, 220) . '...';
+                                                if (mb_strlen($summary) > 250) {
+                                                    echo mb_substr($summary, 0, 250) . '...';
                                                 } else {
                                                     echo $summary;
                                                 }
                                                 ?>
                                             </p>
                                             <!-- Mobile Summary -->
-                                            <p class="card-text d-md-none" style="line-height: 1.5; color: #495057;">
+                                            <p class="card-text d-md-none" style="line-height: 1.5; color: #495057; margin-bottom: 0.5rem;">
                                                 <?php 
                                                 if (mb_strlen($summary) > 150) {
                                                     echo mb_substr($summary, 0, 150) . '...';
@@ -226,7 +225,7 @@ if (empty($slides)) {
                                         </div>
                                         
                                         <!-- Publisher and Date Section with Share Button -->
-                                        <div class="publisher-section mt-3 mt-md-4 pt-3 border-top">
+                                        <div class="publisher-section mt-auto pt-3 border-top">
                                             <div class="row align-items-center g-2">
                                                 <!-- Publisher Name -->
                                                 <div class="col-md-7 col-12">
@@ -263,7 +262,7 @@ if (empty($slides)) {
                                                                 data-share-url="<?php echo $fullShareUrl; ?>"
                                                                 onclick="shareNews(event, <?php echo $newsId; ?>, '<?php echo addslashes($title); ?>', '<?php echo $fullShareUrl; ?>')"
                                                                 title="Share this news">
-                                                            <i class="bi bi-share me-1"></i> Share
+                                                            <i class="bi bi-share me-1"></i> <span>Share</span>
                                                         </button>
                                                         
                                                         <!-- Read More Button -->
@@ -271,7 +270,7 @@ if (empty($slides)) {
                                                            class="read-more-btn btn btn-sm btn-outline-primary"
                                                            data-news-id="<?php echo $newsId; ?>"
                                                            onclick="viewNewsDetail(event, <?php echo $newsId; ?>)">
-                                                            Read More <i class="bi bi-arrow-right ms-1"></i>
+                                                            <span>Read More</span> <i class="bi bi-arrow-right ms-1"></i>
                                                         </a>
                                                     </div>
                                                 </div>
@@ -380,11 +379,11 @@ if (empty($slides)) {
         background: linear-gradient(135deg, #ff5722, #ff9800);
     }
     
-    /* Card styling */
+    /* Card styling - INCREASED HEIGHT */
     .card {
         border: 1px solid #e9ecef !important;
         height: auto;
-        min-height: 320px;
+        min-height: 360px;
         transition: all 0.3s ease;
     }
     
@@ -439,7 +438,7 @@ if (empty($slides)) {
         transform: rotate(-20deg);
     }
     
-    /* Image container - UPDATED FOR FULL IMAGE DISPLAY */
+    /* Image container - INCREASED HEIGHT */
     .image-container {
         overflow: hidden;
         background-color: #f8f9fa; /* Background color for empty spaces */
@@ -451,7 +450,7 @@ if (empty($slides)) {
         width: auto;
         max-width: 100%;
         height: auto;
-        max-height: 320px;
+        max-height: 360px;
         display: block;
         margin: 0 auto; /* Center the image */
     }
@@ -475,6 +474,11 @@ if (empty($slides)) {
     /* Action buttons container */
     .gap-2 {
         gap: 0.5rem;
+    }
+    
+    /* Publisher section always at bottom */
+    .publisher-section {
+        margin-top: auto !important;
     }
     
     /* Responsive adjustments */
@@ -563,13 +567,13 @@ if (empty($slides)) {
     
     @media (min-width: 768px) {
         .card {
-            height: 320px;
+            height: 360px; /* INCREASED HEIGHT */
         }
         
         .image-container {
             border-radius: 0.375rem 0 0 0.375rem;
-            min-height: 320px;
-            max-height: 320px;
+            min-height: 360px; /* INCREASED HEIGHT */
+            max-height: 360px; /* INCREASED HEIGHT */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -578,8 +582,8 @@ if (empty($slides)) {
         
         .image-container img {
             border-radius: 0.375rem 0 0 0.375rem;
-            min-height: 320px;
-            max-height: 320px;
+            min-height: 360px; /* INCREASED HEIGHT */
+            max-height: 360px; /* INCREASED HEIGHT */
             object-fit: contain !important;
             width: auto;
             max-width: 100%;
@@ -589,10 +593,11 @@ if (empty($slides)) {
             border-radius: 0 0.375rem 0.375rem 0;
         }
         
-        /* More content space */
+        /* More content space - INCREASED */
         .news-content {
-            max-height: 160px;
+            max-height: 200px;
             overflow: hidden;
+            flex: 1;
         }
         
         /* Card hover effect */
@@ -632,13 +637,17 @@ if (empty($slides)) {
         }
         
         .image-container {
-            min-height: 340px;
-            max-height: 340px;
+            min-height: 380px; /* INCREASED HEIGHT */
+            max-height: 380px; /* INCREASED HEIGHT */
         }
         
         .image-container img {
-            min-height: 340px;
-            max-height: 340px;
+            min-height: 380px; /* INCREASED HEIGHT */
+            max-height: 380px; /* INCREASED HEIGHT */
+        }
+        
+        .card {
+            height: 380px; /* INCREASED HEIGHT */
         }
     }
     
@@ -671,6 +680,385 @@ if (empty($slides)) {
     
     .border-primary {
         border-color: #f97316 !important;
+    }
+    
+    /* ========== ADDED RESPONSIVE FIXES ========== */
+    
+    /* Tablet devices (768px to 991px) */
+    @media (min-width: 768px) and (max-width: 991px) {
+        .carousel-item .card {
+            height: 320px !important;
+            min-height: 320px !important;
+        }
+        
+        .image-container {
+            min-height: 320px !important;
+            max-height: 320px !important;
+        }
+        
+        .image-container img {
+            min-height: 320px !important;
+            max-height: 320px !important;
+        }
+        
+        .card-title {
+            font-size: 1.3rem !important;
+            margin-bottom: 0.75rem !important;
+        }
+        
+        .card-text.fs-5 {
+            font-size: 0.95rem !important;
+            line-height: 1.5 !important;
+        }
+        
+        .news-content {
+            max-height: 150px !important;
+        }
+        
+        .publisher-section {
+            margin-top: 0.75rem !important;
+            padding-top: 0.75rem !important;
+        }
+        
+        .btn {
+            padding: 0.3rem 0.6rem !important;
+            font-size: 0.85rem !important;
+        }
+    }
+    
+    /* Small desktops (992px to 1199px) */
+    @media (min-width: 992px) and (max-width: 1199px) {
+        .carousel-item .card {
+            height: 380px !important;
+            min-height: 380px !important;
+        }
+        
+        .image-container {
+            min-height: 380px !important;
+            max-height: 380px !important;
+        }
+        
+        .image-container img {
+            min-height: 380px !important;
+            max-height: 380px !important;
+        }
+        
+        .card-title {
+            font-size: 1.4rem !important;
+        }
+        
+        .card-text.fs-5 {
+            font-size: 1rem !important;
+            line-height: 1.6 !important;
+        }
+        
+        .news-content {
+            max-height: 180px !important;
+        }
+    }
+    
+    /* Extra protection for publisher section on all devices */
+    .publisher-section {
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+    }
+    
+    /* Ensure buttons are always visible and not cropped */
+    .col-md-5 .d-flex {
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+    }
+    
+    .share-btn, .read-more-btn {
+        white-space: nowrap;
+        min-width: fit-content;
+    }
+    
+    /* Fix for very small screens (below 400px) */
+    @media (max-width: 400px) {
+        .image-container {
+            min-height: 200px !important;
+            max-height: 200px !important;
+        }
+        
+        .image-container img {
+            min-height: 200px !important;
+            max-height: 200px !important;
+        }
+        
+        .card-body {
+            padding: 1rem !important;
+        }
+        
+        .col-md-5 .d-flex {
+            flex-direction: column;
+            align-items: stretch !important;
+        }
+        
+        .share-btn, .read-more-btn {
+            width: 100%;
+            margin-bottom: 0.5rem !important;
+            text-align: center;
+        }
+    }
+    
+    /* Fix for medium mobile screens (401px to 575px) */
+    @media (min-width: 401px) and (max-width: 575px) {
+        .image-container {
+            min-height: 220px !important;
+            max-height: 220px !important;
+        }
+        
+        .image-container img {
+            min-height: 220px !important;
+            max-height: 220px !important;
+        }
+        
+        .col-md-5 .d-flex {
+            flex-wrap: wrap !important;
+            justify-content: flex-start !important;
+        }
+    }
+    
+    /* Fix for landscape orientation on mobile */
+    @media (max-height: 600px) and (orientation: landscape) {
+        .carousel-item .card {
+            height: 280px !important;
+            min-height: 280px !important;
+        }
+        
+        .image-container {
+            min-height: 280px !important;
+            max-height: 280px !important;
+        }
+        
+        .image-container img {
+            min-height: 280px !important;
+            max-height: 280px !important;
+        }
+        
+        .news-content {
+            max-height: 120px !important;
+        }
+        
+        .card-title {
+            font-size: 1.1rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .card-text.fs-5 {
+            font-size: 0.9rem !important;
+        }
+    }
+    
+    /* High DPI screens optimization */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        .image-container img {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+    }
+    
+    /* Prevent text overflow in summary on all devices */
+    .news-content p {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+    
+    /* Ensure publisher info doesn't get cut off */
+    .publisher-name .hover-primary {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    /* Smooth transitions for all responsive changes */
+    .card, .image-container, .image-container img {
+        transition: all 0.3s ease;
+    }
+    
+    /* ========== FIX FOR 1120px SCREEN SIZE ========== */
+    @media (min-width: 992px) and (max-width: 1200px) {
+        .carousel-item .card {
+            height: 380px !important;
+            min-height: 380px !important;
+        }
+        
+        .image-container {
+            min-height: 380px !important;
+            max-height: 380px !important;
+        }
+        
+        .image-container img {
+            min-height: 380px !important;
+            max-height: 380px !important;
+        }
+        
+        /* Fix for content section */
+        .card-body {
+            padding: 1rem 1.25rem !important;
+        }
+        
+        .card-title {
+            font-size: 1.3rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .card-text.fs-5 {
+            font-size: 0.95rem !important;
+            line-height: 1.5 !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .news-content {
+            max-height: 180px !important;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        /* Publisher section fix */
+        .publisher-section {
+            padding-top: 0.75rem !important;
+            min-height: 70px !important;
+        }
+        
+        /* Fix for publisher info */
+        .col-md-7 {
+            width: 58.333333% !important;
+        }
+        
+        .col-md-5 {
+            width: 41.666667% !important;
+        }
+        
+        /* Button container fix */
+        .col-md-5 .d-flex {
+            flex-wrap: nowrap !important;
+            justify-content: flex-end !important;
+            gap: 0.5rem !important;
+        }
+        
+        .share-btn, .read-more-btn {
+            font-size: 0.85rem !important;
+            padding: 0.25rem 0.5rem !important;
+            white-space: nowrap;
+            min-width: auto !important;
+        }
+        
+        .share-btn i, .read-more-btn i {
+            font-size: 0.85rem !important;
+        }
+        
+        /* Publisher name truncation */
+        .publisher-name .hover-primary {
+            font-size: 0.9rem !important;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Date and time */
+        .text-muted.small {
+            font-size: 0.8rem !important;
+        }
+        
+        /* Reduce icon sizes */
+        .publisher-icon {
+            width: 32px !important;
+            height: 32px !important;
+            padding: 0.5rem !important;
+        }
+        
+        .publisher-icon i {
+            font-size: 1rem !important;
+        }
+        
+        /* Ensure all content fits */
+        .row.align-items-center.g-2 {
+            align-items: flex-start !important;
+            margin-top: 0.25rem !important;
+        }
+    }
+    
+    /* Additional fix for very specific 1120px range */
+    @media (min-width: 1100px) and (max-width: 1140px) {
+        .card-body {
+            padding: 0.75rem 1rem !important;
+        }
+        
+        .card-title {
+            font-size: 1.25rem !important;
+            margin-bottom: 0.4rem !important;
+        }
+        
+        .news-content {
+            max-height: 160px !important;
+        }
+        
+        .share-btn, .read-more-btn {
+            font-size: 0.8rem !important;
+            padding: 0.2rem 0.4rem !important;
+        }
+        
+        /* Adjust column widths for better fit */
+        .col-md-7 {
+            width: 60% !important;
+        }
+        
+        .col-md-5 {
+            width: 40% !important;
+        }
+    }
+    
+    /* Optimize for narrow desktop screens */
+    @media (min-width: 992px) and (max-width: 1050px) {
+        .card-body {
+            padding: 0.5rem 0.75rem !important;
+        }
+        
+        .card-title {
+            font-size: 1.2rem !important;
+            margin-bottom: 0.3rem !important;
+        }
+        
+        .card-text.fs-5 {
+            font-size: 0.9rem !important;
+            line-height: 1.4 !important;
+        }
+        
+        .news-content {
+            max-height: 150px !important;
+        }
+        
+        .publisher-section {
+            padding-top: 0.5rem !important;
+            min-height: 65px !important;
+        }
+        
+        .share-btn, .read-more-btn {
+            font-size: 0.75rem !important;
+            padding: 0.15rem 0.3rem !important;
+        }
+        
+        .share-btn span, .read-more-btn span {
+            display: none; /* Hide text, show only icons */
+        }
+        
+        .share-btn i, .read-more-btn i {
+            margin: 0 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        .col-md-7 {
+            width: 55% !important;
+        }
+        
+        .col-md-5 {
+            width: 45% !important;
+        }
     }
 </style>
 
@@ -1005,4 +1393,105 @@ document.addEventListener('visibilitychange', function() {
         isNavigating = false;
     }
 });
+
+// ========== ADDED RESPONSIVE JAVASCRIPT ==========
+// Add responsive adjustments on window resize
+window.addEventListener('resize', function() {
+    // Recalculate and adjust carousel item heights if needed
+    setTimeout(() => {
+        const carouselItems = document.querySelectorAll('.carousel-item');
+        let maxHeight = 0;
+        
+        // Find the tallest carousel item
+        carouselItems.forEach(item => {
+            const itemHeight = item.offsetHeight;
+            if (itemHeight > maxHeight) {
+                maxHeight = itemHeight;
+            }
+        });
+        
+        // Apply consistent height if there's significant variation
+        if (maxHeight > 0) {
+            const heightVariation = Array.from(carouselItems).reduce((max, item) => {
+                const variation = Math.abs(item.offsetHeight - maxHeight);
+                return variation > max ? variation : max;
+            }, 0);
+            
+            // Only adjust if there's more than 50px variation
+            if (heightVariation > 50) {
+                carouselItems.forEach(item => {
+                    item.style.minHeight = maxHeight + 'px';
+                });
+            }
+        }
+    }, 100);
+});
+
+// Initial adjustment on page load
+setTimeout(() => {
+    window.dispatchEvent(new Event('resize'));
+}, 500);
+
+// ========== ADDED FOR RESPONSIVE BUTTON LAYOUT ==========
+// Function to adjust button layout based on available space
+function adjustButtonLayout() {
+    const screenWidth = window.innerWidth;
+    const buttonContainers = document.querySelectorAll('.col-md-5 .d-flex');
+    
+    buttonContainers.forEach(container => {
+        const buttons = container.querySelectorAll('.btn');
+        const containerWidth = container.offsetWidth;
+        const buttonsWidth = Array.from(buttons).reduce((total, btn) => total + btn.offsetWidth, 0);
+        const availableSpace = containerWidth - buttonsWidth - 20; // 20px for gaps
+        
+        // If buttons don't fit, adjust their display
+        if (availableSpace < 0 && screenWidth >= 992 && screenWidth <= 1200) {
+            // Reduce padding on buttons
+            buttons.forEach(btn => {
+                btn.style.padding = '0.2rem 0.4rem';
+                btn.style.fontSize = '0.85rem';
+                
+                // Hide text on very narrow screens
+                if (screenWidth < 1050) {
+                    const spans = btn.querySelectorAll('span');
+                    spans.forEach(span => span.style.display = 'none');
+                    const icons = btn.querySelectorAll('i');
+                    icons.forEach(icon => {
+                        icon.style.margin = '0';
+                        icon.style.fontSize = '0.9rem';
+                    });
+                }
+            });
+            
+            // Adjust container gap
+            container.style.gap = '0.3rem';
+        } else {
+            // Reset to default
+            buttons.forEach(btn => {
+                btn.style.padding = '';
+                btn.style.fontSize = '';
+                const spans = btn.querySelectorAll('span');
+                spans.forEach(span => span.style.display = '');
+                const icons = btn.querySelectorAll('i');
+                icons.forEach(icon => {
+                    icon.style.margin = '';
+                    icon.style.fontSize = '';
+                });
+            });
+            container.style.gap = '';
+        }
+    });
+}
+
+// Run on load and resize
+window.addEventListener('load', adjustButtonLayout);
+window.addEventListener('resize', adjustButtonLayout);
+
+// Also adjust after carousel slides
+const carousel = document.getElementById('newsCarousel');
+if (carousel) {
+    carousel.addEventListener('slid.bs.carousel', function() {
+        setTimeout(adjustButtonLayout, 100);
+    });
+}
 </script>

@@ -20,7 +20,6 @@ include '../components/db_config.php';
 // Get form data
 $news_id = $_POST['news_id'] ?? 0;
 $action = $_POST['action'] ?? ''; // 'approve' or 'disapprove'
-$comment = $_POST['approval_comment'] ?? '';
 $approver_name = $_SESSION['name'] ?? '';
 
 // Validate
@@ -135,16 +134,20 @@ $update_stmt = $conn->prepare($update_sql);
 $update_stmt->bind_param("isi", $new_status, $approver_name, $news_id);
 
 if ($update_stmt->execute()) {
-    // Success - redirect back
+    // Success - redirect back with correct parameters
+    $redirect_url = '../newsapproval_details.php?news_id=' . $news_id;
+    
     if ($action === 'approve') {
-        header('Location: ../newsapproval_details.php?news_id=' . $news_id . '&approved=1');
+        $redirect_url .= '&approval_success=1';
     } else {
-        header('Location: ../newsapproval_details.php?news_id=' . $news_id . '&disapproved=1');
+        $redirect_url .= '&disapproval_success=1';
     }
+    
+    header('Location: ' . $redirect_url);
     exit();
 } else {
     // Error
-    header('Location: ../newsapproval_details.php?news_id=' . $news_id . '&error=अपडेट%20करण्यात%20अपयशी');
+    header('Location: ../newsapproval_details.php?news_id=' . $news_id . '&approval_error=1');
     exit();
 }
 

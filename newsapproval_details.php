@@ -30,10 +30,55 @@ $edit_mode = isset($_GET['edit']) && $_GET['edit'] == '1';
 $toast_message = '';
 $toast_type = '';
 
+// Check if quick approve button was clicked
+if (isset($_GET['quick_approve']) && $_GET['quick_approve'] == '1') {
+    // Quick approve the news
+    $approver_name = $_SESSION['name'] ?? '';
+    
+    $update_sql = "UPDATE news_articles 
+                   SET is_approved = 1, 
+                       approved_by = ?,
+                       updated_at = NOW()
+                   WHERE news_id = ?";
+    
+    $update_stmt = $conn->prepare($update_sql);
+    $update_stmt->bind_param("si", $approver_name, $news_id);
+    
+    if ($update_stmt->execute()) {
+        $toast_message = "बातमी यशस्वीरित्या मान्य केली गेली!";
+        $toast_type = "success";
+        
+        // Refresh news data after update
+        $sql = "SELECT * FROM news_articles WHERE news_id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $news_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $news = $result->fetch_assoc();
+        $stmt->close();
+    } else {
+        $toast_message = "बातमी मान्य करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
+        $toast_type = "error";
+    }
+    $update_stmt->close();
+}
+
 // Check if form was submitted for editing
 $update_success = false;
 $update_error = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_news'])) {
+    // Debug: Show what data is being posted
+    // echo '<script>';
+    // echo 'alert("DEBUG - POST Data being sent:\\n\\n' . 
+    //      'Title: ' . addslashes($_POST['title']) . '\\n' .
+    //      'Summary: ' . addslashes(substr($_POST['summary'], 0, 100)) . '...\\n' .
+    //      'Content length: ' . strlen($_POST['content']) . ' chars\\n' .
+    //      'Category: ' . $_POST['category'] . '\\n' .
+    //      'District: ' . $_POST['district'] . '\\n' .
+    //      'Region: ' . $_POST['region'] . '\\n' .
+    //      'Top News: ' . (isset($_POST['topnews']) ? '1' : '0') . '");';
+    // echo '</script>';
+    
     // Update news in database
     $title = $_POST['title'] ?? '';
     $summary = $_POST['summary'] ?? '';
@@ -41,19 +86,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_news'])) {
     $category = $_POST['category'] ?? '';
     $district = $_POST['district'] ?? '';
     $region = $_POST['region'] ?? '';
+    $topnews = isset($_POST['topnews']) ? 1 : 0;
     
-    $update_sql = "UPDATE news_articles SET 
+   $update_sql = "UPDATE news_articles SET 
                     title = ?, 
                     summary = ?, 
                     content = ?, 
                     category_name = ?,
-                    district_name = ?,
-                    Region = ?,
+                    topnews = ?,
                     updated_at = NOW()
-                   WHERE news_id = ?";
-    
-    $update_stmt = $conn->prepare($update_sql);
-    $update_stmt->bind_param("ssssssi", $title, $summary, $content, $category, $district, $region, $news_id);
+               WHERE news_id = ?";
+
+$update_stmt = $conn->prepare($update_sql);
+$update_stmt->bind_param(
+    "ssssii",
+    $title,
+    $summary,
+    $content,
+    $category,
+    $topnews,
+    $news_id
+);
     
     if ($update_stmt->execute()) {
         $update_success = true;
@@ -204,7 +257,7 @@ function getMarathiStatusName($status) {
 
 function getMarathiCategoryName($category) {
     $category_map = [
-        'home' => 'मुख्यपृष्ठ',
+        // 'home' => 'मुख्यपृष्ठ',
         'amrut_events' => 'अमृत घडामोडी',
         'beneficiary_story' => 'लाभार्थी स्टोरी',
         'today_special' => 'दिनविशेष',
@@ -294,7 +347,7 @@ function getMarathiDistrictName($districtValue) {
 
 // Get all categories for dropdown
 $categories = [
-    'home' => 'मुख्यपृष्ठ',
+    // 'home' => 'मुख्यपृष्ठ',
     'amrut_events' => 'अमृत घडामोडी',
     'beneficiary_story' => 'लाभार्थी स्टोरी',
     'today_special' => 'दिनविशेष',
@@ -436,6 +489,17 @@ $all_regions = [
             font-size: 12px;
         }
         
+        /* Switch checkbox styles */
+        .form-check-input:checked {
+            background-color: #FF6600 !important;
+            border-color: #FF6600 !important;
+        }
+        
+        .form-check-input:focus {
+            border-color: #FFA500 !important;
+            box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25) !important;
+        }
+        
         /* Responsive styles */
         @media (max-width: 768px) {
             .card-header h4 {
@@ -512,9 +576,26 @@ $all_regions = [
         .edit-mode .edit-button {
             display: none !important;
         }
+        
+        /* Read-only form controls */
+        .form-control[readonly] {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        
+        /* Hide quick approve button for approved/disapproved news */
+        .approved-news .quick-approve-btn,
+        .disapproved-news .quick-approve-btn {
+            display: none !important;
+        }
+        
+        /* Hide edit button for disapproved news only */
+        .disapproved-news .edit-button {
+            display: none !important;
+        }
     </style>
 </head>
-<body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?>">
+<body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?> <?php echo $news['is_approved'] == 1 ? 'approved-news' : ($news['is_approved'] == 2 ? 'disapproved-news' : ''); ?>">
   
 
     <div class="container mt-4 mb-5">
@@ -528,23 +609,34 @@ $all_regions = [
                 <i class="fas fa-arrow-left me-2"></i> मागे जा
             </a>
             
-            <?php if ($news['is_approved'] == 0): ?>
             <div class="d-flex gap-2">
-                <?php if (!$edit_mode): ?>
-                <a href="?news_id=<?php echo $news_id; ?>&edit=1" 
-                   class="btn btn-warning edit-button" 
-                   style="font-family: 'Mukta', sans-serif;">
-                    <i class="fas fa-edit me-2"></i> एडिट करा
-                </a>
-                <?php else: ?>
-                <a href="?news_id=<?php echo $news_id; ?>" 
-                   class="btn btn-secondary" 
-                   style="font-family: 'Mukta', sans-serif;">
-                    <i class="fas fa-times me-2"></i> एडिट बंद करा
+                <?php if ($news['is_approved'] == 0): ?>
+                <!-- Quick Approve Button (only for pending news) -->
+                <a href="?news_id=<?php echo $news_id; ?>&quick_approve=1" 
+                   class="btn btn-success quick-approve-btn" 
+                   style="font-family: 'Mukta', sans-serif;"
+                   onclick="return confirmQuickApprove()">
+                    <i class="fas fa-check-circle me-2"></i>  मान्य करा
                 </a>
                 <?php endif; ?>
+                
+                <!-- Edit Button (for both pending AND approved news, but not for disapproved) -->
+                <?php if ($news['is_approved'] != 2): ?>
+                    <?php if (!$edit_mode): ?>
+                    <a href="?news_id=<?php echo $news_id; ?>&edit=1" 
+                       class="btn btn-warning edit-button" 
+                       style="font-family: 'Mukta', sans-serif;">
+                        <i class="fas fa-edit me-2"></i> एडिट करा
+                    </a>
+                    <?php else: ?>
+                    <a href="?news_id=<?php echo $news_id; ?>" 
+                       class="btn btn-secondary" 
+                       style="font-family: 'Mukta', sans-serif;">
+                        <i class="fas fa-times me-2"></i> एडिट बंद करा
+                    </a>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
         </div>
         
         <!-- Main Card -->
@@ -728,13 +820,13 @@ $all_regions = [
                                             <th width="40%"><i class="fas fa-building me-2"></i> विभाग:</th>
                                             <td>
                                                 <?php if ($edit_mode): ?>
-                                                <select class="form-select form-select-sm" name="region" style="border: 1px solid #FFA500;">
-                                                    <?php foreach ($all_regions as $region_value => $region_name): ?>
-                                                    <option value="<?php echo $region_value; ?>" <?php echo (strtolower($news['Region']) == strtolower($region_value)) ? 'selected' : ''; ?>>
-                                                        <?php echo $region_name; ?>
-                                                    </option>
-                                                    <?php endforeach; ?>
-                                                </select>
+                                                <!-- Make it read-only instead of a dropdown -->
+                                                <input type="text" 
+                                                       class="form-control form-control-sm" 
+                                                       value="<?php echo getMarathiDivisionName($news['Region']); ?>"
+                                                       readonly
+                                                       style="border: 1px solid #FFA500; background-color: #f8f9fa;">
+                                                <input type="hidden" name="region" value="<?php echo htmlspecialchars($news['Region']); ?>">
                                                 <?php else: ?>
                                                 <?php echo getMarathiDivisionName($news['Region']); ?>
                                                 <?php endif; ?>
@@ -744,13 +836,13 @@ $all_regions = [
                                             <th><i class="fas fa-map-marker-alt me-2"></i> जिल्हा:</th>
                                             <td>
                                                 <?php if ($edit_mode): ?>
-                                                <select class="form-select form-select-sm" name="district" style="border: 1px solid #FFA500;">
-                                                    <?php foreach ($all_districts as $district_value => $district_name): ?>
-                                                    <option value="<?php echo $district_value; ?>" <?php echo (strtolower($news['district_name']) == strtolower($district_value)) ? 'selected' : ''; ?>>
-                                                        <?php echo $district_name; ?>
-                                                    </option>
-                                                    <?php endforeach; ?>
-                                                </select>
+                                                <!-- Make it read-only instead of a dropdown -->
+                                                <input type="text" 
+                                                       class="form-control form-control-sm" 
+                                                       value="<?php echo getMarathiDistrictName($news['district_name']); ?>"
+                                                       readonly
+                                                       style="border: 1px solid #FFA500; background-color: #f8f9fa;">
+                                                <input type="hidden" name="district" value="<?php echo htmlspecialchars($news['district_name']); ?>">
                                                 <?php else: ?>
                                                 <?php echo getMarathiDistrictName($news['district_name']); ?>
                                                 <?php endif; ?>
@@ -796,7 +888,23 @@ $all_regions = [
                                         </tr>
                                         <tr>
                                             <th><i class="fas fa-star me-2"></i> टॉप न्यूज:</th>
-                                            <td><?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?></td>
+                                            <td>
+                                                <?php if ($edit_mode): ?>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" 
+                                                           type="checkbox" 
+                                                           name="topnews" 
+                                                           value="1" 
+                                                           <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'checked' : ''; ?>
+                                                           style="width: 3em; height: 1.5em; margin-left: 0;">
+                                                    <label class="form-check-label ms-2">
+                                                        <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?>
+                                                    </label>
+                                                </div>
+                                                <?php else: ?>
+                                                <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     </table>
                                 </div>
@@ -994,6 +1102,15 @@ $all_regions = [
             return true;
         }
         
+        // Function to confirm quick approve
+        function confirmQuickApprove() {
+            if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी  मान्य करायची आहे?')) {
+                return false;
+            }
+            showToast("बातमी झटपट मान्य केली जात आहे...", "info", 2000);
+            return true;
+        }
+        
         // Display stored toast messages from PHP session
         document.addEventListener('DOMContentLoaded', function() {
             <?php 
@@ -1049,6 +1166,19 @@ $all_regions = [
                 }, 5000);
             });
         });
+        
+        // Debug function to show what data is being posted
+        function debugPostData() {
+            const form = document.querySelector('form[method="POST"]');
+            if (form) {
+                const formData = new FormData(form);
+                let debugMessage = "DEBUG - POST Data being sent:\n\n";
+                for (let [key, value] of formData.entries()) {
+                    debugMessage += `${key}: ${value}\n`;
+                }
+                alert(debugMessage);
+            }
+        }
     </script>
 
     <?php include 'components/footer.php'; ?>
