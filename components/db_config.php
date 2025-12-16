@@ -11,9 +11,9 @@
 
 // Production database configuration   for .org
 define('DB_HOST', 'localhost');
-define('DB_USER', 'u153621952_Amrut123');
-define('DB_PASS', 'Mahaamrut@1234');
-define('DB_NAME', 'u153621952_Mahaamrutdb');
+define('DB_USER', 'u153621952_Amrut123');   
+define('DB_PASS', 'Mahaamrut@123456789');
+define('DB_NAME', 'u153621952_Mahaamrutdb');    
 
 
 
