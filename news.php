@@ -827,7 +827,7 @@ $count_stmt->close();
                     <?php while ($related_news = $related_result->fetch_assoc()): ?>
                         <a href="backend/views.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
                             <?php 
-                            // Check if related news has cover photo
+                            // Check if related news has cover photo ...
                             $has_related_photo = !empty($related_news['cover_photo_url']) && isValidImage($related_news['cover_photo_url']);
                             ?>
                             
