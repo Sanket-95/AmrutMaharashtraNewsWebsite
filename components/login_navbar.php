@@ -5,7 +5,7 @@
         padding: 8px 0;
         border-bottom: 2px solid #d35400;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        position: relative;
+        position: relative;    
         z-index: 999;
     }
     
@@ -32,6 +32,32 @@
     }
     
     .news-btn:hover {
+        background: #fff5e6;
+        transform: translateY(-1px);
+    }
+    
+    .nav-buttons-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .dashboard-btn {
+        background: white;
+        color: #ff6600;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s ease;
+        font-size: 14px;
+    }
+    
+    .dashboard-btn:hover {
         background: #fff5e6;
         transform: translateY(-1px);
     }
@@ -110,22 +136,32 @@
         font-weight: 600;
     }
     
+    .modal-footer {
+        padding: 15px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+    }
+    
     .logout-btn {
         background: #dc3545;
         color: white;
         border: none;
-        width: 100%;
-        padding: 8px;
+        padding: 8px 20px;
         border-radius: 5px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-top: 10px;
         font-size: 14px;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
     }
     
     .logout-btn:hover {
         background: #c82333;
+        text-decoration: none;
+        color: white;
     }
     
     @media (max-width: 768px) {
@@ -133,9 +169,13 @@
             padding: 0 10px;
         }
         
-        .news-btn {
+        .news-btn, .dashboard-btn {
             padding: 5px 12px;
             font-size: 13px;
+        }
+        
+        .nav-buttons-container {
+            gap: 8px;
         }
         
         .profile-btn {
@@ -156,6 +196,7 @@ if (isset($_SESSION['user_id'])) {
     $user_name = $_SESSION['name'] ?? 'User';
     $user_roll = $_SESSION['roll'] ?? '';
     $user_location = $_SESSION['location'] ?? '';
+    $username = $_SESSION['username'] ?? '';
     
     // Get current page filename
     $current_page = basename($_SERVER['PHP_SELF']);
@@ -164,8 +205,8 @@ if (isset($_SESSION['user_id'])) {
     $news_approval_pages = ['newsapproval.php', 'newsapproval_details.php'];
     $is_news_approval_page = in_array($current_page, $news_approval_pages);
     
-    // For district_user, only show "नवीन बातमी" button on approval pages
-    // For admin and division_head, show appropriate buttons based on page
+    // Check if current page is dashboard.php
+    $is_dashboard_page = ($current_page === 'dashboard.php');
     ?>
     
     <div class="login-navbar">
@@ -212,46 +253,64 @@ if (isset($_SESSION['user_id'])) {
             }
             ?>
             
-            <div class="profile-container">
-                <button class="profile-btn" id="profileButton">
-                    <i class="bi bi-person-circle"></i>
-                </button>
+            <div class="nav-buttons-container">
+                <?php 
+                // Show dashboard button only for username "MD" and not on dashboard page
+                if (!$is_dashboard_page && $username === 'MD'): 
+                ?>
+                <a href="dashboard.php" class="dashboard-btn">
+                    <i class="bi bi-speedometer2"></i> डॅशबोर्ड
+                </a>
+                <?php endif; ?>
                 
-                <div class="profile-modal" id="profileModal">
-                    <div class="modal-header">
-                        <h5>Profile Info</h5>
-                    </div>
-                    <div class="modal-body">
-                        <div class="user-info-item">
-                            <div class="user-info-label">Name</div>
-                            <div class="user-info-value"><?php echo htmlspecialchars($user_name); ?></div>
+                <div class="profile-container">
+                    <button class="profile-btn" id="profileButton">
+                        <i class="bi bi-person-circle"></i>
+                    </button>
+                    
+                    <div class="profile-modal" id="profileModal">
+                        <div class="modal-header">
+                            <h5>Profile Info</h5>
                         </div>
-                        
-                        <div class="user-info-item">
-                            <div class="user-info-label">Role</div>
-                            <div class="user-info-value">
-                                <?php 
-                                if ($user_roll === 'admin') {
-                                    echo 'Admin';
-                                } elseif ($user_roll === 'division_head') {
-                                    echo 'Divisional Head';
-                                } elseif ($user_roll === 'district_user') {
-                                    echo 'Publisher';
-                                } else {
-                                    echo htmlspecialchars(ucfirst($user_roll));
-                                }
-                                ?>
+                        <div class="modal-body">
+                            <div class="user-info-item">
+                                <div class="user-info-label">Name</div>
+                                <div class="user-info-value"><?php echo htmlspecialchars($user_name); ?></div>
+                            </div>
+                            
+                            <!-- <div class="user-info-item">
+                                <div class="user-info-label">Username</div>
+                                <div class="user-info-value"><?php echo htmlspecialchars($username); ?></div>
+                            </div> -->
+                            
+                            <div class="user-info-item">
+                                <div class="user-info-label">Role</div>
+                                <div class="user-info-value">
+                                    <?php 
+                                    if ($user_roll === 'admin') {
+                                        echo 'Admin';
+                                    } elseif ($user_roll === 'division_head') {
+                                        echo 'Divisional Head';
+                                    } elseif ($user_roll === 'district_user') {
+                                        echo 'Publisher';
+                                    } else {
+                                        echo htmlspecialchars(ucfirst($user_roll));
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                            
+                            <div class="user-info-item">
+                                <div class="user-info-label">Location</div>
+                                <div class="user-info-value"><?php echo htmlspecialchars($user_location); ?></div>
                             </div>
                         </div>
                         
-                        <div class="user-info-item">
-                            <div class="user-info-label">Location</div>
-                            <div class="user-info-value"><?php echo htmlspecialchars($user_location); ?></div>
+                        <div class="modal-footer">
+                            <a href="backend/logout.php" class="logout-btn">
+                                Logout
+                            </a>
                         </div>
-                        
-                        <a href="backend/logout.php" class="logout-btn">
-                            Logout
-                        </a>
                     </div>
                 </div>
             </div>
