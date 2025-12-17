@@ -38,7 +38,7 @@
                         </a>
                     </li>
                     <li class="mb-2">
-                        <a href="http://localhost/AmrutMaharashtra/about_us.php" class="text-white text-decoration-none hover-orange">
+                        <a href="about_us.php" class="text-white text-decoration-none hover-orange">
                             <i class="bi bi-info-circle me-2"></i> About Us
                         </a>
                     </li>
