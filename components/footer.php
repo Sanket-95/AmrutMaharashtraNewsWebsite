@@ -5,10 +5,10 @@
             <div class="col-lg-4 col-md-6 mb-4">
                 <div class="footer-logo">
                     <h3 class="text-orange mb-3">
-                        <i class="bi bi-buildings-fill"></i> Amrut Maharashtra
+                        <i class="bi bi-buildings-fill"></i> AMRUT Maharashtra
                     </h3>
                     <p class="text-light mb-3">
-                        Government News & Information Portal<br>
+                        Positive News & Information Portal<br>
                         Official News & Information Portal
                     </p>
                     <div class="social-links">

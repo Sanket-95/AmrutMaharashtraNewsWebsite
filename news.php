@@ -795,10 +795,13 @@ $count_stmt->close();
                     <i class="bi bi-linkedin"></i>
                 </a>
                 
-                <a href="https://wa.me/?text=<?php echo urlencode($news['title'] . ' ' . $current_url); ?>" 
-                   target="_blank" 
-                   class="share-btn whatsapp"
-                   title="WhatsApp वर शेअर करा">
+                <a href="https://wa.me/?text=<?php 
+                    $whatsapp_text = "*" . $news['title'] . "*" . "\n\nबातमी वाचा 'अमृत महाराष्ट्र'च्या पुढील लिंकवर...\n\n" . $current_url;
+                    echo urlencode($whatsapp_text); 
+                ?>" 
+                target="_blank" 
+                class="share-btn whatsapp"
+                title="WhatsApp वर शेअर करा">
                     <i class="bi bi-whatsapp"></i>
                 </a>
                 
