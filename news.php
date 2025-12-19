@@ -4,16 +4,15 @@ session_start();
 
 // Database connection
 include 'components/db_config.php';
-// INCLUDE VIEW INCREMENT COMPONENT - Add this line
 include 'components/increment_views.php';
 
-// Get news ID from URL     ============ /////   Remove this block after testing   ///// =========
-// $news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get news ID from URL
+$news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-// if ($news_id <= 0) {
-//     header("Location: index.php");
-//     exit();
-// }
+if ($news_id <= 0) {
+    header("Location: index.php");
+    exit();
+}
 
 // Fetch news details from database
 $query = "SELECT 
@@ -47,6 +46,75 @@ $news = $result->fetch_assoc();
 // Format dates
 $published_date = date('d-m-Y', strtotime($news['published_date']));
 $published_time = date('h:i A', strtotime($news['published_date']));
+
+// ============ DYNAMIC OG TAGS CONFIGURATION ============
+// Determine which image to use for sharing
+$share_image_url = '';
+
+// Function to check if image exists and is valid
+function isValidImage($url) {
+    if (empty($url) || $url === null) {
+        return false;
+    }
+    
+    $url = trim($url);
+    
+    // Check if it's a valid URL format
+    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        // Check if it's a local file path
+        if (file_exists($url)) {
+            // Check if it's an image file
+            $imageInfo = @getimagesize($url);
+            return $imageInfo !== false;
+        }
+        // Check if it's a relative path
+        $absolute_path = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($url, '/');
+        if (file_exists($absolute_path)) {
+            $imageInfo = @getimagesize($absolute_path);
+            return $imageInfo !== false;
+        }
+        return false;
+    }
+    
+    // For remote URLs, return true (will be checked by JS)
+    return true;
+}
+
+// First priority: cover_photo_url
+if (!empty($news['cover_photo_url']) && isValidImage($news['cover_photo_url'])) {
+    $share_image_url = $news['cover_photo_url'];
+}
+// Second priority: secondary_photo_url
+elseif (!empty($news['secondary_photo_url']) && isValidImage($news['secondary_photo_url'])) {
+    $share_image_url = $news['secondary_photo_url'];
+}
+// Fallback: default logo
+else {
+    $share_image_url = 'https://amrutmaharashtra.org/assets/images/logo.png';
+}
+
+// Ensure the image URL is absolute
+if (!empty($share_image_url) && strpos($share_image_url, 'http') !== 0) {
+    // Convert relative URL to absolute URL
+    if (strpos($share_image_url, 'photos/') === 0) {
+        $share_image_url = 'https://amrutmaharashtra.org/' . $share_image_url;
+    } else {
+        $share_image_url = 'https://amrutmaharashtra.org/' . ltrim($share_image_url, '/');
+    }
+}
+
+// Current URL for sharing
+$current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
+// Truncate summary for meta description
+$meta_description = !empty($news['summary']) ? 
+    substr(strip_tags($news['summary']), 0, 160) : 
+    substr(strip_tags($news['content']), 0, 160);
+$meta_description = htmlspecialchars($meta_description . '...');
+
+// Clean title for meta tags
+$meta_title = htmlspecialchars($news['title']);
+// ============ END OG TAGS CONFIGURATION ============
 
 // Fetch only APPROVED comments (approve = 1) with LIMIT 15
 $comments_query = "SELECT 
@@ -87,7 +155,7 @@ $marathi_categories = [
 // Get Marathi category name
 $category_marathi = $marathi_categories[$news['category_name']] ?? 'अमृत कार्यदीप';
 
-// FETCH RELATED NEWS - योग्य क्वेरी
+// FETCH RELATED NEWS
 $related_query =  "SELECT news_id, title, cover_photo_url, category_name 
                   FROM `news_articles` 
                   WHERE category_name = ? 
@@ -102,36 +170,15 @@ $related_stmt->execute();
 $related_result = $related_stmt->get_result();
 $related_news_count = $related_result->num_rows;
 
-// Include header
-include 'components/header.php';
-include 'components/navbar.php';
-
-// Current URL for sharing
-$current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
-
-// Function to check if image exists and is valid
-function isValidImage($url) {
-    if (empty($url) || $url === null) {
-        return false;
-    }
-    
-    $url = trim($url);
-    
-    // Check if it's a valid URL format
-    if (filter_var($url, FILTER_VALIDATE_URL) === false) {
-        // Check if it's a local file path
-        if (file_exists($url)) {
-            // Check if it's an image file
-            $imageInfo = @getimagesize($url);
-            return $imageInfo !== false;
-        }
-        return false;
-    }
-    
-    // For remote URLs, we'll check with JavaScript
-    // Return true initially and let JS handle errors
-    return true;
-}
+// Get total approved comments count
+$count_query = "SELECT COUNT(*) as total_comments FROM news_comments WHERE news_id = ? AND approve = 1";
+$count_stmt = $conn->prepare($count_query);
+$count_stmt->bind_param("i", $news_id);
+$count_stmt->execute();
+$count_result = $count_stmt->get_result();
+$count_row = $count_result->fetch_assoc();
+$total_approved_comments = $count_row['total_comments'];
+$count_stmt->close();
 
 // Check for secondary photo - use secondary_photo_url if available, otherwise use cover_photo_url
 $has_secondary_photo = false;
@@ -148,27 +195,65 @@ if (!empty($news['secondary_photo_url']) && isValidImage($news['secondary_photo_
 // Default images
 $default_cover_image = 'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-
-// Get total approved comments count
-$count_query = "SELECT COUNT(*) as total_comments FROM news_comments WHERE news_id = ? AND approve = 1";
-$count_stmt = $conn->prepare($count_query);
-$count_stmt->bind_param("i", $news_id);
-$count_stmt->execute();
-$count_result = $count_stmt->get_result();
-$count_row = $count_result->fetch_assoc();
-$total_approved_comments = $count_row['total_comments'];
-$count_stmt->close();
 ?>
 
 <!DOCTYPE html>
-<html lang="mr">
+<html lang="mr" prefix="og: https://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($news['title']); ?> - अमृत महाराष्ट्र</title>
+    <title><?php echo $meta_title; ?> - अमृत महाराष्ट्र</title>
+    
+    <!-- ========== DYNAMIC OPEN GRAPH META TAGS ========== -->
+    <meta property="og:title" content="<?php echo $meta_title; ?>">
+    <meta property="og:description" content="<?php echo $meta_description; ?>">
+    <meta property="og:image" content="<?php echo htmlspecialchars($share_image_url); ?>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="<?php echo $meta_title; ?>">
+    <meta property="og:url" content="<?php echo htmlspecialchars($current_url); ?>">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="अमृत महाराष्ट्र">
+    <meta property="og:locale" content="mr_IN">
+    
+    <!-- Article specific OG tags -->
+    <meta property="article:published_time" content="<?php echo date('c', strtotime($news['published_date'])); ?>">
+    <meta property="article:author" content="<?php echo htmlspecialchars($news['published_by']); ?>">
+    <meta property="article:section" content="<?php echo htmlspecialchars($news['category_name']); ?>">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo $meta_title; ?>">
+    <meta name="twitter:description" content="<?php echo $meta_description; ?>">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars($share_image_url); ?>">
+    
+    <!-- WhatsApp Specific -->
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:secure_url" content="<?php echo htmlspecialchars($share_image_url); ?>">
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="description" content="<?php echo $meta_description; ?>">
+    <meta name="keywords" content="Maharashtra news, <?php echo htmlspecialchars($news['category_name']); ?>, <?php echo htmlspecialchars($news['district_name']); ?>, Amrut Maharashtra">
+    <meta name="author" content="<?php echo htmlspecialchars($news['published_by']); ?>">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="<?php echo htmlspecialchars($current_url); ?>">
     
     <!-- Toastify CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- Hidden OG image for better WhatsApp sharing -->
+    <div class="og-image-placeholder" style="display:none;">
+        <img src="<?php echo htmlspecialchars($share_image_url); ?>" 
+             alt="<?php echo $meta_title; ?>"
+             crossorigin="anonymous">
+    </div>
     
     <style>
         .news-detail-container {
@@ -308,11 +393,11 @@ $count_stmt->close();
         .news-image {
             width: 100%;
             max-height: 500px;
-            object-fit: contain; /* Changed from cover to contain */
+            object-fit: contain;
             border-radius: 10px;
             margin: 25px 0;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            background-color: #f8f9fa; /* Background for transparency */
+            background-color: #f8f9fa;
         }
         
         .news-content {
@@ -361,6 +446,7 @@ $count_stmt->close();
             text-decoration: none;
             transition: all 0.3s ease;
             font-size: 20px;
+            cursor: pointer;
         }
         
         .share-btn:hover {
@@ -539,9 +625,9 @@ $count_stmt->close();
             max-height: 100%;
             width: auto;
             height: auto;
-            object-fit: contain; /* Changed from cover to contain */
+            object-fit: contain;
             transition: transform 0.5s ease;
-            background-color: #f8f9fa; /* Background for transparency */
+            background-color: #f8f9fa;
         }
         
         .related-news-card:hover .related-news-image {
@@ -673,6 +759,9 @@ $count_stmt->close();
     </style>
 </head>
 <body>
+    <!-- Include navbar -->
+    <?php include 'components/navbar.php'; ?>
+    
     <!-- Breadcrumb Navigation -->
     <div class="container mt-4">
         <nav aria-label="breadcrumb">
@@ -777,6 +866,7 @@ $count_stmt->close();
             <h4 class="mb-4"><i class="bi bi-share-fill text-primary"></i> ही बातमी शेअर करा</h4>
             
             <div class="share-buttons">
+                <!-- Facebook -->
                 <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo urlencode($current_url); ?>" 
                    target="_blank" 
                    class="share-btn facebook"
@@ -784,6 +874,7 @@ $count_stmt->close();
                     <i class="bi bi-facebook"></i>
                 </a>
                 
+                <!-- Twitter -->
                 <a href="https://twitter.com/intent/tweet?url=<?php echo urlencode($current_url); ?>&text=<?php echo urlencode($news['title']); ?>" 
                    target="_blank" 
                    class="share-btn twitter"
@@ -791,23 +882,22 @@ $count_stmt->close();
                     <i class="bi bi-twitter"></i>
                 </a>
                 
-                <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php echo urlencode($current_url); ?>&title=<?php echo urlencode($news['title']); ?>" 
+                <!-- LinkedIn -->
+                <a href="https://www.linkedin.com/shareArticle?mini=true&url=<?php echo urlencode($current_url); ?>&title=<?php echo urlencode($news['title']); ?>&summary=<?php echo urlencode($meta_description); ?>" 
                    target="_blank" 
                    class="share-btn linkedin"
                    title="LinkedIn वर शेअर करा">
                     <i class="bi bi-linkedin"></i>
                 </a>
                 
-                <a href="https://wa.me/?text=<?php 
-                    $whatsapp_text = "*" . $news['title'] . "*" . "\n\nबातमी वाचा 'अमृत महाराष्ट्र'च्या पुढील लिंकवर...\n\n" . $current_url;
-                    echo urlencode($whatsapp_text); 
-                ?>" 
-                target="_blank" 
-                class="share-btn whatsapp"
-                title="WhatsApp वर शेअर करा">
+                <!-- WhatsApp -->
+                <button onclick="shareOnWhatsApp()" 
+                        class="share-btn whatsapp border-0"
+                        title="WhatsApp वर शेअर करा">
                     <i class="bi bi-whatsapp"></i>
-                </a>
+                </button>
                 
+                <!-- Copy Link -->
                 <button onclick="copyToClipboard()" 
                         class="share-btn copy-link border-0"
                         title="लिंक कॉपी करा">
@@ -833,7 +923,7 @@ $count_stmt->close();
                     <?php while ($related_news = $related_result->fetch_assoc()): ?>
                         <a href="news.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
                             <?php 
-                            // Check if related news has cover photo ...
+                            // Check if related news has cover photo
                             $has_related_photo = !empty($related_news['cover_photo_url']) && isValidImage($related_news['cover_photo_url']);
                             ?>
                             
@@ -937,11 +1027,6 @@ $count_stmt->close();
                     <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
                         <i class="bi bi-send"></i> Post Comment
                     </button>
-                    <div id="loadingSpinner" class="d-none">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
                 </div>
             </div>
         </form>
@@ -973,6 +1058,26 @@ $count_stmt->close();
                          'linear-gradient(135deg, #17a2b8, #20c997)'
             }
         }).showToast();
+    }
+    
+    // Enhanced WhatsApp sharing with image
+    function shareOnWhatsApp() {
+        const url = "<?php echo $current_url; ?>";
+        const title = "<?php echo addslashes($news['title']); ?>";
+        const description = "<?php echo addslashes($meta_description); ?>";
+        const image = "<?php echo $share_image_url; ?>";
+        
+        // Create WhatsApp message
+        const whatsappText = `*${title}*\n\n${description}\n\n📰 वाचा: ${url}`;
+        
+        // Use WhatsApp's share API
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
+        
+        // Open in new window
+        window.open(whatsappUrl, '_blank');
+        
+        // Show toast notification
+        showToast('WhatsApp वर शेअर करत आहे...', 'info');
     }
     
     // Copy to clipboard function with toast
@@ -1216,8 +1321,9 @@ $count_stmt->close();
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
     
-    // Add error handlers to images
+    // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', function() {
+        // Add error handlers to images
         const images = document.querySelectorAll('.news-image, .related-news-image');
         images.forEach(function(img) {
             img.addEventListener('error', function() {
@@ -1232,12 +1338,11 @@ $count_stmt->close();
         // Add click handlers to share buttons with toast
         const shareButtons = document.querySelectorAll('.share-btn');
         shareButtons.forEach(button => {
-            if (button.tagName === 'A') {
+            if (button.tagName === 'A' && !button.classList.contains('whatsapp')) {
                 button.addEventListener('click', function() {
                     const platform = this.classList.contains('facebook') ? 'Facebook' :
                                   this.classList.contains('twitter') ? 'Twitter' :
-                                  this.classList.contains('linkedin') ? 'LinkedIn' :
-                                  'WhatsApp';
+                                  'LinkedIn';
                     showToast(`${platform} वर शेअर करत आहे...`, 'info');
                 });
             }
@@ -1264,7 +1369,38 @@ $count_stmt->close();
                 this.style.transform = 'translateY(0)';
             });
         });
+        
+        // Initialize meta tags
+        updateMetaTags();
     });
+    
+    // Function to update meta tags for social sharing
+    function updateMetaTags() {
+        // Set canonical URL
+        const canonicalLink = document.querySelector("link[rel='canonical']") || document.createElement('link');
+        canonicalLink.rel = 'canonical';
+        canonicalLink.href = "<?php echo $current_url; ?>";
+        document.head.appendChild(canonicalLink);
+        
+        // Set additional meta tags
+        const metaTags = [
+            { property: 'og:title', content: "<?php echo addslashes($news['title']); ?>" },
+            { property: 'og:description', content: "<?php echo addslashes($meta_description); ?>" },
+            { property: 'og:image', content: "<?php echo $share_image_url; ?>" },
+            { property: 'og:url', content: "<?php echo $current_url; ?>" },
+            { name: 'twitter:title', content: "<?php echo addslashes($news['title']); ?>" },
+            { name: 'twitter:description', content: "<?php echo addslashes($meta_description); ?>" },
+            { name: 'twitter:image', content: "<?php echo $share_image_url; ?>" }
+        ];
+        
+        metaTags.forEach(tag => {
+            let meta = document.querySelector(`meta[property="${tag.property}"]`) || 
+                      document.querySelector(`meta[name="${tag.name}"]`);
+            if (meta) {
+                meta.setAttribute('content', tag.content);
+            }
+        });
+    }
     </script>
 
     <!-- Back to Top Button -->
