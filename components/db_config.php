@@ -10,20 +10,20 @@
 
 
 // Production database configuration   for .org
-// define('DB_HOST', 'localhost');
-// define('DB_USER', 'u153621952_Amrut1234');   
-// define('DB_PASS', 'Mahaamrut@123456789');
-// define('DB_NAME', 'u153621952_Mahaamrutdb');    
+define('DB_HOST', 'localhost');
+define('DB_USER', 'u153621952_Amrut1234');   
+define('DB_PASS', 'Mahaamrut@123456789');
+define('DB_NAME', 'u153621952_Mahaamrutdb');    
 
 
 
 
 
 // Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'amrutmaharashtra');
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'root');
+// define('DB_PASS', '');
+// define('DB_NAME', 'amrutmaharashtra');
 
 // Create connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
