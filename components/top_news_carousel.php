@@ -1139,7 +1139,7 @@ function shareNews(event, newsId, newsTitle, shareUrl) {
     }
 }
 
-// Function to show share modal - FIXED VERSION
+// Function to show share modal - UPDATED VERSION with WhatsApp fix
 function showShareModal(newsTitle, shareUrl) {
     console.log('Showing share modal for:', newsTitle);
     
@@ -1267,11 +1267,13 @@ function showShareModal(newsTitle, shareUrl) {
             });
         }
         
-        // WhatsApp share button
+        // WhatsApp share button - UPDATED with same format as news.php
         const whatsappBtn = modalElement.querySelector('.share-whatsapp');
         if (whatsappBtn) {
             whatsappBtn.addEventListener('click', function() {
-                const url = `https://wa.me/?text=${encodeURIComponent(newsTitle + ' ' + shareUrl)}`;
+                // Use the same WhatsApp message format as news.php
+                const whatsappText = `*${newsTitle}*\n\n📰 बातमी वाचा 'अमृत महाराष्ट्र'च्या पुढील लिंकवर...\n${shareUrl}`;
+                const url = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
                 window.open(url, '_blank', 'width=600,height=400');
             });
         }
