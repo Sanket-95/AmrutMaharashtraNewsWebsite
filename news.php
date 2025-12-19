@@ -106,13 +106,23 @@ if (!empty($share_image_url) && strpos($share_image_url, 'http') !== 0) {
 // Current URL for sharing
 $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
-// Truncate summary for meta description
+// // Truncate summary for meta description
+// $meta_description = !empty($news['summary']) ? 
+//     substr(strip_tags($news['summary']), 0, 160) : 
+//     substr(strip_tags($news['content']), 0, 160);
+// $meta_description = htmlspecialchars($meta_description . '...');
+
+// // Clean title for meta tags
+// $meta_title = htmlspecialchars($news['title']);
+
+// FIXED VERSION - Use mb_substr for Unicode/Marathi text
 $meta_description = !empty($news['summary']) ? 
-    substr(strip_tags($news['summary']), 0, 160) : 
-    substr(strip_tags($news['content']), 0, 160);
+    mb_substr(strip_tags($news['summary']), 0, 160, 'UTF-8') : 
+    mb_substr(strip_tags($news['content']), 0, 160, 'UTF-8');
+
 $meta_description = htmlspecialchars($meta_description . '...');
 
-// Clean title for meta tags
+// Also fix title if needed
 $meta_title = htmlspecialchars($news['title']);
 // ============ END OG TAGS CONFIGURATION ============
 
