@@ -157,10 +157,10 @@ if (empty($slides)) {
                     
                     // Generate URLs
                     $baseUrl = '/AmrutMaharashtra/';
-                    $viewsUrl = 'backend/views.php?id=' . $newsId;
+                    $viewsUrl = 'news.php?id=' . $newsId;
                     $fullShareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
                                 //    "://$_SERVER[HTTP_HOST]" . $baseUrl . "backend/views.php?id=" . $newsId;
-                               "://" . $_SERVER['HTTP_HOST'] . "/backend/views.php?id=" . $newsId;
+                               "://" . $_SERVER['HTTP_HOST'] . "/news.php?id=" . $newsId;
                     
                     // Prepare safe output
                     $title = safeOutput($slide['title']);

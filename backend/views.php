@@ -1,3 +1,4 @@
+<!-- //////Delete after testing -->
 <?php
 echo "<script>alert('Hello from PHP');</script>";
 ?>

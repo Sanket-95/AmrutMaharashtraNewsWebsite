@@ -4,14 +4,16 @@ session_start();
 
 // Database connection
 include 'components/db_config.php';
+// INCLUDE VIEW INCREMENT COMPONENT - Add this line
+include 'components/increment_views.php';
 
-// Get news ID from URL
-$news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+// Get news ID from URL     ============ /////   Remove this block after testing   ///// =========
+// $news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
-if ($news_id <= 0) {
-    header("Location: index.php");
-    exit();
-}
+// if ($news_id <= 0) {
+//     header("Location: index.php");
+//     exit();
+// }
 
 // Fetch news details from database
 $query = "SELECT 
@@ -829,7 +831,7 @@ $count_stmt->close();
             <?php if ($related_news_count > 0): ?>
                 <div class="related-news-grid">
                     <?php while ($related_news = $related_result->fetch_assoc()): ?>
-                        <a href="backend/views.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
+                        <a href="news.php?id=<?php echo $related_news['news_id']; ?>" class="related-news-card">
                             <?php 
                             // Check if related news has cover photo ...
                             $has_related_photo = !empty($related_news['cover_photo_url']) && isValidImage($related_news['cover_photo_url']);
