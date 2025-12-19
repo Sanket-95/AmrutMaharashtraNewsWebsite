@@ -1068,7 +1068,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         const image = "<?php echo $share_image_url; ?>";
         
         // Create WhatsApp message
-        const whatsappText = `*${title}*\n\n${description}\n\n📰 वाचा: ${url}`;
+        // const whatsappText = `*${title}*\n\n${description}\n\n📰 वाचा: ${url}`;
+        const whatsappText = `*${title}*\n\n${description}\n\n📰 बातमी वाचा 'अमृत महाराष्ट्र'च्या पुढील लिंकवर...\n${url}`;
         
         // Use WhatsApp's share API
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
