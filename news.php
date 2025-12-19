@@ -86,10 +86,11 @@ $marathi_categories = [
 $category_marathi = $marathi_categories[$news['category_name']] ?? 'अमृत कार्यदीप';
 
 // FETCH RELATED NEWS - योग्य क्वेरी
-$related_query = "SELECT news_id, title, cover_photo_url, category_name 
+$related_query =  "SELECT news_id, title, cover_photo_url, category_name 
                   FROM `news_articles` 
                   WHERE category_name = ? 
                   AND news_id <> ? 
+                  AND is_approved = 1  
                   ORDER BY published_date DESC 
                   LIMIT 6";
 
