@@ -255,8 +255,8 @@ if (isset($_SESSION['user_id'])) {
             
             <div class="nav-buttons-container">
                 <?php 
-                // Show dashboard button only for username "MD" and not on dashboard page
-                if (!$is_dashboard_page && $username === 'MD'): 
+                // Show dashboard button only for username "Vijay Joshi" and not on dashboard page
+                if (!$is_dashboard_page && $username === 'Vijay Joshi'): 
                 ?>
                 <a href="dashboard.php" class="dashboard-btn">
                     <i class="bi bi-speedometer2"></i> डॅशबोर्ड
