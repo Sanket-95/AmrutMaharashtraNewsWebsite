@@ -158,6 +158,9 @@ function getMarathiRegionName($regionValue) {
     
     return isset($regionMap[$regionValue]) ? $regionMap[$regionValue] : $regionValue;
 }
+
+// Get current date and time in the format for datetime-local input
+$currentDateTime = date('Y-m-d\TH:i');
 ?>
 
 <div class="container mt-4 mb-5">
@@ -465,20 +468,33 @@ function getMarathiRegionName($regionValue) {
                     </div>
                 </div>
                 
-                <!-- Publish Date -->
+                <!-- Publish Date and Time -->
                 <div class="mb-4">
                     <div class="card shadow-sm" style="border-color: #FFA500; max-width: 400px;">
                         <div class="card-header" style="background-color: #FFF3E0;">
                             <label class="form-label fw-bold mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                <i class="fas fa-calendar-alt me-1"></i> प्रकाशन तारीख *
+                                <i class="fas fa-calendar-alt me-1"></i> प्रकाशन तारीख आणि वेळ *
                             </label>
                         </div>
                         <div class="card-body">
-                            <input type="date" 
-                                   class="form-control" 
-                                   name="publish_date" 
-                                   required
-                                   style="border-color: #FFA500; height: 50px; font-family: 'Mukta', sans-serif;">
+                            <div class="input-group">
+                                <input type="datetime-local" 
+                                       class="form-control" 
+                                       name="publish_date" 
+                                       id="publishDateTime"
+                                       value="<?php echo $currentDateTime; ?>"
+                                       required
+                                       style="border-color: #FFA500; height: 50px; font-family: 'Mukta', sans-serif;">
+                                <button type="button" 
+                                        class="btn btn-outline-secondary" 
+                                        id="setCurrentDateTimeBtn"
+                                        style="border-color: #FFA500; color: #FF6600; height: 50px; font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-clock"></i> आत्ताची वेळ
+                                </button>
+                            </div>
+                            <div class="form-text mt-2" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-info-circle"></i> तारीख आणि वेळ आपोआप आजच्या तारखेसह भरली गेली आहे (बदलू शकता)
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -587,6 +603,11 @@ function getMarathiRegionName($regionValue) {
         background: #FF6600;
     }
     
+    /* Style for datetime-local input */
+    input[type="datetime-local"] {
+        font-family: 'Mukta', sans-serif !important;
+    }
+    
     /* Responsive button styles */
     @media (max-width: 768px) {
         .btn-lg {
@@ -606,6 +627,16 @@ function getMarathiRegionName($regionValue) {
         h2 {
             font-size: 1.5rem !important;
         }
+        
+        /* Adjust datetime input for mobile */
+        input[type="datetime-local"] {
+            font-size: 14px !important;
+        }
+        
+        #setCurrentDateTimeBtn {
+            font-size: 14px !important;
+            padding: 0.375rem 0.5rem !important;
+        }
     }
     
     @media (max-width: 576px) {
@@ -620,6 +651,26 @@ function getMarathiRegionName($regionValue) {
         
         h4 {
             font-size: 1.2rem !important;
+        }
+        
+        /* Adjust datetime input for very small screens */
+        input[type="datetime-local"] {
+            font-size: 13px !important;
+        }
+        
+        #setCurrentDateTimeBtn {
+            font-size: 13px !important;
+            padding: 0.25rem 0.4rem !important;
+        }
+        
+        .input-group {
+            flex-direction: column;
+        }
+        
+        .input-group input,
+        .input-group button {
+            width: 100%;
+            margin-bottom: 5px;
         }
     }
     
@@ -674,6 +725,13 @@ function getMarathiRegionName($regionValue) {
     .form-check-input:focus {
         border-color: #FFA500;
         box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25);
+    }
+    
+    /* Set current datetime button styling */
+    #setCurrentDateTimeBtn:hover {
+        background-color: #FF6600 !important;
+        color: white !important;
+        border-color: #FF6600 !important;
     }
 </style>
 
@@ -872,6 +930,29 @@ function getMarathiRegionName($regionValue) {
             }
         });
         
+        // Set current datetime button functionality
+        const setCurrentDateTimeBtn = document.getElementById('setCurrentDateTimeBtn');
+        const publishDateTimeInput = document.getElementById('publishDateTime');
+        
+        if (setCurrentDateTimeBtn && publishDateTimeInput) {
+            setCurrentDateTimeBtn.addEventListener('click', function() {
+                const now = new Date();
+                
+                // Format: YYYY-MM-DDTHH:MM
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                
+                const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+                publishDateTimeInput.value = currentDateTime;
+                
+                // Show success message
+                toastr.success('आत्ताची तारीख आणि वेळ सेट केली गेली आहे!');
+            });
+        }
+        
         // Check for URL parameters on page load
         function checkURLParameters() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -913,6 +994,17 @@ function getMarathiRegionName($regionValue) {
                     
                     // Uncheck topnews checkbox
                     document.getElementById('topNewsCheckbox').checked = false;
+                    
+                    // Reset datetime to current date and time
+                    if (publishDateTimeInput) {
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        publishDateTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    }
                     
                     coverPreview.style.display = 'none';
                     imagePreviewDiv.innerHTML = '';

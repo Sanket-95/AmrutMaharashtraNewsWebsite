@@ -3,6 +3,9 @@ session_start();
 // Database configuration
 include '../components/db_config.php';
 
+// Set timezone to Indian Standard Time (Asia/Kolkata)
+date_default_timezone_set('Asia/Kolkata');
+
 // Function to sanitize input
 function sanitize_input($data) {
     if(empty($data)) return $data;
@@ -60,6 +63,38 @@ function generate_filename($prefix = '') {
     return $prefix . $timestamp . '_' . $microseconds . '_' . $random;
 }
 
+// Function to convert datetime-local input to MySQL datetime in UTC
+function convert_to_utc_datetime($datetime_local) {
+    if (empty($datetime_local)) {
+        // Return current UTC time if empty
+        return gmdate('Y-m-d H:i:s');
+    }
+    
+    // Input format: YYYY-MM-DDTHH:MM
+    // Convert to YYYY-MM-DD HH:MM:SS
+    $datetime = str_replace('T', ' ', $datetime_local);
+    
+    // If seconds are not provided, add :00
+    if (strlen($datetime) === 16) { // YYYY-MM-DD HH:MM format
+        $datetime .= ':00';
+    }
+    
+    // Create DateTime object assuming input is in IST
+    $ist_timezone = new DateTimeZone('Asia/Kolkata');
+    $date = DateTime::createFromFormat('Y-m-d H:i:s', $datetime, $ist_timezone);
+    
+    if ($date === false) {
+        // If parsing fails, return current UTC datetime
+        return gmdate('Y-m-d H:i:s');
+    }
+    
+    // Convert to UTC
+    $date->setTimezone(new DateTimeZone('UTC'));
+    
+    // Return in MySQL datetime format (in UTC)
+    return $date->format('Y-m-d H:i:s');
+}
+
 // Process form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -71,14 +106,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $news_summary = sanitize_input($_POST['news_summary']);
         $full_news = sanitize_input($_POST['full_news']);
         $publisher_name = sanitize_input($_POST['publisher_name']);
-        $publish_date = sanitize_input($_POST['publish_date']);
+        $publish_date_input = sanitize_input($_POST['publish_date']);
+        
+        // Convert datetime-local input (assumed IST) to UTC for database storage
+        $publish_date_utc = convert_to_utc_datetime($publish_date_input);
         
         // Get topnews value (checkbox - 1 if checked, 0 if not)
         $topnews = isset($_POST['topnews']) ? 1 : 0;
         
         // Validate required fields
         if (empty($region) || empty($district) || empty($category) || empty($news_title) || 
-            empty($news_summary) || empty($full_news) || empty($publisher_name) || empty($publish_date)) {
+            empty($news_summary) || empty($full_news) || empty($publisher_name) || empty($publish_date_input)) {
             throw new Exception('सर्व आवश्यक फील्ड भरा');
         }
         
@@ -162,18 +200,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $conn->set_charset("utf8mb4");
         
+        // Set MySQL session timezone to UTC to ensure consistency
+        $conn->query("SET time_zone = '+00:00'");
+        
         // Determine is_approved value based on user role
         $is_approved = 1; // Default to approved for admin and division_head
         if (isset($_SESSION['roll']) && $_SESSION['roll'] === 'district_user') {
             $is_approved = 0; // Not approved for district_user
         }
         
-        // Prepare SQL statement - COUNT THE PLACEHOLDERS CAREFULLY
-        // We have: region, district, category, title, cover_photo_url, secondary_photo_url, 
-        // summary, content, published_by, approved_by, published_date, created_at, updated_at, 
-        // is_approved, view, topnews = 16 columns
-        // But VALUES has: ? x 14 + NOW() x 2 + 0 + ? = 16 values total
-        
+        // Prepare SQL statement
         $sql = "INSERT INTO news_articles (
                     Region, 
                     district_name, 
@@ -191,19 +227,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     is_approved, 
                     view,
                     topnews
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), ?, 0, ?)";
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), ?, 0, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
             throw new Exception('SQL स्टेटमेंट तयार करताना त्रुटी: ' . $conn->error);
         }
         
-        // Debug: Check parameter count
-        // We need 12 parameters: 10 strings + 1 integer (is_approved) + 1 integer (topnews)
-        // Let me count: 1.region(s), 2.district(s), 3.category(s), 4.title(s), 5.cover_photo_url(s), 
-        // 6.secondary_photo_url(s), 7.summary(s), 8.content(s), 9.publisher_name(s), 
-        // 10.publish_date(s), 11.is_approved(i), 12.topnews(i) = 12 total
-        
+        // Bind parameters: 12 parameters total
         $stmt->bind_param(
             "ssssssssssii", // 12 parameters: 10 strings + 2 integers
             $region,
@@ -215,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $news_summary,
             $full_news,
             $publisher_name,
-            $publish_date,
+            $publish_date_utc, // This is now in UTC
             $is_approved,
             $topnews
         );
@@ -224,6 +255,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$stmt->execute()) {
             throw new Exception('डेटाबेसमध्ये डेटा घालताना त्रुटी: ' . $stmt->error);
         }
+        
+        // For debugging: Log what was inserted
+        // error_log("User entered (IST): " . $publish_date_input);
+        // error_log("Converted to UTC for DB: " . $publish_date_utc);
         
         $stmt->close();
         $conn->close();
