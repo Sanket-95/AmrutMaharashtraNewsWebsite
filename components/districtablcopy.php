@@ -10,16 +10,13 @@ $districts = [];
 $district_totals = [];
 $category_data = [];
 $views_data = [];
-$english_district_names = []; // Store English district names for linking
 
 // Build the query based on region selection
 if ($selected_region == 'all') {
     // Query for ALL regions - Show Marathi district names for all
     $query = "SELECT 
                 md.dmarathi AS district_name_marathi,
-                md.district AS district_name_english,
                 cl.marathi_name AS category_name,
-                cl.catagory AS category_english,
                 COUNT(*) AS total_news,
                 SUM(na.`view`) AS total_views
             FROM news_articles na
@@ -33,9 +30,7 @@ if ($selected_region == 'all') {
                 AND na.published_date <= ?
             GROUP BY 
                 md.dmarathi,
-                md.district,
-                cl.marathi_name,
-                cl.catagory
+                cl.marathi_name
             ORDER BY 
                 md.dmarathi,
                 cl.marathi_name;
@@ -49,9 +44,7 @@ if ($selected_region == 'all') {
     // Query for specific region (with district filter and Marathi district names)
     $query = "SELECT 
                 md.dmarathi AS district_name_marathi,
-                md.district AS district_name_english,
                 cl.marathi_name AS category_name,
-                cl.catagory AS category_english,
                 COUNT(*) AS total_news,
                 SUM(na.`view`) AS total_views
             FROM news_articles na
@@ -66,9 +59,7 @@ if ($selected_region == 'all') {
                 AND md.division = ?
             GROUP BY 
                 md.dmarathi,
-                md.district,
-                cl.marathi_name,
-                cl.catagory
+                cl.marathi_name
             ORDER BY 
                 md.dmarathi,
                 cl.marathi_name;
@@ -87,28 +78,22 @@ if (isset($stmt) && $stmt) {
     // Process the data
     while ($row = $result->fetch_assoc()) {
         // Always use Marathi district name from md.dmarathi
-        $district_marathi = $row['district_name_marathi'];
-        $district_english = $row['district_name_english'];
-        $category_marathi = $row['category_name'];
-        $category_english = $row['category_english'];
+        $district = $row['district_name_marathi'];
+        $category = $row['category_name'];
         $news_count = $row['total_news'];
         $views_count = $row['total_views'];
         
         // Store district totals
-        if (!isset($district_totals[$district_marathi])) {
-            $district_totals[$district_marathi] = 0;
-            $category_data[$district_marathi] = [];
-            $views_data[$district_marathi] = [];
-            $english_district_names[$district_marathi] = $district_english;
-            $districts[] = $district_marathi;
+        if (!isset($district_totals[$district])) {
+            $district_totals[$district] = 0;
+            $category_data[$district] = [];
+            $views_data[$district] = [];
+            $districts[] = $district;
         }
         
-        $district_totals[$district_marathi] += $news_count;
-        $category_data[$district_marathi][$category_marathi] = [
-            'count' => $news_count,
-            'views' => $views_count,
-            'english_name' => $category_english
-        ];
+        $district_totals[$district] += $news_count;
+        $category_data[$district][$category] = $news_count;
+        $views_data[$district][$category] = $views_count;
     }
     $stmt->close();
 } else {
@@ -128,9 +113,9 @@ sort($allCategories);
 
 $total_all_news = array_sum($district_totals);
 $total_all_views = 0;
-foreach ($category_data as $districtCats) {
-    foreach ($districtCats as $catData) {
-        $total_all_views += $catData['views'];
+foreach ($views_data as $districtViews) {
+    foreach ($districtViews as $views) {
+        $total_all_views += $views;
     }
 }
 ?>
@@ -239,15 +224,14 @@ foreach ($category_data as $districtCats) {
                     <tbody>
                         <?php 
                         $counter = 0;
-                        foreach ($district_totals as $district_marathi => $total_news): 
-                            $district_english = $english_district_names[$district_marathi] ?? $district_marathi;
+                        foreach ($district_totals as $district => $total_news): 
                             $district_views = 0;
-                            $district_categories = $category_data[$district_marathi] ?? [];
+                            $district_categories = $category_data[$district] ?? [];
                             
                             // Calculate total views for this district
-                            if (isset($district_categories)) {
-                                foreach ($district_categories as $catData) {
-                                    $district_views += $catData['views'];
+                            if (isset($views_data[$district])) {
+                                foreach ($views_data[$district] as $views) {
+                                    $district_views += $views;
                                 }
                             }
                             
@@ -255,11 +239,11 @@ foreach ($category_data as $districtCats) {
                             $avg_views = $total_news > 0 ? round($district_views / $total_news, 1) : 0;
                             $counter++;
                         ?>
-                        <tr class="district-row" data-district="<?php echo htmlspecialchars($district_marathi); ?>">
+                        <tr class="district-row" data-district="<?php echo htmlspecialchars($district); ?>">
                             <td class="fw-bold">
                                 <a href="#" class="text-decoration-none district-toggle" data-bs-toggle="collapse" 
                                    data-bs-target="#details-<?php echo $counter; ?>">
-                                    <?php echo htmlspecialchars($district_marathi); ?>
+                                    <?php echo htmlspecialchars($district); ?>
                                     <i class="bi bi-chevron-down float-end"></i>
                                 </a>
                             </td>
@@ -287,57 +271,40 @@ foreach ($category_data as $districtCats) {
                         <tr class="collapse" id="details-<?php echo $counter; ?>">
                             <td colspan="5" class="bg-light p-0">
                                 <div class="p-3">
-                                    <h6 class="mb-3"><?php echo htmlspecialchars($district_marathi); ?> साठी वर्गवार विभागणी</h6>
+                                    <h6 class="mb-3"><?php echo htmlspecialchars($district); ?> साठी वर्गवार विभागणी</h6>
                                     <div class="row">
                                         <?php 
                                         $cat_counter = 0;
-                                        foreach ($district_categories as $category_marathi => $catData):
-                                            $count = $catData['count'];
-                                            $views = $catData['views'];
-                                            $category_english = $catData['english_name'];
+                                        foreach ($district_categories as $category => $count):
+                                            $views = $views_data[$district][$category] ?? 0;
                                             $percentage = $total_news > 0 ? round(($count / $total_news) * 100, 1) : 0;
                                             $cat_counter++;
-                                            
-                                            // Create URL for mdnews.php
-                                            $redirect_url = "mdnews.php?" . http_build_query([
-                                                'district' => $district_english,
-                                                'category' => $category_english,
-                                                'from_date' => $from_date,
-                                                'to_date' => $to_date
-                                            ]);
                                         ?>
                                         <div class="col-md-4 col-lg-3 mb-3">
-                                            <a href="<?php echo $redirect_url; ?>" class="text-decoration-none category-card-link">
-                                                <div class="card border-0 shadow-sm h-100 clickable-card">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                                            <h6 class="card-title mb-0"><?php echo htmlspecialchars($category_marathi); ?></h6>
-                                                            <span class="badge bg-primary"><?php echo $percentage; ?>%</span>
+                                            <div class="card border-0 shadow-sm h-100">
+                                                <div class="card-body p-3">
+                                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                                        <h6 class="card-title mb-0"><?php echo htmlspecialchars($category); ?></h6>
+                                                        <span class="badge bg-primary"><?php echo $percentage; ?>%</span>
+                                                    </div>
+                                                    <div class="row g-2">
+                                                        <div class="col-6">
+                                                            <div class="text-muted small">बातम्या</div>
+                                                            <div class="fw-bold"><?php echo number_format($count); ?></div>
                                                         </div>
-                                                        <div class="row g-2">
-                                                            <div class="col-6">
-                                                                <div class="text-muted small">बातम्या</div>
-                                                                <div class="fw-bold"><?php echo number_format($count); ?></div>
-                                                            </div>
-                                                            <div class="col-6">
-                                                                <div class="text-muted small">दृश्ये</div>
-                                                                <div class="fw-bold text-info"><?php echo number_format($views); ?></div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="progress mt-2" style="height: 5px;">
-                                                            <div class="progress-bar" role="progressbar" 
-                                                                 style="width: <?php echo min($percentage, 100); ?>%;" 
-                                                                 aria-valuenow="<?php echo $percentage; ?>" 
-                                                                 aria-valuemin="0" aria-valuemax="100"></div>
-                                                        </div>
-                                                        <div class="mt-2 text-end">
-                                                            <small class="text-primary">
-                                                                <i class="bi bi-arrow-right-circle me-1"></i>सर्व बातम्या पहा
-                                                            </small>
+                                                        <div class="col-6">
+                                                            <div class="text-muted small">दृश्ये</div>
+                                                            <div class="fw-bold text-info"><?php echo number_format($views); ?></div>
                                                         </div>
                                                     </div>
+                                                    <div class="progress mt-2" style="height: 5px;">
+                                                        <div class="progress-bar" role="progressbar" 
+                                                             style="width: <?php echo min($percentage, 100); ?>%;" 
+                                                             aria-valuenow="<?php echo $percentage; ?>" 
+                                                             aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
                                                 </div>
-                                            </a>
+                                            </div>
                                         </div>
                                         <?php endforeach; ?>
                                         
@@ -493,26 +460,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.appendChild(clone);
     });
     <?php endif; ?>
-    
-    // Add hover effect to clickable cards
-    document.querySelectorAll('.clickable-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px)';
-            this.style.boxShadow = '0 6px 15px rgba(0,0,0,0.1)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
-        });
-        
-        card.addEventListener('click', function(e) {
-            // Let the anchor tag handle the navigation
-            // This is just for visual feedback
-            this.style.transform = 'translateY(-1px)';
-            this.style.boxShadow = '0 4px 10px rgba(0,0,0,0.08)';
-        });
-    });
 });
 </script>
 
@@ -580,32 +527,6 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #0d6efd;
 }
 
-/* Clickable card styles */
-.category-card-link {
-    display: block;
-    text-decoration: none !important;
-    color: inherit;
-}
-
-.clickable-card {
-    transition: all 0.3s ease;
-    border: 1px solid #e9ecef;
-    cursor: pointer;
-}
-
-.clickable-card:hover {
-    border-color: #0d6efd;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.clickable-card .card-body {
-    transition: all 0.3s ease;
-}
-
-.clickable-card:hover .card-body {
-    background-color: #f8f9fa;
-}
-
 /* Fix table header z-index to stay below navbar */
 .table-dark {
     position: sticky !important;
@@ -660,10 +581,6 @@ document.addEventListener('DOMContentLoaded', function() {
     .table th, .table td {
         padding: 0.4rem;
         font-size: 0.8rem;
-    }
-    
-    .clickable-card {
-        margin-bottom: 10px;
     }
 }
 </style>

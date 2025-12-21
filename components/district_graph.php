@@ -1,8 +1,9 @@
 <?php
 // District Graph Component
-// Get dates from parent (dashboard.php)
+// Get filters from parent (dashboard.php)
 $from_date = $_GET['from_date'] ?? date('Y-m-d', strtotime('-1 month'));
 $to_date = $_GET['to_date'] ?? date('Y-m-d');
+$selected_region = $_GET['region'] ?? 'all';
 
 // Initialize arrays for data
 $districts = [];
@@ -10,36 +11,72 @@ $district_totals = [];
 $category_data = [];
 $views_data = [];
 
-// Query to get district-wise news and category breakdown
-$query = "SELECT 
-            na.district_name,
-            cl.marathi_name AS category_name,
-            COUNT(*) AS total_news,
-            SUM(na.`view`) AS total_views
-        FROM news_articles na
-        JOIN catagory_list cl 
-            ON cl.catagory = na.category_name
-        WHERE 
-            na.is_approved = 1
-            AND na.published_date >= ?
-            AND na.published_date <= ?
-        GROUP BY 
-            na.district_name,
-            cl.marathi_name
-        ORDER BY 
-            na.district_name,
-            cl.marathi_name;
-        ";
+// Build the query based on region selection
+if ($selected_region == 'all') {
+    // Query for ALL regions (no district filter)
+    $query = "SELECT 
+                na.district_name,
+                cl.marathi_name AS category_name,
+                COUNT(*) AS total_news,
+                SUM(na.`view`) AS total_views
+            FROM news_articles na
+            JOIN catagory_list cl 
+                ON cl.catagory = na.category_name
+            WHERE 
+                na.is_approved = 1
+                AND na.published_date >= ?
+                AND na.published_date <= ?
+            GROUP BY 
+                na.district_name,
+                cl.marathi_name
+            ORDER BY 
+                na.district_name,
+                cl.marathi_name;
+            ";
+    
+    $stmt = $conn->prepare($query);
+    if ($stmt) {
+        $stmt->bind_param("ss", $from_date, $to_date);
+    }
+} else {
+    // Query for specific region (with district filter and Marathi district names)
+    $query = "SELECT 
+                md.dmarathi AS district_name_marathi,
+                cl.marathi_name AS category_name,
+                COUNT(*) AS total_news,
+                SUM(na.`view`) AS total_views
+            FROM news_articles na
+            JOIN catagory_list cl 
+                ON cl.catagory = na.category_name
+            JOIN mdistrict md
+                ON md.district = na.district_name
+            WHERE 
+                na.is_approved = 1
+                AND na.published_date >= ?
+                AND na.published_date <= ?
+                AND md.division = ?
+            GROUP BY 
+                md.dmarathi,
+                cl.marathi_name
+            ORDER BY 
+                md.dmarathi,
+                cl.marathi_name;
+            ";
+    
+    $stmt = $conn->prepare($query);
+    if ($stmt) {
+        $stmt->bind_param("sss", $from_date, $to_date, $selected_region);
+    }
+}
 
-$stmt = $conn->prepare($query);
-if ($stmt) {
-    $stmt->bind_param("ss", $from_date, $to_date);
+if (isset($stmt) && $stmt) {
     $stmt->execute();
     $result = $stmt->get_result();
     
     // Process the data
     while ($row = $result->fetch_assoc()) {
-        $district = $row['district_name'];
+        // Use Marathi district name when region is selected, otherwise use English district name
+        $district = ($selected_region == 'all') ? $row['district_name'] : $row['district_name_marathi'];
         $category = $row['category_name'];
         $news_count = $row['total_news'];
         $views_count = $row['total_views'];
@@ -94,9 +131,16 @@ $allCategories = array_unique($allCategories);
 <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">
         <h5 class="mb-0">
-            <i class="bi bi-bar-chart me-2"></i>District-wise News Distribution
+            <i class="bi bi-bar-chart me-2"></i>
+            <?php if ($selected_region != 'all'): ?>
+                <?php echo htmlspecialchars($selected_region); ?> प्रदेश - 
+            <?php endif; ?>
+            जिल्हावार बातमी वितरण
             <small class="float-end d-none d-md-inline">
-                <?php echo date('d M Y', strtotime($from_date)); ?> to <?php echo date('d M Y', strtotime($to_date)); ?>
+                <?php echo date('d M Y', strtotime($from_date)); ?> ते <?php echo date('d M Y', strtotime($to_date)); ?>
+                <?php if ($selected_region != 'all'): ?>
+                    <br><span class="fst-italic">फिल्टर: <?php echo htmlspecialchars($selected_region); ?> प्रदेश</span>
+                <?php endif; ?>
             </small>
         </h5>
     </div>
@@ -104,7 +148,13 @@ $allCategories = array_unique($allCategories);
         <?php if (empty($districts)): ?>
             <div class="text-center py-5">
                 <i class="bi bi-inbox display-1 text-muted"></i>
-                <p class="text-muted mt-3">No news articles found for the selected date range.</p>
+                <p class="text-muted mt-3">
+                    बातम्या आढळल्या नाहीत 
+                    <?php if ($selected_region != 'all'): ?>
+                        <?php echo htmlspecialchars($selected_region); ?> प्रदेशात 
+                    <?php endif; ?>
+                    निवडलेल्या तारखेपर्यंत.
+                </p>
             </div>
         <?php else: ?>
             <!-- Responsive container with scroll for mobile -->
@@ -116,16 +166,19 @@ $allCategories = array_unique($allCategories);
             
             <!-- District count summary -->
             <div class="mt-3 text-center text-muted small">
-                Showing <?php echo count($districts); ?> districts
+                दाखवत आहे <?php echo count($districts); ?> जिल्हे
+                <?php if ($selected_region != 'all'): ?>
+                    <?php echo htmlspecialchars($selected_region); ?> प्रदेशात
+                <?php endif; ?>
                 <?php if (count($districts) > 15): ?>
-                    <span class="d-block d-sm-inline">- Scroll horizontally to view all</span>
+                    <span class="d-block d-sm-inline">- सर्व पाहण्यासाठी क्षैतिज स्क्रोल करा</span>
                 <?php endif; ?>
             </div>
             
             <!-- Compact category legend with show/hide -->
             <div class="mt-4">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="text-muted mb-0">Categories (<?php echo count($allCategories); ?>)</h6>
+                    <h6 class="text-muted mb-0">वर्ग (<?php echo count($allCategories); ?>)</h6>
                     <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleLegend">
                         <i class="bi bi-chevron-down"></i>
                     </button>
@@ -139,13 +192,22 @@ $allCategories = array_unique($allCategories);
     <div class="card-footer text-muted small">
         <div class="row">
             <div class="col-sm-4 mb-2 mb-sm-0">
-                <i class="bi bi-geo-alt me-1"></i> Districts: <?php echo count($districts); ?>
+                <i class="bi bi-geo-alt me-1"></i> 
+                <?php if ($selected_region != 'all'): ?>
+                    <?php echo htmlspecialchars($selected_region); ?>: 
+                <?php endif; ?>
+                <?php echo count($districts); ?> जिल्हे
             </div>
             <div class="col-sm-4 mb-2 mb-sm-0">
-                <i class="bi bi-newspaper me-1"></i> Total News: <?php echo array_sum($news_counts); ?>
+                <i class="bi bi-newspaper me-1"></i> एकूण बातम्या: <?php echo array_sum($news_counts); ?>
             </div>
             <div class="col-sm-4">
-                <i class="bi bi-eye me-1"></i> Hover for details
+                <i class="bi bi-eye me-1"></i> 
+                <?php if ($selected_region == 'all'): ?>
+                    सर्व प्रदेश
+                <?php else: ?>
+                    <?php echo htmlspecialchars($selected_region); ?> प्रदेश
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -164,6 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newsCounts = <?php echo json_encode($news_counts); ?>;
     const hoverData = <?php echo json_encode($hover_data); ?>;
     const allCategories = <?php echo json_encode(array_values($allCategories)); ?>;
+    const selectedRegion = "<?php echo $selected_region; ?>";
     
     // Check if we have many districts (for mobile optimization)
     const isManyDistricts = districtLabels.length > 20;
@@ -293,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: districtLabels,
             datasets: [{
-                label: 'Total News',
+                label: selectedRegion === 'all' ? 'एकूण बातम्या' : selectedRegion + ' प्रदेशातील बातम्या',
                 data: newsCounts,
                 backgroundColor: function(context) {
                     const chart = context.chart;
@@ -325,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         label: function(context) {
                             const district = context.label;
                             const total = context.raw;
-                            return `Total News: ${total}`;
+                            return `एकूण बातम्या: ${total}`;
                         },
                         afterLabel: function(context) {
                             const district = context.label;
@@ -335,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 return '';
                             }
                             
-                            let tooltipText = '\nCategory Breakdown:\n';
+                            let tooltipText = '\nवर्गवार विभागणी:\n';
                             const maxCategories = window.innerWidth < 576 ? 5 : 10;
                             const displayedCategories = categories.slice(0, maxCategories);
                             const remaining = categories.length - maxCategories;
@@ -344,11 +407,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const color = categoryColorMap[item.category] || '#999';
                                 
                                 // Create colored square and category info
-                                tooltipText += `■ ${item.category}: ${item.count} news (${item.views} views)\n`;
+                                tooltipText += `■ ${item.category}: ${item.count} बातम्या (${item.views} दृश्ये)\n`;
                             });
                             
                             if (remaining > 0) {
-                                tooltipText += `... and ${remaining} more categories\n`;
+                                tooltipText += `... आणि ${remaining} अधिक वर्ग\n`;
                             }
                             
                             return tooltipText;
@@ -357,7 +420,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             const district = context[0].label;
                             const total = context[0].raw;
                             const categories = hoverData[district] || [];
-                            return `${categories.length} categories | Total Views: ${categories.reduce((sum, cat) => sum + (cat.views || 0), 0)}`;
+                            const totalViews = categories.reduce((sum, cat) => sum + (cat.views || 0), 0);
+                            
+                            if (selectedRegion === 'all') {
+                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews}`;
+                            } else {
+                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews} | प्रदेश: ${selectedRegion}`;
+                            }
                         }
                     },
                     backgroundColor: 'rgba(0, 0, 0, 0.85)',
@@ -388,6 +457,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     footerFont: {
                         size: window.innerWidth < 576 ? 10 : 11
                     }
+                },
+                title: {
+                    display: false,
+                    text: selectedRegion === 'all' ? 'सर्व प्रदेश - जिल्हावार बातमी वितरण' : selectedRegion + ' प्रदेश - जिल्हावार बातमी वितरण'
                 }
             },
             scales: {
@@ -411,7 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     title: {
                         display: true,
-                        text: 'Number of News Articles',
+                        text: 'बातम्यांची संख्या',
                         font: {
                             size: window.innerWidth < 576 ? 11 : 12
                         }
@@ -446,6 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const index = elements[0].index;
                     const district = districtLabels[index];
                     console.log('Clicked on district:', district);
+                    // You could add functionality here to drill down to district details
                 }
             },
             animation: {

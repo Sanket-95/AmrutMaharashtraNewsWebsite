@@ -19,16 +19,41 @@ $user_name = $_SESSION['name'] ?? 'User';
 $default_to_date = date('Y-m-d');
 $default_from_date = date('Y-m-d', strtotime('-1 month'));
 
-// Get selected dates - use GET instead of POST to avoid resubmission on refresh
+// Get selected dates and region - use GET instead of POST to avoid resubmission on refresh
 $from_date = $_GET['from_date'] ?? $default_from_date;
 $to_date = $_GET['to_date'] ?? $default_to_date;
+$selected_region = $_GET['region'] ?? 'all';
+
+// Define region options with Marathi names
+$region_options = [
+    'all' => 'सर्व प्रदेश',
+    'Konkan' => 'कोकण',
+    'Pune' => 'पुणे',
+    'Sambhajinagar' => 'संभाजीनगर',
+    'Nashik' => 'नाशिक',
+    'Amravati' => 'अमरावती',
+    'Nagpur' => 'नागपूर'
+];
 ?>
 
 <div class="container-fluid mt-3 px-2 px-md-3">
-    <!-- Compact datepicker in top-right corner -->
-    <div class="d-flex justify-content-end mb-3">
-        <form method="GET" action="" class="compact-datepicker">
-            <div class="d-flex align-items-center gap-1">
+    <!-- Unified filter form -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <form method="GET" action="" class="d-flex align-items-center gap-2 unified-filter flex-wrap w-100">
+            <!-- Region dropdown -->
+            <div class="region-filter">
+                <select class="form-select form-select-sm region-select" name="region" id="regionSelect">
+                    <?php foreach ($region_options as $value => $label): ?>
+                        <option value="<?php echo htmlspecialchars($value); ?>" 
+                            <?php echo ($selected_region == $value) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <!-- Date inputs -->
+            <div class="d-flex align-items-center gap-1 date-filter">
                 <input type="date" class="form-control form-control-sm date-input" id="from_date" name="from_date" 
                        value="<?php echo htmlspecialchars($from_date); ?>" 
                        max="<?php echo date('Y-m-d'); ?>">
@@ -38,13 +63,23 @@ $to_date = $_GET['to_date'] ?? $default_to_date;
                 <input type="date" class="form-control form-control-sm date-input" id="to_date" name="to_date" 
                        value="<?php echo htmlspecialchars($to_date); ?>" 
                        max="<?php echo date('Y-m-d'); ?>">
+            </div>
+            
+            <!-- Action buttons -->
+            <div class="d-flex align-items-center gap-1 action-buttons">
+                <button type="submit" class="btn btn-primary btn-sm px-3">
+                    <i class="bi bi-funnel me-1"></i> Apply Filters
+                </button>
                 
-                <button type="submit" class="btn btn-primary btn-sm ms-1 px-2 px-md-3">
-                    Go
+                <button type="button" id="resetAll" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Reset All
                 </button>
-                <button type="button" id="resetDates" class="btn btn-outline-secondary btn-sm px-2 px-md-3">
-                    Reset
-                </button>
+                
+                <?php if ($selected_region != 'all'): ?>
+                    <button type="button" id="resetRegionOnly" class="btn btn-outline-warning btn-sm px-3">
+                        <i class="bi bi-globe me-1"></i> सर्व प्रदेश
+                    </button>
+                <?php endif; ?>
             </div>
         </form>
     </div>
@@ -64,34 +99,56 @@ $to_date = $_GET['to_date'] ?? $default_to_date;
 </div>
 
 <style>
-.compact-datepicker {
-    max-width: 500px;
+.unified-filter {
+    max-width: 100%;
+}
+
+.region-filter {
+    min-width: 200px;
+    flex: 1;
+}
+
+.date-filter {
+    flex: 2;
+    min-width: 300px;
+}
+
+.action-buttons {
+    flex: 0 0 auto;
+}
+
+.region-select {
+    width: 100%;
 }
 
 .date-input {
-    width: 120px;
+    width: 140px;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-    .date-input {
-        width: 110px;
-    }
-    .container-fluid {
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .compact-datepicker {
-        width: 100%;
-        max-width: 100%;
+@media (max-width: 992px) {
+    .unified-filter {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 1rem !important;
     }
     
-    .compact-datepicker .d-flex {
+    .region-filter,
+    .date-filter,
+    .action-buttons {
+        width: 100%;
+        min-width: 100%;
+    }
+    
+    .date-filter {
+        justify-content: center;
+    }
+    
+    .action-buttons {
+        display: flex;
+        justify-content: center;
         flex-wrap: wrap;
-        gap: 0.5rem !important;
+        gap: 0.5rem;
     }
     
     .date-input {
@@ -99,33 +156,74 @@ $to_date = $_GET['to_date'] ?? $default_to_date;
         min-width: auto;
     }
     
-    .compact-datepicker .text-muted {
+    .region-select {
+        width: 100%;
+    }
+    
+    .container-fluid {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .date-filter {
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+    }
+    
+    .date-input {
+        width: calc(50% - 0.5rem);
+    }
+    
+    .date-filter .text-muted {
         display: none;
     }
     
-    .compact-datepicker .btn {
-        width: calc(50% - 0.5rem);
+    .action-buttons .btn {
+        flex: 1;
+        min-width: 120px;
     }
 }
 
-@media (min-width: 769px) and (max-width: 992px) {
+@media (min-width: 993px) and (max-width: 1200px) {
+    .region-select {
+        min-width: 180px;
+    }
+    
     .date-input {
-        width: 115px;
+        width: 130px;
     }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1201px) {
     .date-input {
-        width: 125px;
+        width: 150px;
     }
+    
+    .region-select {
+        min-width: 200px;
+    }
+}
+
+/* Active filter indicators */
+.btn-outline-warning {
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.btn-outline-warning:hover {
+    background-color: #ffc107;
+    color: #212529;
 }
 </style>
 
-<!-- JavaScript for date handling -->
+<!-- JavaScript for unified filter handling -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Reset button functionality
-    document.getElementById('resetDates').addEventListener('click', function() {
+    // Reset ALL button functionality
+    document.getElementById('resetAll').addEventListener('click', function() {
+        // Reset dates to default (last month to today)
         const today = new Date().toISOString().split('T')[0];
         const lastMonth = new Date();
         lastMonth.setMonth(lastMonth.getMonth() - 1);
@@ -134,9 +232,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('from_date').value = lastMonthStr;
         document.getElementById('to_date').value = today;
         
-        // Submit form after reset
+        // Reset region to "all"
+        document.getElementById('regionSelect').value = 'all';
+        
+        // Submit form
         this.closest('form').submit();
     });
+    
+    // Reset region only button functionality
+    const resetRegionOnlyBtn = document.getElementById('resetRegionOnly');
+    if (resetRegionOnlyBtn) {
+        resetRegionOnlyBtn.addEventListener('click', function() {
+            document.getElementById('regionSelect').value = 'all';
+            this.closest('form').submit();
+        });
+    }
     
     // Date validation
     const fromDate = document.getElementById('from_date');
@@ -153,6 +263,64 @@ document.addEventListener('DOMContentLoaded', function() {
             fromDate.value = this.value;
         }
     });
+    
+    // Quick date presets (optional - can be added as buttons if needed)
+    const quickDatePresets = {
+        'last7days': function() {
+            const today = new Date();
+            const lastWeek = new Date(today);
+            lastWeek.setDate(today.getDate() - 7);
+            
+            document.getElementById('from_date').value = lastWeek.toISOString().split('T')[0];
+            document.getElementById('to_date').value = today.toISOString().split('T')[0];
+            document.querySelector('form').submit();
+        },
+        'last30days': function() {
+            const today = new Date();
+            const lastMonth = new Date(today);
+            lastMonth.setDate(today.getDate() - 30);
+            
+            document.getElementById('from_date').value = lastMonth.toISOString().split('T')[0];
+            document.getElementById('to_date').value = today.toISOString().split('T')[0];
+            document.querySelector('form').submit();
+        },
+        'last90days': function() {
+            const today = new Date();
+            const lastQuarter = new Date(today);
+            lastQuarter.setDate(today.getDate() - 90);
+            
+            document.getElementById('from_date').value = lastQuarter.toISOString().split('T')[0];
+            document.getElementById('to_date').value = today.toISOString().split('T')[0];
+            document.querySelector('form').submit();
+        }
+    };
+    
+    // If you want to add quick date preset buttons, add them like this:
+    // <button type="button" class="btn btn-sm btn-outline-info" onclick="quickDatePresets.last7days()">Last 7 Days</button>
+    // <button type="button" class="btn btn-sm btn-outline-info" onclick="quickDatePresets.last30days()">Last 30 Days</button>
+    // <button type="button" class="btn btn-sm btn-outline-info" onclick="quickDatePresets.last90days()">Last 90 Days</button>
+    
+    // Show active filter status
+    function updateActiveFilterStatus() {
+        const region = document.getElementById('regionSelect').value;
+        const fromDateVal = document.getElementById('from_date').value;
+        const toDateVal = document.getElementById('to_date').value;
+        
+        // You can add visual indicators here if needed
+        console.log('Active filters:', {
+            region: region,
+            fromDate: fromDateVal,
+            toDate: toDateVal
+        });
+    }
+    
+    // Update status on change
+    document.getElementById('regionSelect').addEventListener('change', updateActiveFilterStatus);
+    fromDate.addEventListener('change', updateActiveFilterStatus);
+    toDate.addEventListener('change', updateActiveFilterStatus);
+    
+    // Initialize status
+    updateActiveFilterStatus();
 });
 </script>
 
