@@ -3,7 +3,7 @@ session_start();
 // Database configuration
 include '../components/db_config.php';
 
-// Set timezone to Indian Standard Time (Asia/Kolkata)
+// Set default timezone to IST for all PHP date functions
 date_default_timezone_set('Asia/Kolkata');
 
 // Function to sanitize input
@@ -63,11 +63,11 @@ function generate_filename($prefix = '') {
     return $prefix . $timestamp . '_' . $microseconds . '_' . $random;
 }
 
-// Function to convert datetime-local input to MySQL datetime in UTC
-function convert_to_utc_datetime($datetime_local) {
+// Function to convert datetime-local input to MySQL datetime (store as given, assume it's already correct)
+function format_datetime_for_db($datetime_local) {
     if (empty($datetime_local)) {
-        // Return current UTC time if empty
-        return gmdate('Y-m-d H:i:s');
+        // Return current time in MySQL format
+        return date('Y-m-d H:i:s');
     }
     
     // Input format: YYYY-MM-DDTHH:MM
@@ -79,20 +79,13 @@ function convert_to_utc_datetime($datetime_local) {
         $datetime .= ':00';
     }
     
-    // Create DateTime object assuming input is in IST
-    $ist_timezone = new DateTimeZone('Asia/Kolkata');
-    $date = DateTime::createFromFormat('Y-m-d H:i:s', $datetime, $ist_timezone);
-    
-    if ($date === false) {
-        // If parsing fails, return current UTC datetime
-        return gmdate('Y-m-d H:i:s');
+    // Validate the format
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $datetime)) {
+        return $datetime;
     }
     
-    // Convert to UTC
-    $date->setTimezone(new DateTimeZone('UTC'));
-    
-    // Return in MySQL datetime format (in UTC)
-    return $date->format('Y-m-d H:i:s');
+    // If invalid, return current time
+    return date('Y-m-d H:i:s');
 }
 
 // Process form submission
@@ -108,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $publisher_name = sanitize_input($_POST['publisher_name']);
         $publish_date_input = sanitize_input($_POST['publish_date']);
         
-        // Convert datetime-local input (assumed IST) to UTC for database storage
-        $publish_date_utc = convert_to_utc_datetime($publish_date_input);
+        // Format the datetime for database (store exactly as user selected)
+        $publish_date = format_datetime_for_db($publish_date_input);
         
         // Get topnews value (checkbox - 1 if checked, 0 if not)
         $topnews = isset($_POST['topnews']) ? 1 : 0;
@@ -200,8 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         $conn->set_charset("utf8mb4");
         
-        // Set MySQL session timezone to UTC to ensure consistency
-        $conn->query("SET time_zone = '+00:00'");
+        // Set MySQL session timezone to IST to match PHP
+        $conn->query("SET time_zone = '+05:30'");
         
         // Determine is_approved value based on user role
         $is_approved = 1; // Default to approved for admin and division_head
@@ -209,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $is_approved = 0; // Not approved for district_user
         }
         
-        // Prepare SQL statement
+        // Prepare SQL statement - Use NOW() which will use the session timezone (IST)
         $sql = "INSERT INTO news_articles (
                     Region, 
                     district_name, 
@@ -227,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     is_approved, 
                     view,
                     topnews
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), ?, 0, ?)";
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), ?, 0, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
@@ -246,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $news_summary,
             $full_news,
             $publisher_name,
-            $publish_date_utc, // This is now in UTC
+            $publish_date, // Store exactly what user selected
             $is_approved,
             $topnews
         );
@@ -256,9 +249,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('डेटाबेसमध्ये डेटा घालताना त्रुटी: ' . $stmt->error);
         }
         
-        // For debugging: Log what was inserted
-        // error_log("User entered (IST): " . $publish_date_input);
-        // error_log("Converted to UTC for DB: " . $publish_date_utc);
+        // For debugging
+        error_log("User entered datetime: " . $publish_date_input);
+        error_log("Formatted for DB: " . $publish_date);
         
         $stmt->close();
         $conn->close();
