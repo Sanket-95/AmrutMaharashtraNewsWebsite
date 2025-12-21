@@ -15,9 +15,6 @@ if (!in_array($_SESSION['roll'], $allowed_roles)) {
     exit();
 }
 
-include 'components/header.php';
-include 'components/navbar.php';
-include 'components/login_navbar.php';
 include 'components/db_config.php';
 
 // Get news_id from URL
@@ -29,6 +26,167 @@ $edit_mode = isset($_GET['edit']) && $_GET['edit'] == '1';
 // Variables for toast messages
 $toast_message = '';
 $toast_type = '';
+$redirect_needed = false;
+$redirect_url = '';
+
+// Handle ALL form submissions (both edit and approve)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $approver_name = $_SESSION['name'] ?? '';
+    
+    // Always get form data (whether editing or approving)
+    $title = $_POST['title'] ?? '';
+    $summary = $_POST['summary'] ?? '';
+    $content = $_POST['content'] ?? '';
+    $category = $_POST['category'] ?? '';
+    $district = $_POST['district'] ?? '';
+    $region = $_POST['region'] ?? '';
+    $topnews = isset($_POST['topnews']) ? 1 : 0;
+    
+    // Check what action to perform
+    if ($action == 'approve' || $action == 'disapprove') {
+        // Approval/disapproval action
+        if ($action == 'approve') {
+            $is_approved = 1;
+            $status_text = "मान्य केली";
+        } else {
+            $is_approved = 2;
+            $status_text = "नामंजूर केली";
+        }
+        
+        // Update news with all data AND approval status
+        $update_sql = "UPDATE news_articles 
+                       SET title = ?,
+                           summary = ?,
+                           content = ?,
+                           category_name = ?,
+                           district_name = ?,
+                           Region = ?,
+                           topnews = ?,
+                           is_approved = ?, 
+                           approved_by = ?,
+                           updated_at = NOW()
+                       WHERE news_id = ?";
+        
+        $update_stmt = $conn->prepare($update_sql);
+        $update_stmt->bind_param(
+            "ssssssissi",
+            $title,
+            $summary,
+            $content,
+            $category,
+            $district,
+            $region,
+            $topnews,
+            $is_approved,
+            $approver_name,
+            $news_id
+        );
+        
+        if ($update_stmt->execute()) {
+            $_SESSION['toast_message'] = "बातमी यशस्वीरित्या " . $status_text . " गेली!";
+            $_SESSION['toast_type'] = ($action == 'approve') ? "success" : "warning";
+            $redirect_needed = true;
+            $redirect_url = "newsapproval.php?status=" . ($action == 'approve' ? 'approved' : 'disapproved');
+        } else {
+            $_SESSION['toast_message'] = "बातमी " . $status_text . " ताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
+            $_SESSION['toast_type'] = "error";
+            $redirect_needed = true;
+            $redirect_url = "newsapproval.php?status=pending&error=" . urlencode($_SESSION['toast_message']);
+        }
+        $update_stmt->close();
+    } 
+    elseif (isset($_POST['update_news'])) {
+        // Edit/save action
+        $update_sql = "UPDATE news_articles SET 
+                        title = ?, 
+                        summary = ?, 
+                        content = ?, 
+                        category_name = ?,
+                        district_name = ?,
+                        Region = ?,
+                        topnews = ?,
+                        updated_at = NOW()
+                    WHERE news_id = ?";
+
+        $update_stmt = $conn->prepare($update_sql);
+        $update_stmt->bind_param(
+            "ssssssii",
+            $title,
+            $summary,
+            $content,
+            $category,
+            $district,
+            $region,
+            $topnews,
+            $news_id
+        );
+        
+        if ($update_stmt->execute()) {
+            $toast_message = "बातमी यशस्वीरित्या अपडेट केली गेली!";
+            $toast_type = "success";
+            
+            // Refresh news data after update
+            $sql = "SELECT * FROM news_articles WHERE news_id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $news_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $news = $result->fetch_assoc();
+            $stmt->close();
+            
+            // After update, disable edit mode
+            $edit_mode = false;
+            
+            // Check if we should also approve or disapprove after save
+            if (isset($_POST['approve_after_save']) && $_POST['approve_after_save'] != '0') {
+                $approver_name = $_SESSION['name'] ?? '';
+                
+                if ($_POST['approve_after_save'] == '1') {
+                    // Approve after save
+                    $approve_sql = "UPDATE news_articles 
+                                   SET is_approved = 1, 
+                                       approved_by = ?,
+                                       updated_at = NOW()
+                                   WHERE news_id = ?";
+                    
+                    $approve_stmt = $conn->prepare($approve_sql);
+                    $approve_stmt->bind_param("si", $approver_name, $news_id);
+                    
+                    if ($approve_stmt->execute()) {
+                        $_SESSION['toast_message'] = "बातमी यशस्वीरित्या अपडेट आणि मान्य केली गेली!";
+                        $_SESSION['toast_type'] = "success";
+                        $redirect_needed = true;
+                        $redirect_url = "newsapproval.php?status=approved";
+                    }
+                    $approve_stmt->close();
+                } elseif ($_POST['approve_after_save'] == '2') {
+                    // Disapprove after save
+                    $disapprove_sql = "UPDATE news_articles 
+                                      SET is_approved = 2, 
+                                          approved_by = ?,
+                                          updated_at = NOW()
+                                      WHERE news_id = ?";
+                    
+                    $disapprove_stmt = $conn->prepare($disapprove_sql);
+                    $disapprove_stmt->bind_param("si", $approver_name, $news_id);
+                    
+                    if ($disapprove_stmt->execute()) {
+                        $_SESSION['toast_message'] = "बातमी यशस्वीरित्या अपडेट आणि नामंजूर केली गेली!";
+                        $_SESSION['toast_type'] = "warning";
+                        $redirect_needed = true;
+                        $redirect_url = "newsapproval.php?status=disapproved";
+                    }
+                    $disapprove_stmt->close();
+                }
+            }
+        } else {
+            $toast_message = "बातमी अपडेट करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
+            $toast_type = "error";
+        }
+        $update_stmt->close();
+    }
+}
 
 // Check if quick approve button was clicked
 if (isset($_GET['quick_approve']) && $_GET['quick_approve'] == '1') {
@@ -45,100 +203,70 @@ if (isset($_GET['quick_approve']) && $_GET['quick_approve'] == '1') {
     $update_stmt->bind_param("si", $approver_name, $news_id);
     
     if ($update_stmt->execute()) {
-        $toast_message = "बातमी यशस्वीरित्या मान्य केली गेली!";
-        $toast_type = "success";
-        
-        // Refresh news data after update
-        $sql = "SELECT * FROM news_articles WHERE news_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $news_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $news = $result->fetch_assoc();
-        $stmt->close();
+        $_SESSION['toast_message'] = "बातमी यशस्वीरित्या मान्य केली गेली!";
+        $_SESSION['toast_type'] = "success";
+        $redirect_needed = true;
+        $redirect_url = "newsapproval.php?status=approved";
     } else {
-        $toast_message = "बातमी मान्य करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
-        $toast_type = "error";
+        $_SESSION['toast_message'] = "बातमी मान्य करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
+        $_SESSION['toast_type'] = "error";
+        $redirect_needed = true;
+        $redirect_url = "newsapproval_details.php?news_id=$news_id&error=" . urlencode($_SESSION['toast_message']);
     }
     $update_stmt->close();
 }
 
-// Check if form was submitted for editing
-$update_success = false;
-$update_error = false;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_news'])) {
-    // Debug: Show what data is being posted
-    // echo '<script>';
-    // echo 'alert("DEBUG - POST Data being sent:\\n\\n' . 
-    //      'Title: ' . addslashes($_POST['title']) . '\\n' .
-    //      'Summary: ' . addslashes(substr($_POST['summary'], 0, 100)) . '...\\n' .
-    //      'Content length: ' . strlen($_POST['content']) . ' chars\\n' .
-    //      'Category: ' . $_POST['category'] . '\\n' .
-    //      'District: ' . $_POST['district'] . '\\n' .
-    //      'Region: ' . $_POST['region'] . '\\n' .
-    //      'Top News: ' . (isset($_POST['topnews']) ? '1' : '0') . '");';
-    // echo '</script>';
+// Check if delete button was clicked
+if (isset($_GET['delete']) && $_GET['delete'] == '1') {
+    // First check if news exists
+    $check_sql = "SELECT * FROM news_articles WHERE news_id = ?";
+    $check_stmt = $conn->prepare($check_sql);
+    $check_stmt->bind_param("i", $news_id);
+    $check_stmt->execute();
+    $check_result = $check_stmt->get_result();
     
-    // Update news in database
-    $title = $_POST['title'] ?? '';
-    $summary = $_POST['summary'] ?? '';
-    $content = $_POST['content'] ?? '';
-    $category = $_POST['category'] ?? '';
-    $district = $_POST['district'] ?? '';
-    $region = $_POST['region'] ?? '';
-    $topnews = isset($_POST['topnews']) ? 1 : 0;
-    
-   $update_sql = "UPDATE news_articles SET 
-                    title = ?, 
-                    summary = ?, 
-                    content = ?, 
-                    category_name = ?,
-                    topnews = ?,
-                    updated_at = NOW()
-               WHERE news_id = ?";
-
-$update_stmt = $conn->prepare($update_sql);
-$update_stmt->bind_param(
-    "ssssii",
-    $title,
-    $summary,
-    $content,
-    $category,
-    $topnews,
-    $news_id
-);
-    
-    if ($update_stmt->execute()) {
-        $update_success = true;
-        $toast_message = "बातमी यशस्वीरित्या अपडेट केली गेली!";
-        $toast_type = "success";
-        // Refresh news data after update
-        $sql = "SELECT * FROM news_articles WHERE news_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $news_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $news = $result->fetch_assoc();
-        $stmt->close();
-        // After update, disable edit mode
-        $edit_mode = false;
+    if ($check_result->num_rows > 0) {
+        // Delete news from database
+        $delete_sql = "DELETE FROM news_articles WHERE news_id = ?";
+        $delete_stmt = $conn->prepare($delete_sql);
+        $delete_stmt->bind_param("i", $news_id);
+        
+        if ($delete_stmt->execute()) {
+            $_SESSION['toast_message'] = "बातमी यशस्वीरित्या डिलीट केली गेली!";
+            $_SESSION['toast_type'] = "success";
+            $redirect_needed = true;
+            $redirect_url = "newsapproval.php?status=pending";
+        } else {
+            $_SESSION['toast_message'] = "बातमी डिलीट करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
+            $_SESSION['toast_type'] = "error";
+            $redirect_needed = true;
+            $redirect_url = "newsapproval_details.php?news_id=$news_id&error=" . urlencode($_SESSION['toast_message']);
+        }
+        $delete_stmt->close();
     } else {
-        $update_error = true;
-        $toast_message = "बातमी अपडेट करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.";
-        $toast_type = "error";
+        $_SESSION['toast_message'] = "बातमी सापडली नाही!";
+        $_SESSION['toast_type'] = "error";
+        $redirect_needed = true;
+        $redirect_url = "newsapproval.php?status=pending&error=" . urlencode($_SESSION['toast_message']);
     }
-    $update_stmt->close();
+    $check_stmt->close();
+}
+
+// If redirect is needed, do it now before any output
+if ($redirect_needed && !empty($redirect_url)) {
+    header("Location: $redirect_url");
+    exit();
 }
 
 // Check for approval/disapproval notifications from URL
-if (isset($_GET['approval_success'])) {
+if (isset($_GET['approved'])) {
     $toast_message = "बातमी यशस्वीरित्या मान्य केली गेली!";
     $toast_type = "success";
-} elseif (isset($_GET['disapproval_success'])) {
+} elseif (isset($_GET['disapproved'])) {
     $toast_message = "बातमी यशस्वीरित्या नामंजूर केली गेली!";
     $toast_type = "warning";
-} elseif (isset($_GET['approval_error'])) {
-    $toast_message = "बातमी मंजुरी/नामंजुरी करताना त्रुटी आली.";
+} elseif (isset($_GET['error'])) {
+    $toast_message = htmlspecialchars(urldecode($_GET['error']));
     $toast_type = "error";
 }
 
@@ -154,7 +282,7 @@ if (!isset($news) || empty($news)) {
         $news = $result->fetch_assoc();
     } else {
         // Redirect if news not found
-        $_SESSION['toast_message'] = "बातमी सापडली नाही!";
+        $_SESSION['toast_message'] = "बातमी सापडली नाही";
         $_SESSION['toast_type'] = "error";
         header('Location: newsapproval.php?status=pending');
         exit();
@@ -225,10 +353,10 @@ function getRegionFromLocation($location) {
         // Nagpur region districts
         'nagpur' => 'nagpur',
         'wardha' => 'nagpur',
-        'bhandara' => 'nagpur',
-        'gondia' => 'nagpur',
-        'chandrapur' => 'nagpur',
-        'gadchiroli' => 'nagpur'
+        'bhandara' => 'नागपूर',
+        'gondia' => 'नागपूर',
+        'chandrapur' => 'नागपूर',
+        'gadchiroli' => 'नागपूर'
     ];
     
     return isset($districtToRegion[$location]) ? $districtToRegion[$location] : $location;
@@ -239,8 +367,8 @@ $user_region_for_check = getRegionFromLocation($user_region);
 
 // For division_head, check if news belongs to their region
 if ($user_roll === 'division_head' && strtolower($news['Region']) !== strtolower($user_region_for_check)) {
-    $toast_message = "आपल्याला या बातमीवर परवानगी नाही!";
-    $toast_type = "error";
+    $_SESSION['toast_message'] = "आपल्याला या बातमीवर परवानगी नाही";
+    $_SESSION['toast_type'] = "error";
     header('Location: newsapproval.php?status=pending');
     exit();
 }
@@ -257,10 +385,9 @@ function getMarathiStatusName($status) {
 
 function getMarathiCategoryName($category) {
     $category_map = [
-        // 'home' => 'मुख्यपृष्ठ',
+        'home' => 'मुख्यपृष्ठ',
         'amrut_events' => 'अमृत घडामोडी',
         'beneficiary_story' => 'लाभार्थी स्टोरी',
-        'blog' => 'ब्लॉग',
         'today_special' => 'दिनविशेष',
         'successful_entrepreneur' => 'यशस्वी उद्योजक',
         'words_amrut' => 'शब्दांमृत',
@@ -274,30 +401,30 @@ function getMarathiCategoryName($category) {
     return $category_map[$category] ?? $category;
 }
 
-function getMarathiDivisionName($regionValue) {
+function getMarathiRegionName($regionValue) {
     // Convert to lowercase for comparison
     $regionValue = strtolower($regionValue);
-    $divisionMap = [
-        'kokan' => 'कोकण विभाग',
-        'pune' => 'पुणे विभाग',
-        'sambhajinagar' => 'संभाजीनगर विभाग',
-        'nashik' => 'नाशिक विभाग',
-        'amaravati' => 'अमरावती विभाग',
-        'nagpur' => 'नागपूर विभाग',
-        'mumbai' => 'मुंबई विभाग',
-        'ratnagiri' => 'रत्नागिरी विभाग',
-        'solapur' => 'सोलापूर विभाग',
-        'kolhapur' => 'कोल्हापूर विभाग',
-        'thane' => 'ठाणे विभाग',
-        'raigad' => 'रायगड विभाग',
-        'jalna' => 'जालना विभाग',
-        'nanded' => 'नांदेड विभाग',
-        'ahilyanagar' => 'अहिल्यानगर विभाग',
-        'sangli' => 'सांगली विभाग',
-        'satara' => 'सातारा विभाग',
-        'gadchiroli' => 'गडचिरोली विभाग'
+    $regionMap = [
+        'kokan' => 'कोकण',
+        'pune' => 'पुणे',
+        'sambhajinagar' => 'संभाजीनगर',
+        'nashik' => 'नाशिक',
+        'amaravati' => 'अमरावती',
+        'nagpur' => 'नागपूर',
+        'mumbai' => 'मुंबई',
+        'ratnagiri' => 'रत्नागिरी',
+        'solapur' => 'सोलापूर',
+        'kolhapur' => 'कोल्हापूर',
+        'thane' => 'ठाणे',
+        'raigad' => 'रायगड',
+        'jalna' => 'जालना',
+        'nanded' => 'नांदेड',
+        'ahilyanagar' => 'अहिल्यानगर',
+        'sangli' => 'सांगली',
+        'satara' => 'सातारा',
+        'gadchiroli' => 'गडचिरोली'
     ];
-    return isset($divisionMap[$regionValue]) ? $divisionMap[$regionValue] : $regionValue . ' विभाग';
+    return isset($regionMap[$regionValue]) ? $regionMap[$regionValue] : $regionValue;
 }
 
 function getMarathiDistrictName($districtValue) {
@@ -348,10 +475,9 @@ function getMarathiDistrictName($districtValue) {
 
 // Get all categories for dropdown
 $categories = [
-    // 'home' => 'मुख्यपृष्ठ',
+    'home' => 'मुख्यपृष्ठ',
     'amrut_events' => 'अमृत घडामोडी',
     'beneficiary_story' => 'लाभार्थी स्टोरी',
-    'blog' => 'ब्लॉग',
     'today_special' => 'दिनविशेष',
     'successful_entrepreneur' => 'यशस्वी उद्योजक',
     'words_amrut' => 'शब्दांमृत',
@@ -364,10 +490,11 @@ $categories = [
 ];
 
 // Get all districts for dropdown
-$all_districts = [
+$districts = [
     'palghar' => 'पालघर',
     'thane' => 'ठाणे',
     'mumbai_city' => 'मुंबई शहर',
+    'mumbai' => 'मुंबई',
     'mumbai_suburban' => 'मुंबई उपनगर',
     'raigad' => 'रायगड',
     'ratnagiri' => 'रत्नागिरी',
@@ -405,14 +532,19 @@ $all_districts = [
 ];
 
 // Get all regions for dropdown
-$all_regions = [
-    'kokan' => 'कोकण विभाग',
-    'pune' => 'पुणे विभाग',
-    'sambhajinagar' => 'संभाजीनगर विभाग',
-    'nashik' => 'नाशिक विभाग',
-    'amaravati' => 'अमरावती विभाग',
-    'nagpur' => 'नागपूर विभाग'
+$regions = [
+    'kokan' => 'कोकण',
+    'pune' => 'पुणे',
+    'sambhajinagar' => 'संभाजीनगर',
+    'nashik' => 'नाशिक',
+    'amaravati' => 'अमरावती',
+    'nagpur' => 'नागपूर'
 ];
+
+// Now include header files after all processing
+include 'components/header.php';
+include 'components/navbar.php';
+include 'components/login_navbar.php';
 ?>
 
 <!DOCTYPE html>
@@ -422,7 +554,6 @@ $all_regions = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>बातमी तपशील - मंजुरी प्रक्रिया</title>
     
-        
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -440,7 +571,6 @@ $all_regions = [
         
         .btn {
             transition: all 0.3s ease;
-            font-family: 'Mukta', sans-serif;
         }
         
         .btn:hover {
@@ -450,7 +580,6 @@ $all_regions = [
         
         .card {
             transition: transform 0.3s ease;
-            font-family: 'Mukta', sans-serif;
         }
         
         .card:hover {
@@ -525,14 +654,6 @@ $all_regions = [
                 flex-direction: column !important;
                 gap: 10px;
             }
-            
-            /* Toastify adjustments for mobile */
-            .toastify {
-                max-width: 90% !important;
-                margin: 10px auto !important;
-                border-radius: 10px !important;
-                font-size: 14px !important;
-            }
         }
         
         /* Toastify custom styles */
@@ -559,11 +680,6 @@ $all_regions = [
             color: black !important;
         }
         
-        .custom-toast-info {
-            background: linear-gradient(135deg, #17a2b8, #20c997) !important;
-            color: white !important;
-        }
-        
         /* Hide approval buttons in edit mode */
         .edit-mode .approval-buttons {
             display: none !important;
@@ -579,366 +695,395 @@ $all_regions = [
             display: none !important;
         }
         
-        /* Read-only form controls */
-        .form-control[readonly] {
+        /* Delete button styles */
+        .delete-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333) !important;
+            border: none !important;
+            color: white !important;
+        }
+        
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #c82333, #bd2130) !important;
+            transform: translateY(-3px) !important;
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3) !important;
+        }
+        
+        /* Always show form fields, just disable them in view mode */
+        .view-mode .form-control,
+        .view-mode .form-select,
+        .view-mode .form-check-input {
+            pointer-events: none;
             background-color: #f8f9fa;
-            border-color: #dee2e6;
+            border: 1px solid #dee2e6 !important;
         }
         
-        /* Hide quick approve button for approved/disapproved news */
-        .approved-news .quick-approve-btn,
-        .disapproved-news .quick-approve-btn {
-            display: none !important;
+        .view-mode textarea.form-control {
+            resize: none;
         }
         
-        /* Hide edit button for disapproved news only */
-        .disapproved-news .edit-button {
-            display: none !important;
+        /* Style for view mode fields to look like normal text */
+        .view-mode .form-control-plaintext {
+            font-family: 'Mukta', sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 0;
+            background: transparent;
+            border: none;
         }
     </style>
 </head>
-<body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?> <?php echo $news['is_approved'] == 1 ? 'approved-news' : ($news['is_approved'] == 2 ? 'disapproved-news' : ''); ?>">
+<body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?>">
   
-
-    <div class="container mt-4 mb-5">
-        <!-- Toastify Notifications will appear here -->
+<div class="container mt-4 mb-5">
+    <!-- Back Button and Action Buttons -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="newsapproval.php?status=<?php echo $news['is_approved'] == 0 ? 'pending' : ($news['is_approved'] == 1 ? 'approved' : 'disapproved'); ?>" 
+           class="btn btn-outline-primary" 
+           style="font-family: 'Mukta', sans-serif;">
+            <i class="fas fa-arrow-left me-2"></i> मागे जा
+        </a>
         
-        <!-- Back Button and Edit Toggle -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <a href="newsapproval.php?status=<?php echo $news['is_approved'] == 0 ? 'pending' : ($news['is_approved'] == 1 ? 'approved' : 'disapproved'); ?>" 
-               class="btn btn-outline-primary" 
-               style="font-family: 'Mukta', sans-serif;">
-                <i class="fas fa-arrow-left me-2"></i> मागे जा
+        <div class="d-flex gap-2">
+            <!-- Delete Button (Always visible) -->
+            <a href="?news_id=<?php echo $news_id; ?>&delete=1" 
+               class="btn delete-btn" 
+               style="font-family: 'Mukta', sans-serif;"
+               onclick="return confirmDelete()">
+                <i class="fas fa-trash-alt me-2"></i> डिलीट करा
             </a>
             
-            <div class="d-flex gap-2">
-                <?php if ($news['is_approved'] == 0): ?>
-                <!-- Quick Approve Button (only for pending news) -->
-                <a href="?news_id=<?php echo $news_id; ?>&quick_approve=1" 
-                   class="btn btn-success quick-approve-btn" 
-                   style="font-family: 'Mukta', sans-serif;"
-                   onclick="return confirmQuickApprove()">
-                    <i class="fas fa-check-circle me-2"></i>  मान्य करा
-                </a>
-                <?php endif; ?>
-                
-                <!-- Edit Button (for both pending AND approved news, but not for disapproved) -->
-                <?php if ($news['is_approved'] != 2): ?>
-                    <?php if (!$edit_mode): ?>
-                    <a href="?news_id=<?php echo $news_id; ?>&edit=1" 
-                       class="btn btn-warning edit-button" 
-                       style="font-family: 'Mukta', sans-serif;">
-                        <i class="fas fa-edit me-2"></i> एडिट करा
-                    </a>
-                    <?php else: ?>
-                    <a href="?news_id=<?php echo $news_id; ?>" 
-                       class="btn btn-secondary" 
-                       style="font-family: 'Mukta', sans-serif;">
-                        <i class="fas fa-times me-2"></i> एडिट बंद करा
-                    </a>
-                    <?php endif; ?>
-                <?php endif; ?>
+            <!-- Edit Button (Always visible) -->
+            <?php if (!$edit_mode): ?>
+            <a href="?news_id=<?php echo $news_id; ?>&edit=1" 
+               class="btn btn-warning edit-button" 
+               style="font-family: 'Mukta', sans-serif;">
+                <i class="fas fa-edit me-2"></i> एडिट करा
+            </a>
+            <?php else: ?>
+            <a href="?news_id=<?php echo $news_id; ?>" 
+               class="btn btn-secondary" 
+               style="font-family: 'Mukta', sans-serif;">
+                <i class="fas fa-times me-2"></i> एडिट बंद करा
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Main Card -->
+    <div class="card shadow-lg" style="border: 3px solid #FF6600; border-radius: 15px;">
+        <div class="card-header text-center py-3" style="
+            background: linear-gradient(135deg, 
+            <?php 
+            if($news['is_approved'] == 0) echo '#FF6600, #FF8C00';
+            elseif($news['is_approved'] == 1) echo '#28a745, #20c997';
+            else echo '#dc3545, #fd7e14';
+            ?>); 
+            color: white;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge rounded-pill px-3 py-2" style="
+                        background: rgba(255, 255, 255, 0.2); 
+                        font-family: 'Mukta', sans-serif; 
+                        font-size: 16px;">
+                        <i class="fas fa-clipboard-check me-1"></i>
+                        <?php echo getMarathiStatusName($news['is_approved']); ?>
+                        <?php if ($edit_mode): ?>
+                        <span class="ms-2"><i class="fas fa-edit"></i> एडिट मोड</span>
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <h4 class="mb-0" style="font-family: 'Khand', sans-serif; font-weight: bold;">
+                    <i class="fas fa-newspaper me-2"></i>बातमी तपशील
+                </h4>
             </div>
         </div>
         
-        <!-- Main Card -->
-        <div class="card shadow-lg" style="border: 3px solid #FF6600; border-radius: 15px;">
-            <div class="card-header text-center py-3" style="
-                background: linear-gradient(135deg, 
-                <?php 
-                if($news['is_approved'] == 0) echo '#FF6600, #FF8C00';
-                elseif($news['is_approved'] == 1) echo '#28a745, #20c997';
-                else echo '#dc3545, #fd7e14';
-                ?>); 
-                color: white;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge rounded-pill px-3 py-2" style="
-                            background: rgba(255, 255, 255, 0.2); 
-                            font-family: 'Mukta', sans-serif; 
-                            font-size: 16px;">
-                            <i class="fas fa-clipboard-check me-1"></i>
-                            <?php echo getMarathiStatusName($news['is_approved']); ?>
-                            <?php if ($edit_mode): ?>
-                            <span class="ms-2"><i class="fas fa-edit"></i> एडिट मोड</span>
-                            <?php endif; ?>
-                        </span>
-                    </div>
-                    <h4 class="mb-0" style="font-family: 'Khand', sans-serif; font-weight: bold;">
-                        <i class="fas fa-newspaper me-2"></i>बातमी तपशील
-                    </h4>
-                </div>
-            </div>
-            
-            <div class="card-body p-4">
-                <!-- Images Section -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-header" style="background-color: #FFF3E0;">
-                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                    <i class="fas fa-image me-2"></i> मुख्य चित्र
-                                </h5>
-                            </div>
-                            <div class="card-body text-center">
-                                <?php if (!empty($news['cover_photo_url'])): ?>
-                                    <img src="<?php echo htmlspecialchars($news['cover_photo_url']); ?>" 
-                                         class="img-fluid rounded" 
-                                         alt="मुख्य चित्र"
-                                         style="max-height: 300px; object-fit: contain;">
-                                <?php else: ?>
-                                    <div class="py-5 text-center">
-                                        <i class="fas fa-image" style="font-size: 80px; color: #FFA500;"></i>
-                                        <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
-                                            चित्र उपलब्ध नाही
-                                        </p>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
+        <div class="card-body p-4">
+            <!-- Images Section -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header" style="background-color: #FFF3E0;">
+                            <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-image me-2"></i> मुख्य चित्र
+                            </h5>
                         </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <div class="card-header" style="background-color: #FFF3E0;">
-                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                    <i class="fas fa-images me-2"></i> दुय्यम चित्र
-                                </h5>
-                            </div>
-                            <div class="card-body text-center">
-                                <?php if (!empty($news['secondary_photo_url'])): ?>
-                                    <img src="<?php echo htmlspecialchars($news['secondary_photo_url']); ?>" 
-                                         class="img-fluid rounded" 
-                                         alt="दुय्यम चित्र"
-                                         style="max-height: 300px; object-fit: contain;">
-                                <?php else: ?>
-                                    <div class="py-5 text-center">
-                                        <i class="fas fa-images" style="font-size: 80px; color: #FFA500;"></i>
-                                        <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
-                                            दुय्यम चित्र उपलब्ध नाही
-                                        </p>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
+                        <div class="card-body text-center">
+                            <?php if (!empty($news['cover_photo_url'])): ?>
+                                <img src="<?php echo htmlspecialchars($news['cover_photo_url']); ?>" 
+                                     class="img-fluid rounded" 
+                                     alt="मुख्य चित्र"
+                                     style="max-height: 300px; object-fit: contain;">
+                            <?php else: ?>
+                                <div class="py-5 text-center">
+                                    <i class="fas fa-image" style="font-size: 80px; color: #FFA500;"></i>
+                                    <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
+                                        चित्र उपलब्ध नाही
+                                    </p>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
                 
-                <!-- News Details Form -->
-                <form method="POST" action="">
-                    <input type="hidden" name="news_id" value="<?php echo $news['news_id']; ?>">
-                    <input type="hidden" name="update_news" value="1">
-                    
-                    <div class="row">
-                        <div class="col-lg-8">
-                            <!-- Title -->
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
-                                    <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-heading me-2"></i> बातमी शीर्षक
-                                    </h5>
-                                    <?php if ($edit_mode): ?>
-                                    <span class="badge bg-warning">एडिट करता येईल</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="card-body">
-                                    <?php if ($edit_mode): ?>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           name="title" 
-                                           value="<?php echo htmlspecialchars($news['title']); ?>"
-                                           required
-                                           style="font-family: 'Mukta', sans-serif; font-size: 1.5rem; font-weight: bold; border: 2px solid #FFA500;">
-                                    <?php else: ?>
-                                    <h3 style="font-family: 'Khand', sans-serif; font-weight: bold; color: #333;">
-                                        <?php echo htmlspecialchars($news['title']); ?>
-                                    </h3>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            
-                            <!-- Summary -->
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
-                                    <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-align-left me-2"></i> सारांश
-                                    </h5>
-                                    <?php if ($edit_mode): ?>
-                                    <span class="badge bg-warning">एडिट करता येईल</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="card-body">
-                                    <?php if ($edit_mode): ?>
-                                    <textarea class="form-control" 
-                                              name="summary" 
-                                              rows="5"
-                                              required
-                                              style="font-family: 'Mukta', sans-serif; font-size: 18px; line-height: 1.6; border: 2px solid #FFA500;"><?php echo htmlspecialchars($news['summary']); ?></textarea>
-                                    <?php else: ?>
-                                    <p style="font-family: 'Mukta', sans-serif; font-size: 18px; line-height: 1.6;">
-                                        <?php echo nl2br(htmlspecialchars($news['summary'])); ?>
+                <div class="col-md-6">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header" style="background-color: #FFF3E0;">
+                            <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                <i class="fas fa-images me-2"></i> दुय्यम चित्र
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <?php if (!empty($news['secondary_photo_url'])): ?>
+                                <img src="<?php echo htmlspecialchars($news['secondary_photo_url']); ?>" 
+                                     class="img-fluid rounded" 
+                                     alt="दुय्यम चित्र"
+                                     style="max-height: 300px; object-fit: contain;">
+                            <?php else: ?>
+                                <div class="py-5 text-center">
+                                    <i class="fas fa-images" style="font-size: 80px; color: #FFA500;"></i>
+                                    <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
+                                        दुय्यम चित्र उपलब्ध नाही
                                     </p>
-                                    <?php endif; ?>
                                 </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SINGLE FORM for everything -->
+            <form method="POST" action="" id="mainForm">
+                <input type="hidden" name="news_id" value="<?php echo $news['news_id']; ?>">
+                <input type="hidden" name="approve_after_save" id="approveAfterSave" value="0">
+                
+                <div class="row">
+                    <div class="col-lg-8">
+                        <!-- Title -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
+                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-heading me-2"></i> बातमी शीर्षक
+                                </h5>
+                                <?php if ($edit_mode): ?>
+                                <span class="badge bg-warning">एडिट करता येईल</span>
+                                <?php endif; ?>
                             </div>
-                            
-                            <!-- Full Content -->
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
-                                    <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-newspaper me-2"></i> संपूर्ण बातमी
-                                    </h5>
-                                    <?php if ($edit_mode): ?>
-                                    <span class="badge bg-warning">एडिट करता येईल</span>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="card-body">
-                                    <?php if ($edit_mode): ?>
-                                    <textarea class="form-control" 
-                                              name="content" 
-                                              rows="15"
-                                              required
-                                              style="font-family: 'Mukta', sans-serif; font-size: 16px; line-height: 1.8; border: 2px solid #FFA500;"><?php echo htmlspecialchars($news['content']); ?></textarea>
-                                    <?php else: ?>
-                                    <div style="font-family: 'Mukta', sans-serif; font-size: 16px; line-height: 1.8;">
-                                        <?php echo nl2br(htmlspecialchars($news['content'])); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                </div>
+                            <div class="card-body">
+                                <input type="text" 
+                                       class="form-control <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                       name="title" 
+                                       value="<?php echo htmlspecialchars($news['title']); ?>"
+                                       <?php echo !$edit_mode ? 'readonly' : 'required'; ?>
+                                       style="font-family: 'Mukta', sans-serif; font-size: 1.5rem; font-weight: bold; border: 2px solid #FFA500;">
                             </div>
                         </div>
                         
-                        <div class="col-lg-4">
-                            <!-- Meta Information -->
-                            <div class="card shadow-sm mb-4">
-                                <div class="card-header" style="background-color: #FFF3E0;">
-                                    <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-info-circle me-2"></i> माहिती
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <table class="table table-borderless" style="font-family: 'Mukta', sans-serif;">
-                                        <tr>
-                                            <th width="40%"><i class="fas fa-building me-2"></i> विभाग:</th>
-                                            <td>
-                                                <?php if ($edit_mode): ?>
-                                                <!-- Make it read-only instead of a dropdown -->
-                                                <input type="text" 
-                                                       class="form-control form-control-sm" 
-                                                       value="<?php echo getMarathiDivisionName($news['Region']); ?>"
-                                                       readonly
-                                                       style="border: 1px solid #FFA500; background-color: #f8f9fa;">
-                                                <input type="hidden" name="region" value="<?php echo htmlspecialchars($news['Region']); ?>">
-                                                <?php else: ?>
-                                                <?php echo getMarathiDivisionName($news['Region']); ?>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-map-marker-alt me-2"></i> जिल्हा:</th>
-                                            <td>
-                                                <?php if ($edit_mode): ?>
-                                                <!-- Make it read-only instead of a dropdown -->
-                                                <input type="text" 
-                                                       class="form-control form-control-sm" 
-                                                       value="<?php echo getMarathiDistrictName($news['district_name']); ?>"
-                                                       readonly
-                                                       style="border: 1px solid #FFA500; background-color: #f8f9fa;">
-                                                <input type="hidden" name="district" value="<?php echo htmlspecialchars($news['district_name']); ?>">
-                                                <?php else: ?>
-                                                <?php echo getMarathiDistrictName($news['district_name']); ?>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-tags me-2"></i> वर्ग:</th>
-                                            <td>
-                                                <?php if ($edit_mode): ?>
-                                                <select class="form-select form-select-sm" name="category" style="border: 1px solid #FFA500;">
-                                                    <?php foreach ($categories as $category_value => $category_name): ?>
-                                                    <option value="<?php echo $category_value; ?>" <?php echo (strtolower($news['category_name']) == strtolower($category_value)) ? 'selected' : ''; ?>>
-                                                        <?php echo $category_name; ?>
-                                                    </option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                                <?php else: ?>
-                                                <?php echo getMarathiCategoryName($news['category_name']); ?>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-user me-2"></i> प्रकाशक:</th>
-                                            <td><?php echo htmlspecialchars($news['published_by']); ?></td>
-                                        </tr>
-                                        <?php if (!empty($news['approved_by'])): ?>
-                                        <tr>
-                                            <th><i class="fas fa-user-check me-2"></i> मंजूर करणारा:</th>
-                                            <td><?php echo htmlspecialchars($news['approved_by']); ?></td>
-                                        </tr>
-                                        <?php endif; ?>
-                                        <tr>
-                                            <th><i class="fas fa-calendar-alt me-2"></i> प्रकाशन तारीख:</th>
-                                            <td><?php echo date('d-m-Y', strtotime($news['published_date'])); ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-clock me-2"></i> तयार केले:</th>
-                                            <td><?php echo date('d-m-Y H:i', strtotime($news['created_at'])); ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-sync-alt me-2"></i> अद्ययावत केले:</th>
-                                            <td><?php echo date('d-m-Y H:i', strtotime($news['updated_at'])); ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th><i class="fas fa-star me-2"></i> टॉप न्यूज:</th>
-                                            <td>
-                                                <?php if ($edit_mode): ?>
-                                                <div class="form-check form-switch">
-                                                    <input class="form-check-input" 
-                                                           type="checkbox" 
-                                                           name="topnews" 
-                                                           value="1" 
-                                                           <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'checked' : ''; ?>
-                                                           style="width: 3em; height: 1.5em; margin-left: 0;">
-                                                    <label class="form-check-label ms-2">
-                                                        <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?>
-                                                    </label>
-                                                </div>
-                                                <?php else: ?>
-                                                <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </div>
+                        <!-- Summary -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
+                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-align-left me-2"></i> सारांश
+                                </h5>
+                                <?php if ($edit_mode): ?>
+                                <span class="badge bg-warning">एडिट करता येईल</span>
+                                <?php endif; ?>
                             </div>
-                            
-                            <!-- Save Buttons (Only in Edit Mode) -->
-                            <?php if ($edit_mode): ?>
-                            <div class="card shadow-sm mb-4 border-primary save-buttons">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="mb-0" style="font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-save me-2"></i> अपडेट करा
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-grid gap-2">
-                                        <button type="submit" 
-                                                class="btn btn-lg btn-primary shadow"
-                                                onclick="showLoadingToast()">
-                                            <i class="fas fa-save me-2"></i> बदल सेव्ह करा
+                            <div class="card-body">
+                                <textarea class="form-control <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                          name="summary" 
+                                          rows="5"
+                                          <?php echo !$edit_mode ? 'readonly' : 'required'; ?>
+                                          style="font-family: 'Mukta', sans-serif; font-size: 18px; line-height: 1.6; border: 2px solid #FFA500;"><?php echo htmlspecialchars($news['summary']); ?></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Full Content -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
+                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-newspaper me-2"></i> संपूर्ण बातमी
+                                </h5>
+                                <?php if ($edit_mode): ?>
+                                <span class="badge bg-warning">एडिट करता येईल</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="form-control <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                          name="content" 
+                                          rows="15"
+                                          <?php echo !$edit_mode ? 'readonly' : 'required'; ?>
+                                          style="font-family: 'Mukta', sans-serif; font-size: 16px; line-height: 1.8; border: 2px solid #FFA500;"><?php echo htmlspecialchars($news['content']); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <!-- Meta Information -->
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header" style="background-color: #FFF3E0;">
+                                <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-info-circle me-2"></i> माहिती
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-borderless" style="font-family: 'Mukta', sans-serif;">
+                                    <tr>
+                                        <th width="40%"><i class="fas fa-globe me-2"></i> प्रदेश:</th>
+                                        <td>
+                                            <select class="form-select form-select-sm <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                                    name="region" 
+                                                    <?php echo !$edit_mode ? 'disabled' : ''; ?>
+                                                    style="border: 1px solid #FFA500;">
+                                                <?php foreach ($regions as $region_value => $region_name): ?>
+                                                <option value="<?php echo $region_value; ?>" <?php echo (strtolower($news['Region']) == strtolower($region_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo $region_name; ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-map-marker-alt me-2"></i> जिल्हा:</th>
+                                        <td>
+                                            <select class="form-select form-select-sm <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                                    name="district" 
+                                                    <?php echo !$edit_mode ? 'disabled' : ''; ?>
+                                                    style="border: 1px solid #FFA500;">
+                                                <?php foreach ($districts as $district_value => $district_name): ?>
+                                                <option value="<?php echo $district_value; ?>" <?php echo (strtolower($news['district_name']) == strtolower($district_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo $district_name; ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-tags me-2"></i> वर्ग:</th>
+                                        <td>
+                                            <select class="form-select form-select-sm <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                                    name="category" 
+                                                    <?php echo !$edit_mode ? 'disabled' : ''; ?>
+                                                    style="border: 1px solid #FFA500;">
+                                                <?php foreach ($categories as $category_value => $category_name): ?>
+                                                <option value="<?php echo $category_value; ?>" <?php echo (strtolower($news['category_name']) == strtolower($category_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo $category_name; ?>
+                                                </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-user me-2"></i> प्रकाशक:</th>
+                                        <td><?php echo htmlspecialchars($news['published_by']); ?></td>
+                                    </tr>
+                                    <?php if (!empty($news['approved_by'])): ?>
+                                    <tr>
+                                        <th><i class="fas fa-user-check me-2"></i> मंजूर करणारा:</th>
+                                        <td><?php echo htmlspecialchars($news['approved_by']); ?></td>
+                                    </tr>
+                                    <?php endif; ?>
+                                    <tr>
+                                        <th><i class="fas fa-calendar-alt me-2"></i> प्रकाशन तारीख:</th>
+                                        <td><?php echo date('d-m-Y', strtotime($news['published_date'])); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-clock me-2"></i> तयार केले:</th>
+                                        <td><?php echo date('d-m-Y H:i', strtotime($news['created_at'])); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-sync-alt me-2"></i> अद्ययावत केले:</th>
+                                        <td><?php echo date('d-m-Y H:i', strtotime($news['updated_at'])); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-eye me-2"></i> दृश्ये:</th>
+                                        <td><?php echo $news['view'] ?? 0; ?></td>
+                                    </tr>
+                                    <tr>
+                                        <th><i class="fas fa-star me-2"></i> टॉप न्यूज:</th>
+                                        <td>
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
+                                                       type="checkbox" 
+                                                       name="topnews" 
+                                                       value="1" 
+                                                       <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'checked' : ''; ?>
+                                                       <?php echo !$edit_mode ? 'disabled' : ''; ?>
+                                                       style="width: 3em; height: 1.5em; margin-left: 0;">
+                                                <label class="form-check-label ms-2">
+                                                    <?php echo (!empty($news['topnews']) && $news['topnews'] == 1) ? 'होय' : 'नाही'; ?>
+                                                </label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Debug: Show news approval status -->
+                        <?php 
+                        // Debug code - remove this after testing
+                        if ($edit_mode) {
+                            echo '<div class="alert alert-info small" style="display:none;">';
+                            echo 'Debug: News ID = ' . $news_id . '<br>';
+                            echo 'is_approved = ' . $news['is_approved'] . ' (Type: ' . gettype($news['is_approved']) . ')<br>';
+                            echo 'Status: ' . getMarathiStatusName($news['is_approved']);
+                            echo '</div>';
+                        }
+                        ?>
+                        
+                        <!-- Save Buttons (Only in Edit Mode) -->
+                        <?php if ($edit_mode): ?>
+                        <div class="card shadow-sm mb-4 border-primary save-buttons">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0" style="font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-save me-2"></i> अपडेट करा
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button type="submit" 
+                                            name="update_news"
+                                            value="1"
+                                            class="btn btn-lg btn-primary shadow"
+                                            onclick="showLoadingToast()">
+                                        <i class="fas fa-save me-2"></i> बदल सेव्ह करा
+                                    </button>
+                                    
+                                    <?php if ($news['is_approved'] == 0): ?>
+                                        <!-- Pending News: Save and Approve -->
+                                        <button type="button" 
+                                                class="btn btn-lg btn-success shadow"
+                                                onclick="saveAndApprove()">
+                                            <i class="fas fa-check-circle me-2"></i> सेव्ह करा आणि मान्य करा
                                         </button>
-                                        
-                                        <a href="?news_id=<?php echo $news_id; ?>" 
-                                           class="btn btn-lg btn-secondary shadow">
-                                            <i class="fas fa-times me-2"></i> रद्द करा
-                                        </a>
-                                    </div>
+                                    <?php elseif ($news['is_approved'] == 1): ?>
+                                        <!-- Approved News: Save and Disapprove -->
+                                        <button type="button" 
+                                                class="btn btn-lg btn-danger shadow"
+                                                onclick="saveAndDisapprove()">
+                                            <i class="fas fa-times-circle me-2"></i> सेव्ह करा आणि नामंजूर करा
+                                        </button>
+                                    <?php elseif ($news['is_approved'] == 2): ?>
+                                        <!-- Disapproved News: Save and Approve -->
+                                        <button type="button" 
+                                                class="btn btn-lg btn-success shadow"
+                                                onclick="saveAndApprove()">
+                                            <i class="fas fa-check-circle me-2"></i> सेव्ह करा आणि मान्य करा
+                                        </button>
+                                    <?php endif; ?>
+                                    
+                                    <a href="?news_id=<?php echo $news_id; ?>" 
+                                       class="btn btn-lg btn-secondary shadow">
+                                        <i class="fas fa-times me-2"></i> रद्द करा
+                                    </a>
                                 </div>
                             </div>
-                            <?php endif; ?>
-                            
-                            <!-- Approval Actions (only for pending news and NOT in edit mode) -->
-                            <?php if ($news['is_approved'] == 0 && !$edit_mode): ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Approval Actions (only for pending news and NOT in edit mode) -->
+                        <?php if ($news['is_approved'] == 0 && !$edit_mode): ?>
                             <div class="card shadow-sm mb-4 border-success approval-buttons">
                                 <div class="card-header bg-success text-white">
                                     <h5 class="mb-0" style="font-family: 'Mukta', sans-serif;">
@@ -946,243 +1091,276 @@ $all_regions = [
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <form action="backend/approve_news.php" method="POST" id="approvalForm">
-                                        <input type="hidden" name="news_id" value="<?php echo $news['news_id']; ?>">
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" 
+                                                name="action" 
+                                                value="approve"
+                                                class="btn btn-lg btn-success shadow approve-btn">
+                                            <i class="fas fa-check-circle me-2"></i> मान्य करा
+                                        </button>
                                         
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" 
-                                                    name="action" 
-                                                    value="approve"
-                                                    class="btn btn-lg btn-success shadow"
-                                                    onclick="showApprovalToast('approve')">
-                                                <i class="fas fa-check-circle me-2"></i> मान्य करा
-                                            </button>
-                                            
-                                            <button type="submit" 
-                                                    name="action" 
-                                                    value="disapprove"
-                                                    class="btn btn-lg btn-danger shadow"
-                                                    onclick="showApprovalToast('disapprove')">
-                                                <i class="fas fa-times-circle me-2"></i> नामंजूर करा
-                                            </button>
-                                        </div>
-                                    </form>
+                                        <button type="submit" 
+                                                name="action" 
+                                                value="disapprove"
+                                                class="btn btn-lg btn-danger shadow disapprove-btn">
+                                            <i class="fas fa-times-circle me-2"></i> नामंजूर करा
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <?php endif; ?>
-                            
-                            <!-- Status Information -->
-                            <div class="card shadow-sm border-<?php echo $news['is_approved'] == 0 ? 'warning' : ($news['is_approved'] == 1 ? 'success' : 'danger'); ?>">
-                                <div class="card-header bg-<?php echo $news['is_approved'] == 0 ? 'warning' : ($news['is_approved'] == 1 ? 'success' : 'danger'); ?> text-white">
-                                    <h5 class="mb-0" style="font-family: 'Mukta', sans-serif;">
-                                        <i class="fas fa-info-circle me-2"></i> स्थिती माहिती
-                                    </h5>
-                                </div>
-                                <div class="card-body text-center">
-                                    <div class="mb-3">
-                                        <i class="fas 
-                                            <?php 
-                                            if($news['is_approved'] == 0) echo 'fa-clock';
-                                            elseif($news['is_approved'] == 1) echo 'fa-check-circle';
-                                            else echo 'fa-times-circle';
-                                            ?>" 
-                                            style="font-size: 60px; 
-                                            color: <?php 
-                                            if($news['is_approved'] == 0) echo '#FFA500';
-                                            elseif($news['is_approved'] == 1) echo '#28a745';
-                                            else echo '#dc3545';
-                                            ?>;">
-                                        </i>
-                                    </div>
-                                    <h4 class="mb-2" style="font-family: 'Khand', sans-serif;">
-                                        <?php echo getMarathiStatusName($news['is_approved']); ?>
-                                    </h4>
-                                    <p class="mb-0 text-muted" style="font-family: 'Mukta', sans-serif;">
+                        <?php endif; ?>
+                        
+                        <!-- Status Information -->
+                        <div class="card shadow-sm border-<?php echo $news['is_approved'] == 0 ? 'warning' : ($news['is_approved'] == 1 ? 'success' : 'danger'); ?>">
+                            <div class="card-header bg-<?php echo $news['is_approved'] == 0 ? 'warning' : ($news['is_approved'] == 1 ? 'success' : 'danger'); ?> text-white">
+                                <h5 class="mb-0" style="font-family: 'Mukta', sans-serif;">
+                                    <i class="fas fa-info-circle me-2"></i> स्थिती माहिती
+                                </h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas 
                                         <?php 
-                                        if($news['is_approved'] == 0) {
-                                            echo 'बातमी मंजुरीसाठी प्रलंबित आहे';
-                                        } elseif($news['is_approved'] == 1) {
-                                            echo 'बातमी मंजूर केली गेली आहे';
-                                            echo '<br><small>' . date('d-m-Y H:i', strtotime($news['updated_at'])) . '</small>';
-                                        } else {
-                                            echo 'बातमी नामंजूर केली गेली आहे';
+                                        if($news['is_approved'] == 0) echo 'fa-clock';
+                                        elseif($news['is_approved'] == 1) echo 'fa-check-circle';
+                                        else echo 'fa-times-circle';
+                                        ?>" 
+                                        style="font-size: 60px; 
+                                        color: <?php 
+                                        if($news['is_approved'] == 0) echo '#FFA500';
+                                        elseif($news['is_approved'] == 1) echo '#28a745';
+                                        else echo '#dc3545';
+                                        ?>;">
+                                    </i>
+                                </div>
+                                <h4 class="mb-2" style="font-family: 'Khand', sans-serif;">
+                                    <?php echo getMarathiStatusName($news['is_approved']); ?>
+                                </h4>
+                                <p class="mb-0 text-muted" style="font-family: 'Mukta', sans-serif;">
+                                    <?php 
+                                    if($news['is_approved'] == 0) {
+                                        echo 'बातमी मंजुरीसाठी प्रलंबित आहे';
+                                    } elseif($news['is_approved'] == 1) {
+                                        echo 'बातमी मंजूर केली गेली आहे';
+                                        if (!empty($news['updated_at'])) {
                                             echo '<br><small>' . date('d-m-Y H:i', strtotime($news['updated_at'])) . '</small>';
                                         }
-                                        ?>
-                                    </p>
-                                </div>
+                                    } else {
+                                        echo 'बातमी नामंजूर केली गेली आहे';
+                                        if (!empty($news['updated_at'])) {
+                                            echo '<br><small>' . date('d-m-Y H:i', strtotime($news['updated_at'])) . '</small>';
+                                        }
+                                    }
+                                    ?>
+                                </p>
                             </div>
                         </div>
                     </div>
-                </form>
-            </div>
-            
-            <div class="card-footer text-center py-3" style="background-color: #FFF8F0; border-top: 2px dashed #FFA500;">
-                <small style="font-family: 'Mukta', sans-serif;">
-                    <i class="fas fa-info-circle me-1" style="color: #FF6600;"></i>
-                    बातमी ID: <?php echo $news['news_id']; ?> | 
-                    तयार केली: <?php echo date('d-m-Y H:i', strtotime($news['created_at'])); ?> | 
-                    अद्ययावत: <?php echo date('d-m-Y H:i', strtotime($news['updated_at'])); ?>
-                </small>
-            </div>
+                </div>
+            </form>
+        </div>
+        
+        <div class="card-footer text-center py-3" style="background-color: #FFF8F0; border-top: 2px dashed #FFA500;">
+            <small style="font-family: 'Mukta', sans-serif;">
+                <i class="fas fa-info-circle me-1" style="color: #FF6600;"></i>
+                बातमी ID: <?php echo $news['news_id']; ?> | 
+                तयार केली: <?php echo date('d-m-Y H:i', strtotime($news['created_at'])); ?> | 
+                अद्ययावत: <?php echo date('d-m-Y H:i', strtotime($news['updated_at'])); ?>
+            </small>
         </div>
     </div>
+</div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Toastify JS -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+<script>
+    // Function to show toast notification
+    function showToast(message, type = 'info', duration = 5000) {
+        let backgroundColor;
+        let className;
+        
+        switch(type) {
+            case 'success':
+                backgroundColor = "linear-gradient(135deg, #28a745, #20c997)";
+                className = "custom-toast custom-toast-success";
+                break;
+            case 'error':
+                backgroundColor = "linear-gradient(135deg, #dc3545, #fd7e14)";
+                className = "custom-toast custom-toast-error";
+                break;
+            case 'warning':
+                backgroundColor = "linear-gradient(135deg, #ffc107, #ff8c00)";
+                className = "custom-toast custom-toast-warning";
+                break;
+            default:
+                backgroundColor = "linear-gradient(135deg, #333, #666)";
+                className = "custom-toast";
+        }
+        
+        Toastify({
+            text: message,
+            duration: duration,
+            gravity: "top",
+            position: "center",
+            stopOnFocus: true,
+            className: className,
+            style: {
+                background: backgroundColor,
+                fontFamily: "'Mukta', sans-serif",
+                fontSize: "16px",
+                borderRadius: "8px",
+                boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
+                padding: "15px 20px"
+            },
+            offset: {
+                y: 70
+            }
+        }).showToast();
+    }
     
-    <!-- Toastify JS -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
-    <script>
-        // Function to show toast notification
-        function showToast(message, type = 'info', duration = 5000) {
-            let backgroundColor;
-            let className;
-            
-            switch(type) {
-                case 'success':
-                    backgroundColor = "linear-gradient(135deg, #28a745, #20c997)";
-                    className = "custom-toast custom-toast-success";
-                    break;
-                case 'error':
-                    backgroundColor = "linear-gradient(135deg, #dc3545, #fd7e14)";
-                    className = "custom-toast custom-toast-error";
-                    break;
-                case 'warning':
-                    backgroundColor = "linear-gradient(135deg, #ffc107, #ff8c00)";
-                    className = "custom-toast custom-toast-warning";
-                    break;
-                case 'info':
-                    backgroundColor = "linear-gradient(135deg, #17a2b8, #20c997)";
-                    className = "custom-toast custom-toast-info";
-                    break;
-                default:
-                    backgroundColor = "linear-gradient(135deg, #333, #666)";
-                    className = "custom-toast";
-            }
-            
-            Toastify({
-                text: message,
-                duration: duration,
-                gravity: "top",
-                position: "center",
-                stopOnFocus: true,
-                className: className,
-                style: {
-                    background: backgroundColor,
-                    fontFamily: "'Mukta', sans-serif",
-                    fontSize: "16px",
-                    borderRadius: "8px",
-                    boxShadow: "0 5px 15px rgba(0,0,0,0.2)",
-                    padding: "15px 20px"
-                },
-                offset: {
-                    y: 70
+    // Function to show loading toast
+    function showLoadingToast() {
+        showToast("बातमी अपडेट केली जात आहे... कृपया प्रतीक्षा करा", "info", 3000);
+    }
+    
+    // Function to confirm delete
+    function confirmDelete() {
+        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी डिलीट करायची आहे?\n\nही क्रिया परत येणार नाही!')) {
+            return false;
+        }
+        showToast("बातमी डिलीट केली जात आहे...", "info", 2000);
+        return true;
+    }
+    
+    // Function to save and approve
+    function saveAndApprove() {
+        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि मान्य करायची आहे?')) {
+            return false;
+        }
+        
+        // Set the hidden field to indicate approve after save
+        document.getElementById('approveAfterSave').value = '1';
+        
+        showToast("बातमी सेव्ह आणि मान्य केली जात आहे...", "info", 3000);
+        
+        // Submit the main form with update_news parameter
+        const form = document.getElementById('mainForm');
+        const updateInput = document.createElement('input');
+        updateInput.type = 'hidden';
+        updateInput.name = 'update_news';
+        updateInput.value = '1';
+        form.appendChild(updateInput);
+        
+        form.submit();
+    }
+    
+    // Function to save and disapprove
+    function saveAndDisapprove() {
+        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि नामंजूर करायची आहे?')) {
+            return false;
+        }
+        
+        // Set the hidden field to indicate disapprove after save
+        document.getElementById('approveAfterSave').value = '2';
+        
+        showToast("बातमी सेव्ह आणि नामंजूर केली जात आहे...", "info", 3000);
+        
+        // Submit the main form with update_news parameter
+        const form = document.getElementById('mainForm');
+        const updateInput = document.createElement('input');
+        updateInput.type = 'hidden';
+        updateInput.name = 'update_news';
+        updateInput.value = '1';
+        form.appendChild(updateInput);
+        
+        form.submit();
+    }
+    
+    // Handle form submission for approval
+    function handleApprovalSubmit(e) {
+        const submitter = e.submitter;
+        const action = submitter.value;
+        
+        let confirmMessage = '';
+        
+        if (action === 'approve') {
+            confirmMessage = 'तुम्हाला खात्री आहे की तुम्हाला ही बातमी मान्य करायची आहे?';
+        } else if (action === 'disapprove') {
+            confirmMessage = 'तुम्हाला खात्री आहे की तुम्हाला ही बातमी नामंजूर करायची आहे?';
+        }
+        
+        if (!confirm(confirmMessage)) {
+            e.preventDefault();
+            return false;
+        }
+        
+        showToast(action === 'approve' ? "बातमी मान्य केली जात आहे..." : "बातमी नामंजूर केली जात आहे...", "info", 2000);
+        return true;
+    }
+    
+    // Display stored toast messages
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        <?php if (!empty($toast_message)): ?>
+            showToast("<?php echo $toast_message; ?>", "<?php echo $toast_type; ?>");
+        <?php endif; ?>
+        
+        // Handle approval form submission
+        const mainForm = document.getElementById('mainForm');
+        if (mainForm) {
+            mainForm.addEventListener('submit', function(e) {
+                const submitter = e.submitter;
+                if (submitter && (submitter.value === 'approve' || submitter.value === 'disapprove')) {
+                    return handleApprovalSubmit(e);
                 }
-            }).showToast();
-        }
-        
-        // Function to show loading toast
-        function showLoadingToast() {
-            showToast("बातमी अपडेट केली जात आहे... कृपया प्रतीक्षा करा", "info", 3000);
-        }
-        
-        // Function to show approval/disapproval toast
-        function showApprovalToast(action) {
-            if (action === 'approve') {
-                if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी मान्य करायची आहे?')) {
-                    return false;
-                }
-                showToast("बातमी मान्य केली जात आहे...", "info", 2000);
-            } else if (action === 'disapprove') {
-                if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी नामंजूर करायची आहे?')) {
-                    return false;
-                }
-                showToast("बातमी नामंजूर केली जात आहे...", "info", 2000);
-            }
-            return true;
-        }
-        
-        // Function to confirm quick approve
-        function confirmQuickApprove() {
-            if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी  मान्य करायची आहे?')) {
-                return false;
-            }
-            showToast("बातमी झटपट मान्य केली जात आहे...", "info", 2000);
-            return true;
-        }
-        
-        // Display stored toast messages from PHP session
-        document.addEventListener('DOMContentLoaded', function() {
-            <?php 
-            // Check for URL parameter notifications first
-            if (isset($_GET['approval_success'])): ?>
-                showToast("बातमी यशस्वीरित्या मान्य केली गेली!", "success");
-                // Remove parameter from URL without reloading
-                window.history.replaceState({}, document.title, window.location.pathname + '?news_id=<?php echo $news_id; ?>');
-            <?php elseif (isset($_GET['disapproval_success'])): ?>
-                showToast("बातमी यशस्वीरित्या नामंजूर केली गेली!", "warning");
-                window.history.replaceState({}, document.title, window.location.pathname + '?news_id=<?php echo $news_id; ?>');
-            <?php elseif (isset($_GET['approval_error'])): ?>
-                showToast("बातमी मंजुरी/नामंजुरी करताना त्रुटी आली.", "error");
-                window.history.replaceState({}, document.title, window.location.pathname + '?news_id=<?php echo $news_id; ?>');
-            <?php endif; ?>
-            
-            // Check for local toast messages (from form submission)
-            <?php if (!empty($toast_message)): ?>
-                showToast("<?php echo $toast_message; ?>", "<?php echo $toast_type; ?>");
-            <?php endif; ?>
-            
-            // Remove URL parameters after showing toast
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('approval_success') || urlParams.has('disapproval_success') || urlParams.has('approval_error')) {
-                // URL already cleaned above
-            }
-        });
-        
-        // Confirm before disapproval in the form submission
-        document.addEventListener('DOMContentLoaded', function() {
-            const approvalForm = document.getElementById('approvalForm');
-            if (approvalForm) {
-                approvalForm.addEventListener('submit', function(e) {
-                    const action = document.activeElement.value;
+                
+                // Handle save form validation
+                if (submitter && submitter.name === 'update_news') {
+                    const title = this.querySelector('[name="title"]');
+                    const summary = this.querySelector('[name="summary"]');
+                    const content = this.querySelector('[name="content"]');
                     
-                    if (action === 'disapprove') {
-                        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी नामंजूर करायची आहे?')) {
-                            e.preventDefault();
-                            return false;
-                        }
+                    if (title && !title.value.trim()) {
+                        e.preventDefault();
+                        showToast("कृपया बातमी शीर्षक प्रविष्ट करा", "error");
+                        title.focus();
+                        return false;
                     }
-                });
-            }
-        });
-        
-        // Auto-hide alerts after 5 seconds
-        document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
-                setTimeout(function() {
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 5000);
-            });
-        });
-        
-        // Debug function to show what data is being posted
-        function debugPostData() {
-            const form = document.querySelector('form[method="POST"]');
-            if (form) {
-                const formData = new FormData(form);
-                let debugMessage = "DEBUG - POST Data being sent:\n\n";
-                for (let [key, value] of formData.entries()) {
-                    debugMessage += `${key}: ${value}\n`;
+                    
+                    if (summary && !summary.value.trim()) {
+                        e.preventDefault();
+                        showToast("कृपया बातमी सारांश प्रविष्ट करा", "error");
+                        summary.focus();
+                        return false;
+                    }
+                    
+                    if (content && !content.value.trim()) {
+                        e.preventDefault();
+                        showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
+                        content.focus();
+                        return false;
+                    }
+                    
+                    const approveAfterSave = document.getElementById('approveAfterSave').value;
+                    if (approveAfterSave === '1') {
+                        showToast("बातमी सेव्ह आणि मान्य केली जात आहे...", "info", 3000);
+                    } else if (approveAfterSave === '2') {
+                        showToast("बातमी सेव्ह आणि नामंजूर केली जात आहे...", "info", 3000);
+                    } else {
+                        showLoadingToast();
+                    }
                 }
-                alert(debugMessage);
-            }
+                return true;
+            });
         }
-    </script>
+    });
+</script>
 
-    <?php include 'components/footer.php'; ?>
-</body>
-</html>
+<?php
+include 'components/footer.php';
+?>
