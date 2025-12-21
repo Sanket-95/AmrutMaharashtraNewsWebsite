@@ -12,6 +12,9 @@ include 'components/navbar.php';
 include 'components/login_navbar.php';
 include 'components/db_config.php';
 
+// Set timezone to IST
+date_default_timezone_set('Asia/Kolkata');
+
 // Get user info for display
 $user_name = $_SESSION['name'] ?? 'User';
 $user_roll = $_SESSION['roll'] ?? '';
@@ -160,6 +163,7 @@ function getMarathiRegionName($regionValue) {
 }
 
 // Get current date and time in the format for datetime-local input
+// Using simple PHP approach that should work
 $currentDateTime = date('Y-m-d\TH:i');
 ?>
 
@@ -930,27 +934,38 @@ $currentDateTime = date('Y-m-d\TH:i');
             }
         });
         
-        // Set current datetime button functionality
+        // Set current datetime button functionality - SIMPLIFIED
         const setCurrentDateTimeBtn = document.getElementById('setCurrentDateTimeBtn');
         const publishDateTimeInput = document.getElementById('publishDateTime');
         
         if (setCurrentDateTimeBtn && publishDateTimeInput) {
             setCurrentDateTimeBtn.addEventListener('click', function() {
+                // SIMPLE approach - use the browser's local time directly
                 const now = new Date();
                 
-                // Format: YYYY-MM-DDTHH:MM
+                // Get local date components
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const day = String(now.getDate()).padStart(2, '0');
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 
+                // Format: YYYY-MM-DDTHH:MM
                 const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+                
+                // Set the value
                 publishDateTimeInput.value = currentDateTime;
+                
+                // Debug log
+                console.log('Current time set to:', currentDateTime);
+                console.log('Browser local time:', now.toString());
                 
                 // Show success message
                 toastr.success('आत्ताची तारीख आणि वेळ सेट केली गेली आहे!');
             });
+            
+            // Also set on page load if needed
+            // Note: We're already setting it via PHP, so this is just for the button
         }
         
         // Check for URL parameters on page load
@@ -995,15 +1010,11 @@ $currentDateTime = date('Y-m-d\TH:i');
                     // Uncheck topnews checkbox
                     document.getElementById('topNewsCheckbox').checked = false;
                     
-                    // Reset datetime to current date and time
+                    // Reset datetime to current date and time using PHP value
                     if (publishDateTimeInput) {
-                        const now = new Date();
-                        const year = now.getFullYear();
-                        const month = String(now.getMonth() + 1).padStart(2, '0');
-                        const day = String(now.getDate()).padStart(2, '0');
-                        const hours = String(now.getHours()).padStart(2, '0');
-                        const minutes = String(now.getMinutes()).padStart(2, '0');
-                        publishDateTimeInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                        // This will use the PHP-generated datetime which is in IST
+                        // The datetime-local input will interpret it as local time
+                        publishDateTimeInput.value = '<?php echo $currentDateTime; ?>';
                     }
                     
                     coverPreview.style.display = 'none';
