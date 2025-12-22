@@ -7,12 +7,17 @@ include '../components/db_config.php';
 date_default_timezone_set('Asia/Kolkata');
 
 // Function to sanitize input
+// function sanitize_input($data) {
+//     if(empty($data)) return $data;
+//     $data = trim($data);
+//     $data = stripslashes($data);
+//     $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+//     return $data;
+// }
+
 function sanitize_input($data) {
-    if(empty($data)) return $data;
-    $data = trim($data);
-    $data = stripslashes($data);
-    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
-    return $data;
+    if ($data === null) return $data;
+    return trim($data);
 }
 
 // Function to create directory if not exists (cross-platform)
