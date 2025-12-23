@@ -1,60 +1,34 @@
 <?php
-// components/header_fixed.php - ULTIMATE FIX
-
-// ========== PHASE 1: CLEAN UTF-8 SETUP ==========
-// Stop any previous output
+// components/header_fixed.php - ULTIMATE FIX V2
 if (ob_get_level()) ob_end_clean();
 
-// Set headers BEFORE any output
 header('Content-Type: text/html; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
-
-// Start fresh output buffer
 ob_start('ob_gzhandler');
 
-// Force UTF-8 for all string functions
 if (function_exists('mb_internal_encoding')) {
     mb_internal_encoding('UTF-8');
     mb_http_output('UTF-8');
 }
 
-// Remove BOM if present
-function removeUtf8Bom($text) {
-    $bom = pack('H*', 'EFBBBF');
-    $text = preg_replace("/^$bom/", '', $text);
-    return $text;
-}
-
-// ========== PHASE 2: SIMPLIFIED HEADER ==========
-// Get current page URL
 $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
-// Use Unicode escapes for ALL Marathi text
-$amrut_maharashtra = '&#x0905;&#x092E;&#x0943;&#x0924; &#x092E;&#x0939;&#x093E;&#x0930;&#x093E;&#x0937;&#x094D;&#x091F;&#x094D;&#x0930;';
-$shramev_jayate = '&#x0936;&#x094D;&#x0930;&#x092E;&#x0947;&#x0935; &#x091C;&#x092F;&#x0924;&#x0947;';
-
-// Clean the output buffer
 ob_clean();
 ?>
 <!DOCTYPE html>
 <html lang="mr">
 <head>
-    <!-- ONE AND ONLY ONE charset declaration -->
     <meta charset="UTF-8">
-    
-    <!-- NO http-equiv Content-Type here - let the HTTP header handle it -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Title with Unicode escapes -->
-    <title><?php echo $amrut_maharashtra; ?></title>
+    <title>अमृत महाराष्ट्र</title>
     
-    <!-- ========== META TAGS - ENGLISH ONLY ========== -->
-    <!-- Using English prevents encoding issues with social platforms -->
+    <!-- META TAGS -->
     <meta name="description" content="Latest news, government initiatives, and developments in Maharashtra">
     <meta name="keywords" content="Maharashtra news, government news, Amrut Maharashtra">
     <meta name="author" content="Amrut Maharashtra">
     
-    <!-- ========== OPEN GRAPH TAGS - ENGLISH ONLY ========== -->
+    <!-- OPEN GRAPH TAGS -->
     <meta property="og:title" content="Amrut Maharashtra">
     <meta property="og:description" content="Latest news and government initiatives in Maharashtra">
     <meta property="og:image" content="https://amrutmaharashtra.org/assets/images/logo.png">
@@ -62,56 +36,44 @@ ob_clean();
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Amrut Maharashtra">
     
-    <!-- ========== TWITTER CARD ========== -->
+    <!-- TWITTER CARD -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Amrut Maharashtra">
     <meta name="twitter:description" content="Latest Maharashtra news and updates">
     
-    <!-- ========== CANONICAL URL ========== -->
+    <!-- CANONICAL URL -->
     <link rel="canonical" href="<?php echo htmlspecialchars($current_url, ENT_QUOTES, 'UTF-8'); ?>">
     
-    <!-- ========== BOOTSTRAP ========== -->
+    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
-    <!-- ========== CRITICAL: INLINE STYLES ========== -->
+    <!-- CRITICAL: INLINE STYLES -->
     <style>
-    /* RESET EVERYTHING FIRST */
     * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
     }
     
-    /* Force UTF-8 rendering */
     body {
-        font-family: Arial, sans-serif;
+        font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif;
         -webkit-text-size-adjust: 100%;
         text-size-adjust: 100%;
     }
     
-    /* CRITICAL: Protect navbar text with !important */
-    .center-title {
-        font-family: 'Arial Unicode MS', 'Segoe UI', sans-serif !important;
-        color: #f97316 !important;
-        font-weight: 800 !important;
-        font-size: 1.6rem !important;
+    /* PROTECT ALL NAVBAR MARATHI TEXT */
+    .center-title, .subtitle, 
+    .main-heading, .mobile-heading-line-2, .mobile-heading-line-3,
+    .heading-main-part, .heading-secondary-part {
+        font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif !important;
         text-transform: none !important;
         letter-spacing: normal !important;
-        content: "<?php echo $amrut_maharashtra; ?>" !important;
     }
     
-    .subtitle {
-        font-family: 'Arial Unicode MS', 'Segoe UI', sans-serif !important;
-        color: #c2410c !important;
-        font-style: italic !important;
-        font-weight: 500 !important;
-        font-size: 0.85rem !important;
-        content: "<?php echo $shramev_jayate; ?>" !important;
-    }
-    
-    /* Make these elements unselectable to prevent changes */
-    .center-title, .subtitle {
+    /* Make ALL Marathi text unselectable to prevent changes */
+    .center-title, .subtitle, 
+    .main-heading, .mobile-heading-line-2, .mobile-heading-line-3 {
         -webkit-user-select: none !important;
         -moz-user-select: none !important;
         -ms-user-select: none !important;
@@ -120,55 +82,61 @@ ob_clean();
     }
     </style>
     
-    <!-- ========== NUCLEAR OPTION: BLOCK ALL EXTERNAL SCRIPTS FROM MODIFYING TEXT ========== -->
+    <!-- NUCLEAR OPTION: PROTECT ALL MARATHI TEXT -->
     <script>
-    // RUN THIS BEFORE ANY OTHER SCRIPT
     (function() {
         'use strict';
         
-        // Store the correct text
-        const CORRECT_TITLE = 'अमृत महाराष्ट्र';
-        const CORRECT_SUBTITLE = 'श्रमेव जयते';
-        const WRONG_TITLE = 'अमृत महाराष्ट्रार';
-        
-        // Nuclear option: Override DOM methods
-        const originalCreateElement = document.createElement;
-        const originalCreateTextNode = document.createTextNode;
-        const originalQuerySelector = document.querySelector;
-        const originalQuerySelectorAll = document.querySelectorAll;
-        
-        // Block creation of elements with wrong text
-        document.createElement = function(tagName) {
-            const element = originalCreateElement.call(this, tagName);
-            
-            if (tagName.toLowerCase() === 'script') {
-                const originalAppend = element.appendChild;
-                element.appendChild = function(child) {
-                    if (child && child.nodeType === 3) { // Text node
-                        if (child.textContent.includes(WRONG_TITLE)) {
-                            console.error('BLOCKED: Script trying to create wrong text');
-                            child.textContent = child.textContent.replace(WRONG_TITLE, CORRECT_TITLE);
-                        }
-                    }
-                    return originalAppend.call(this, child);
-                };
-            }
-            
-            return element;
+        // Store ALL CORRECT Marathi texts
+        const CORRECT_TEXTS = {
+            'center-title': 'अमृत महाराष्ट्र',
+            'subtitle': 'श्रमेव जयते',
+            'main-heading': 'महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी (अमृत) - महाराष्ट्र शासनाची स्वायत्त संस्था',
+            'mobile-heading-line-2': 'महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी (अमृत)',
+            'mobile-heading-line-3': 'महाराष्ट्र शासनाची स्वायत्त संस्था'
         };
         
-        // Block creation of text nodes with wrong text
-        document.createTextNode = function(text) {
-            if (text.includes(WRONG_TITLE)) {
-                console.error('BLOCKED: TextNode with wrong text');
-                text = text.replace(WRONG_TITLE, CORRECT_TITLE);
-            }
-            return originalCreateTextNode.call(this, text);
-        };
+        // Common wrong patterns
+        const WRONG_PATTERNS = [
+            'महाराष्टर',  // Missing the रा combination
+            'महाराष्ट्रार', // Extra र
+            'महाराष्ट्',   // Missing र
+            'महाराष्ट',    // Missing ्
+            'महाराष्ट़'    // Wrong diacritic
+        ];
         
-        // Intercept text content changes
+        // Function to check if text contains wrong patterns
+        function hasWrongPattern(text) {
+            return WRONG_PATTERNS.some(pattern => text.includes(pattern));
+        }
+        
+        // Function to get correct text for element
+        function getCorrectText(element) {
+            if (element.classList.contains('center-title')) return CORRECT_TEXTS['center-title'];
+            if (element.classList.contains('subtitle')) return CORRECT_TEXTS['subtitle'];
+            if (element.classList.contains('main-heading')) return CORRECT_TEXTS['main-heading'];
+            if (element.classList.contains('mobile-heading-line-2')) return CORRECT_TEXTS['mobile-heading-line-2'];
+            if (element.classList.contains('mobile-heading-line-3')) return CORRECT_TEXTS['mobile-heading-line-3'];
+            
+            // Check parent classes
+            const parent = element.parentElement;
+            if (parent) {
+                if (parent.classList.contains('center-title')) return CORRECT_TEXTS['center-title'];
+                if (parent.classList.contains('subtitle')) return CORRECT_TEXTS['subtitle'];
+                if (parent.classList.contains('main-heading')) return CORRECT_TEXTS['main-heading'];
+                if (parent.classList.contains('mobile-heading-line-2')) return CORRECT_TEXTS['mobile-heading-line-2'];
+                if (parent.classList.contains('mobile-heading-line-3')) return CORRECT_TEXTS['mobile-heading-line-3'];
+            }
+            
+            return null;
+        }
+        
+        // Protect element from text changes
         function protectElement(element) {
             if (!element) return;
+            
+            const correctText = getCorrectText(element);
+            if (!correctText) return; // Not a protected element
             
             const originalTextContent = Object.getOwnPropertyDescriptor(element, 'textContent');
             const originalInnerText = Object.getOwnPropertyDescriptor(element, 'innerText');
@@ -177,22 +145,12 @@ ob_clean();
             if (originalTextContent) {
                 Object.defineProperty(element, 'textContent', {
                     get: function() {
-                        if (this.classList.contains('center-title')) return CORRECT_TITLE;
-                        if (this.classList.contains('subtitle')) return CORRECT_SUBTITLE;
-                        return originalTextContent.get.call(this);
+                        return correctText;
                     },
                     set: function(value) {
-                        if (this.classList.contains('center-title')) {
-                            if (value !== CORRECT_TITLE) {
-                                console.error('BLOCKED: Attempt to change center-title to:', value);
-                                value = CORRECT_TITLE;
-                            }
-                        }
-                        if (this.classList.contains('subtitle')) {
-                            if (value !== CORRECT_SUBTITLE) {
-                                console.error('BLOCKED: Attempt to change subtitle to:', value);
-                                value = CORRECT_SUBTITLE;
-                            }
+                        if (value !== correctText && hasWrongPattern(value)) {
+                            console.error('BLOCKED: Attempt to change protected text to:', value);
+                            return originalTextContent.set.call(this, correctText);
                         }
                         return originalTextContent.set.call(this, value);
                     },
@@ -203,45 +161,71 @@ ob_clean();
             if (originalInnerText) {
                 Object.defineProperty(element, 'innerText', {
                     get: function() {
-                        if (this.classList.contains('center-title')) return CORRECT_TITLE;
-                        if (this.classList.contains('subtitle')) return CORRECT_SUBTITLE;
-                        return originalInnerText.get.call(this);
+                        return correctText;
                     },
                     set: function(value) {
-                        if (this.classList.contains('center-title')) {
-                            if (value !== CORRECT_TITLE) {
-                                console.error('BLOCKED: Attempt to change center-title innerText to:', value);
-                                value = CORRECT_TITLE;
-                            }
-                        }
-                        if (this.classList.contains('subtitle')) {
-                            if (value !== CORRECT_SUBTITLE) {
-                                console.error('BLOCKED: Attempt to change subtitle innerText to:', value);
-                                value = CORRECT_SUBTITLE;
-                            }
+                        if (value !== correctText && hasWrongPattern(value)) {
+                            console.error('BLOCKED: Attempt to change protected innerText to:', value);
+                            return originalInnerText.set.call(this, correctText);
                         }
                         return originalInnerText.set.call(this, value);
                     },
                     configurable: false
                 });
             }
+            
+            // Also protect immediately
+            if (element.textContent !== correctText && hasWrongPattern(element.textContent)) {
+                element.textContent = correctText;
+            }
         }
         
-        // Run immediately
+        // Run protection
+        function protectAllMarathiText() {
+            const selectors = [
+                '.center-title', '.subtitle', 
+                '.main-heading', '.mobile-heading-line-2', '.mobile-heading-line-3',
+                '.heading-main-part', '.heading-secondary-part'
+            ];
+            
+            selectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(protectElement);
+            });
+            
+            // Also check all text nodes in document
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            let node;
+            while (node = walker.nextNode()) {
+                if (hasWrongPattern(node.textContent)) {
+                    // Try to find correct text based on parent
+                    const parent = node.parentElement;
+                    if (parent) {
+                        const correctText = getCorrectText(parent);
+                        if (correctText) {
+                            node.textContent = correctText;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Run on DOM load
         document.addEventListener('DOMContentLoaded', function() {
-            // Protect existing elements
-            document.querySelectorAll('.center-title, .subtitle').forEach(protectElement);
+            protectAllMarathiText();
             
             // Monitor for new elements
             const observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {
                     if (mutation.type === 'childList') {
                         mutation.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1) { // Element node
-                                if (node.classList && (node.classList.contains('center-title') || node.classList.contains('subtitle'))) {
-                                    protectElement(node);
-                                }
-                                node.querySelectorAll('.center-title, .subtitle').forEach(protectElement);
+                            if (node.nodeType === 1) {
+                                protectAllMarathiText();
                             }
                         });
                     }
@@ -253,30 +237,13 @@ ob_clean();
                 subtree: true
             });
             
-            // Force correct text every 100ms (nuclear option)
-            setInterval(function() {
-                const titles = document.querySelectorAll('.center-title');
-                const subtitles = document.querySelectorAll('.subtitle');
-                
-                titles.forEach(function(title) {
-                    if (title.textContent !== CORRECT_TITLE) {
-                        console.log('Fixing title from:', title.textContent, 'to:', CORRECT_TITLE);
-                        title.textContent = CORRECT_TITLE;
-                    }
-                });
-                
-                subtitles.forEach(function(subtitle) {
-                    if (subtitle.textContent !== CORRECT_SUBTITLE) {
-                        console.log('Fixing subtitle from:', subtitle.textContent, 'to:', CORRECT_SUBTITLE);
-                        subtitle.textContent = CORRECT_SUBTITLE;
-                    }
-                });
-            }, 100);
+            // Force check every 500ms
+            setInterval(protectAllMarathiText, 500);
         });
         
-        // Check immediately
+        // Check immediately if DOM already loaded
         if (document.readyState !== 'loading') {
-            document.querySelectorAll('.center-title, .subtitle').forEach(protectElement);
+            protectAllMarathiText();
         }
         
     })();
