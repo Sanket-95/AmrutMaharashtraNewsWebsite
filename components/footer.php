@@ -68,9 +68,8 @@
                     </li>
                     <li class="mb-3">
                         <i class="bi bi-geo-alt text-orange me-2"></i>
-                        <span>Location: Academy Of Maharashtra Research, Upliftment & Training (Amrut),<br>
-                              Maharaja Sayajirao Gaikwad Udyog Bhavan,<br>
-                              Fifth Floor, Aundh, Pune 411067.</span>
+                        <span>Location: AMRUT Building, near Bhimsen Joshi Sabhagruh, Ward No. 8, PMRDA,<br>
+                              Aundh, Pune, Maharashtra 411067</span>
                     </li>
                 </ul>
             </div>
