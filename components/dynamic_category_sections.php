@@ -358,7 +358,7 @@ function generateNewsCard($news) {
                                   overflow: hidden;
                                   text-decoration: none;">
                             <i class="bi bi-newspaper me-2"></i>
-                            या विभागातील सर्व मजकूर पाहा
+                            <?php echo htmlspecialchars($category['label']); ?> मधील सर्व मजकूर पहा
                             <i class="bi bi-arrow-right-circle ms-2"></i>
                         </a>
                     </div>

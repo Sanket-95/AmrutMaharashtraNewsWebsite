@@ -756,7 +756,7 @@
                         <!-- Right Logo - Your custom Amrut logo -->
                         <div class="right-logo">
                             <div class="logo-container right-logo-container">
-                                <img src="components/assets/Amrut.png" 
+                                <img src="components/assets/Amrut.JPEG" 
                                      alt="Amrut Maharashtra Right Logo" 
                                      class="side-logo img-fluid">
                             </div>
@@ -784,7 +784,7 @@
                     
                     <div class="right-logo">
                         <div class="logo-container right-logo-container">
-                            <img src="components/assets/Amrut.png" 
+                            <img src="components/assets/Amrut.JPEG" 
                                  alt="Amrut Maharashtra Right Logo" 
                                  class="side-logo img-fluid">
                         </div>
