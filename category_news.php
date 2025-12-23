@@ -30,7 +30,7 @@ $category_label = isset($category_map[$category]) ? $category_map[$category] : $
 
 // Handle date filter if provided
 $date_filter = isset($_GET['date']) ? $_GET['date'] : '';
-$where_clause = "WHERE category_name = ?";
+$where_clause = "WHERE category_name = ? AND is_approved = 1";
 $params = array($category);
 $param_types = "s";
 
@@ -50,7 +50,7 @@ $news_query = "SELECT
     published_date
 FROM news_articles
 $where_clause
-ORDER BY published_date DESC";
+ORDER BY published_date DESC";  
 
 $stmt = $conn->prepare($news_query);
 
