@@ -56,7 +56,7 @@
                 <ul class="list-unstyled">
                     <li class="mb-3">
                         <i class="bi bi-envelope text-orange me-2"></i>
-                        <span>Email: info@mahaamrut.org.in</span>
+                        <span>Email:  amrutmaharashtraorg@gmail.com</span>
                     </li>
                     <li class="mb-3">
                         <i class="bi bi-phone text-orange me-2"></i>
