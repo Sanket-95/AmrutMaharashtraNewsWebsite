@@ -40,7 +40,7 @@ if (!empty($date_filter)) {
     $param_types .= "s";
 }
 
-// Fetch news articles based on category and optional date filter
+// Fetch news articles based on category and optional date filters
 $news_query = "SELECT 
     news_id,
     title,
