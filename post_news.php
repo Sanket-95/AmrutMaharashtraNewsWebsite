@@ -298,7 +298,7 @@ $currentDateTime = date('Y-m-d\TH:i');
                                 <?php endforeach; ?>
                             </select>
                         <?php elseif($user_roll === 'district_user'): ?>
-                            <!-- For district_user - readonly field showing auto-filled district -->
+                            <!-- For district_user - readonly field showing auto-filled district ----------->
                             <div class="form-control shadow-sm" style="
                                 border-color: #FFA500; 
                                 font-family: 'Mukta', sans-serif; 
