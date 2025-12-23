@@ -361,6 +361,8 @@ $currentDateTime = date('Y-m-d\TH:i');
                         <option value="social_situation">सामाजिक परिवर्तक</option>
                         <option value="women_power">स्त्रीशक्ती</option>
                         <option value="tourism">पर्यटन</option>
+                        <option value="news">वार्ता</option>
+                        <option value="tourism">पर्यटन</option>
                     </select>
                 </div>
                 

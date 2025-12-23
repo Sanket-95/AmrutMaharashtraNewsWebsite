@@ -35,7 +35,7 @@ $params = array($category);
 $param_types = "s";
 
 if (!empty($date_filter)) {
-    $where_clause .= " AND DATE(published_date) = ?";
+    $where_clause .= " AND DATE(published_date) = ? AND is_approved = 1";
     $params[] = $date_filter;
     $param_types .= "s";
 }
