@@ -33,7 +33,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 try {
     // INSERT with approve = 1 (immediately approved)
     $query = "INSERT INTO news_comments (news_id, name, email, comment, approve) 
-              VALUES (?, ?, ?, ?, 0)";
+              VALUES (?, ?, ?, ?, 1)";
     
     $stmt = $conn->prepare($query);
     $stmt->bind_param("isss", $news_id, $name, $email, $comment_text);

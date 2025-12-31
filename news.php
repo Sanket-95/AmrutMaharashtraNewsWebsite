@@ -106,15 +106,6 @@ if (!empty($share_image_url) && strpos($share_image_url, 'http') !== 0) {
 // Current URL for sharing
 $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
-// // Truncate summary for meta description
-// $meta_description = !empty($news['summary']) ? 
-//     substr(strip_tags($news['summary']), 0, 160) : 
-//     substr(strip_tags($news['content']), 0, 160);
-// $meta_description = htmlspecialchars($meta_description . '...');
-
-// // Clean title for meta tags
-// $meta_title = htmlspecialchars($news['title']);
-
 // FIXED VERSION - Use mb_substr for Unicode/Marathi text
 $meta_description = !empty($news['summary']) ? 
     mb_substr(strip_tags($news['summary']), 0, 160, 'UTF-8') : 
@@ -126,7 +117,25 @@ $meta_description = htmlspecialchars($meta_description . '...');
 $meta_title = htmlspecialchars($news['title']);
 // ============ END OG TAGS CONFIGURATION ============
 
-// Fetch only APPROVED comments (approve = 1) with LIMIT 15
+// COMMENT PAGINATION CONFIGURATION
+$comments_per_page = 5; // Show only 5 comments per page
+$current_page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$offset = ($current_page - 1) * $comments_per_page;
+
+// Get total approved comments count for pagination
+$count_query = "SELECT COUNT(*) as total_comments FROM news_comments WHERE news_id = ? AND approve = 1";
+$count_stmt = $conn->prepare($count_query);
+$count_stmt->bind_param("i", $news_id);
+$count_stmt->execute();
+$count_result = $count_stmt->get_result();
+$count_row = $count_result->fetch_assoc();
+$total_approved_comments = $count_row['total_comments'];
+$count_stmt->close();
+
+// Calculate total pages
+$total_pages = ceil($total_approved_comments / $comments_per_page);
+
+// Fetch only APPROVED comments (approve = 1) with pagination (5 per page)
 $comments_query = "SELECT 
     comment_id, 
     name, 
@@ -137,10 +146,10 @@ FROM news_comments
 WHERE news_id = ? 
     AND approve = 1 
 ORDER BY comment_date DESC 
-LIMIT 15";
+LIMIT ? OFFSET ?";
 
 $comments_stmt = $conn->prepare($comments_query);
-$comments_stmt->bind_param("i", $news_id);
+$comments_stmt->bind_param("iii", $news_id, $comments_per_page, $offset);
 $comments_stmt->execute();
 $comments_result = $comments_stmt->get_result();
 
@@ -179,16 +188,6 @@ $related_stmt->bind_param("si", $news['category_name'], $news_id);
 $related_stmt->execute();
 $related_result = $related_stmt->get_result();
 $related_news_count = $related_result->num_rows;
-
-// Get total approved comments count
-$count_query = "SELECT COUNT(*) as total_comments FROM news_comments WHERE news_id = ? AND approve = 1";
-$count_stmt = $conn->prepare($count_query);
-$count_stmt->bind_param("i", $news_id);
-$count_stmt->execute();
-$count_result = $count_stmt->get_result();
-$count_row = $count_result->fetch_assoc();
-$total_approved_comments = $count_row['total_comments'];
-$count_stmt->close();
 
 // Check for secondary photo - use secondary_photo_url if available, otherwise use cover_photo_url
 $has_secondary_photo = false;
@@ -568,6 +567,76 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             font-size: 14px;
         }
         
+        /* Character counter */
+        .char-counter {
+            font-size: 14px;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .char-counter .remaining {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .char-counter .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .char-counter .exceeded {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        /* PAGINATION STYLES */
+        .pagination-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .pagination {
+            margin: 0;
+        }
+        
+        .page-link {
+            color: #ff6600;
+            border: 1px solid #dee2e6;
+            padding: 8px 16px;
+            margin: 0 3px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .page-link:hover {
+            background-color: #ff6600;
+            color: white;
+            border-color: #ff6600;
+        }
+        
+        .page-item.active .page-link {
+            background-color: #ff6600;
+            border-color: #ff6600;
+            color: white;
+        }
+        
+        .page-item.disabled .page-link {
+            color: #6c757d;
+            pointer-events: none;
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+        
+        .comments-per-page {
+            font-size: 14px;
+            color: #666;
+            margin-left: 20px;
+        }
+        
         /* RELATED NEWS STYLES */
         .related-news-section {
             margin-top: 60px;
@@ -744,6 +813,15 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 gap: 15px;
             }
             
+            .pagination-container {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .comments-per-page {
+                margin-left: 0;
+            }
+            
             /* Mobile image adjustments */
             .news-image {
                 max-height: 400px;
@@ -791,6 +869,63 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <div class="news-header">
             <h1 class="news-title"><?php echo htmlspecialchars($news['title']); ?></h1>     
         </div>
+         <!-- News Meta Information -->
+            <!-- <div class="news-publish"> -->
+                <div class="news-meta">
+                    <div class="text-center">
+                        <!-- Publisher -->
+                        <span class="meta-item">
+                            <i class="bi bi-person-fill"></i>
+                            <strong>Publisher:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                            <span class="meta-tooltip">News publisher name</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Date -->
+                        <span class="meta-item">
+                            <i class="bi bi-calendar-event"></i>
+                            <strong>Date:</strong>
+                            <span class="meta-value"><?php echo $published_date; ?></span>
+                            <span class="meta-tooltip">News publication date</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Time -->
+                        <span class="meta-item">
+                            <i class="bi bi-clock"></i>
+                            <strong>Time:</strong>
+                            <span class="meta-value"><?php echo $published_time; ?></span>
+                            <span class="meta-tooltip">News publication time</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Views -->
+                        <span class="meta-item">
+                            <i class="bi bi-eye-fill"></i>
+                            <strong>Views:</strong>
+                            <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                            <span class="meta-tooltip">Number of times this news has been viewed</span>
+                        </span>
+                        
+                        <?php if (!empty($news['district_name'])): ?>
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- District -->
+                        <span class="meta-item">
+                            <i class="bi bi-geo-alt"></i>
+                            <strong>District:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                            <span class="meta-tooltip">Related district of the news</span>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <!-- </div> -->
+
 
         <!-- Summary -->
         <?php if (!empty($news['summary'])): ?>
@@ -814,62 +949,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             <?php echo nl2br(htmlspecialchars($news['content'])); ?>
         </div>
 
-       <!-- News Meta Information -->
-        <div class="news-publish">
-            <div class="news-meta">
-                <div class="text-center">
-                    <!-- Publisher -->
-                    <span class="meta-item">
-                        <i class="bi bi-person-fill"></i>
-                        <strong>Publisher:</strong>
-                        <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
-                        <span class="meta-tooltip">News publisher name</span>
-                    </span>
-                    
-                    <span class="meta-divider">|</span>
-                    
-                    <!-- Date -->
-                    <span class="meta-item">
-                        <i class="bi bi-calendar-event"></i>
-                        <strong>Date:</strong>
-                        <span class="meta-value"><?php echo $published_date; ?></span>
-                        <span class="meta-tooltip">News publication date</span>
-                    </span>
-                    
-                    <span class="meta-divider">|</span>
-                    
-                    <!-- Time -->
-                    <span class="meta-item">
-                        <i class="bi bi-clock"></i>
-                        <strong>Time:</strong>
-                        <span class="meta-value"><?php echo $published_time; ?></span>
-                        <span class="meta-tooltip">News publication time</span>
-                    </span>
-                    
-                    <span class="meta-divider">|</span>
-                    
-                    <!-- Views -->
-                    <span class="meta-item">
-                        <i class="bi bi-eye-fill"></i>
-                        <strong>Views:</strong>
-                        <span class="meta-value"><?php echo number_format($news['view']); ?></span>
-                        <span class="meta-tooltip">Number of times this news has been viewed</span>
-                    </span>
-                    
-                    <?php if (!empty($news['district_name'])): ?>
-                    <span class="meta-divider">|</span>
-                    
-                    <!-- District -->
-                    <span class="meta-item">
-                        <i class="bi bi-geo-alt"></i>
-                        <strong>District:</strong>
-                        <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
-                        <span class="meta-tooltip">Related district of the news</span>
-                    </span>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
+      
 
         <!-- Social Share Section -->
         <div class="social-share">
@@ -922,6 +1002,144 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             </div>
         </div>
 
+        <!-- Comments Section -->
+        <div class="comments-section">
+            <h3 class="mb-4 border-bottom pb-2">
+                <i class="bi bi-chat-left-text"></i> Comments 
+                <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> Comments</span>
+            </h3>
+        
+            <!-- Comments List -->
+            <div class="comments-list" id="commentsContainer">
+                <?php if ($comments_result->num_rows > 0): ?>
+                    <?php while ($comment = $comments_result->fetch_assoc()): ?>
+                        <div class="comment-item">
+                            <div class="comment-header">
+                                <div class="comment-avatar">
+                                    <?php echo mb_substr(htmlspecialchars($comment['name']), 0, 1); ?>
+                                </div>
+                                <div class="comment-author">
+                                    <h6><?php echo htmlspecialchars($comment['name']); ?></h6>
+                                    <div class="comment-date">
+                                        <i class="bi bi-clock"></i> <?php echo $comment['formatted_date']; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="comment-text"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
+                        </div>
+                    <?php endwhile; ?>
+                <?php else: ?>
+                    <div class="no-comments text-center py-5" id="noCommentsMessage">
+                        <i class="bi bi-chat-left-text display-1 text-muted"></i>
+                        <h4 class="mt-3 text-muted">No comments yet</h4>
+                        <p class="text-muted">You can start the discussion</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Pagination -->
+            <?php if ($total_approved_comments > $comments_per_page): ?>
+                <div class="pagination-container">
+                    <nav aria-label="Comments pagination">
+                        <ul class="pagination">
+                            <!-- Previous Page -->
+                            <?php if ($current_page > 1): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="news.php?id=<?php echo $news_id; ?>&page=<?php echo $current_page - 1; ?>#commentsContainer">
+                                        <i class="bi bi-chevron-left"></i> Previous
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="bi bi-chevron-left"></i> Previous</span>
+                                </li>
+                            <?php endif; ?>
+                            
+                            <!-- Page Numbers -->
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <?php if ($i == $current_page): ?>
+                                    <li class="page-item active">
+                                        <span class="page-link"><?php echo $i; ?></span>
+                                    </li>
+                                <?php else: ?>
+                                    <li class="page-item">
+                                        <a class="page-link" href="news.php?id=<?php echo $news_id; ?>&page=<?php echo $i; ?>#commentsContainer">
+                                            <?php echo $i; ?>
+                                        </a>
+                                    </li>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+                            
+                            <!-- Next Page -->
+                            <?php if ($current_page < $total_pages): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="news.php?id=<?php echo $news_id; ?>&page=<?php echo $current_page + 1; ?>#commentsContainer">
+                                        Next <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            <?php else: ?>
+                                <li class="page-item disabled">
+                                    <span class="page-link">Next <i class="bi bi-chevron-right"></i></span>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                    
+                    <div class="comments-per-page">
+                        Showing <?php echo ($offset + 1); ?> - <?php echo min($offset + $comments_per_page, $total_approved_comments); ?> of <?php echo $total_approved_comments; ?> comments
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <!-- Comment Form -->
+            <div class="comment-form">
+                <h5 class="mb-4"><i class="bi bi-pencil-square"></i> Write a Comment</h5>
+                
+                <form id="commentForm" method="POST">
+                    <input type="hidden" name="news_id" id="news_id" value="<?php echo $news_id; ?>">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="Your name">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" name="email" required 
+                                   placeholder="Your email address">
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="comment" class="form-label">Your Comment <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="comment" name="comment" rows="5" required 
+                                      placeholder="Write your comment here (Maximum 100 words)"
+                                      oninput="updateCharCounter(this)"></textarea>
+                            <div class="char-counter">
+                                <span id="charCount">0</span> / <span id="maxChars">100</span> words
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
+                                <label class="form-check-label" for="saveInfo">
+                                    Save my name, email, and website for next time
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
+                                <i class="bi bi-send"></i> Post Comment
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- RELATED NEWS SECTION -->
         <div class="related-news-section">
             <h3 class="section-title">
@@ -965,83 +1183,6 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- Comments Section -->
-       <div class="comments-section">
-    <h3 class="mb-4 border-bottom pb-2">
-        <i class="bi bi-chat-left-text"></i> Comments 
-        <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> Comments</span>
-    </h3>
-    
-    <!-- Comments List -->
-    <div class="comments-list" id="commentsContainer">
-        <?php if ($comments_result->num_rows > 0): ?>
-            <?php while ($comment = $comments_result->fetch_assoc()): ?>
-                <div class="comment-item">
-                    <div class="comment-header">
-                        <div class="comment-avatar">
-                            <?php echo mb_substr(htmlspecialchars($comment['name']), 0, 1); ?>
-                        </div>
-                        <div class="comment-author">
-                            <h6><?php echo htmlspecialchars($comment['name']); ?></h6>
-                            <div class="comment-date">
-                                <i class="bi bi-clock"></i> <?php echo $comment['formatted_date']; ?>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="comment-text"><?php echo nl2br(htmlspecialchars($comment['comment'])); ?></p>
-                </div>
-            <?php endwhile; ?>
-        <?php else: ?>
-            <div class="no-comments text-center py-5" id="noCommentsMessage">
-                <i class="bi bi-chat-left-text display-1 text-muted"></i>
-                <h4 class="mt-3 text-muted">No comments yet</h4>
-                <p class="text-muted">You can start the discussion</p>
-            </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Comment Form -->
-    <div class="comment-form">
-        <h5 class="mb-4"><i class="bi bi-pencil-square"></i> Write a Comment</h5>
-        
-        <form id="commentForm" method="POST">
-            <input type="hidden" name="news_id" id="news_id" value="<?php echo $news_id; ?>">
-            
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="name" name="name" required>
-                </div>
-                
-                <div class="col-md-6">
-                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control" id="email" name="email" required>
-                </div>
-                
-                <div class="col-12">
-                    <label for="comment" class="form-label">Your Comment <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="comment" name="comment" rows="5" required></textarea>
-                </div>
-                
-                <div class="col-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
-                        <label class="form-check-label" for="saveInfo">
-                            Save my name, email, and website for next time
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="col-12">
-                    <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
-                        <i class="bi bi-send"></i> Post Comment
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
     </div>
 
     <!-- Toastify JS -->
@@ -1078,7 +1219,6 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         const image = "<?php echo $share_image_url; ?>";
         
         // Create WhatsApp message
-        // const whatsappText = `*${title}*\n\n${description}\n\n📰 वाचा: ${url}`;
         const whatsappText = `*${title}*\n\n${description}\n\n📰 बातमी वाचा 'अमृत महाराष्ट्र'च्या पुढील लिंकवर...\n${url}`;
         
         // Use WhatsApp's share API
@@ -1140,6 +1280,49 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
     }
     
+    // Function to count words in text (supports both Marathi and English)
+    function countWords(text) {
+        // Remove extra whitespace and split by word separators
+        const cleanedText = text.trim().replace(/\s+/g, ' ');
+        
+        if (!cleanedText) {
+            return 0;
+        }
+        
+        // Split by spaces and filter out empty strings
+        const words = cleanedText.split(' ').filter(word => word.length > 0);
+        
+        return words.length;
+    }
+    
+    // Function to update character counter
+    function updateCharCounter(textarea) {
+        const text = textarea.value;
+        const wordCount = countWords(text);
+        const maxWords = 100;
+        
+        // Update counter display
+        const charCountElement = document.getElementById('charCount');
+        charCountElement.textContent = wordCount;
+        
+        // Update color based on word count
+        const charCounter = textarea.nextElementSibling;
+        
+        if (wordCount > maxWords) {
+            charCounter.querySelector('#charCount').className = 'exceeded';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('submitBtn').style.opacity = '0.6';
+        } else if (wordCount > maxWords - 10) {
+            charCounter.querySelector('#charCount').className = 'warning';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').style.opacity = '1';
+        } else {
+            charCounter.querySelector('#charCount').className = 'remaining';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').style.opacity = '1';
+        }
+    }
+    
     // Handle comment form submission with AJAX
     document.getElementById('commentForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1152,21 +1335,34 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         // Basic validation
         if (!name || !email || !comment) {
-            showToast('कृपया सर्व आवश्यक फील्ड भरा', 'error');
+            showToast('Please fill all required fields', 'error');
             return;
         }
         
         // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            showToast('कृपया वैध ईमेल पत्ता टाका', 'error');
+            showToast('Please enter a valid email address', 'error');
+            return;
+        }
+        
+        // Word count validation (max 100 words)
+        const wordCount = countWords(comment);
+        if (wordCount > 100) {
+            showToast('Please write maximum 100 words', 'error');
+            return;
+        }
+        
+        // Minimum word count validation (optional)
+        if (wordCount < 2) {
+            showToast('Please write at least 2 words', 'error');
             return;
         }
         
         // Show loading state
         const submitBtn = document.getElementById('submitBtn');
         const originalBtnText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> सबमिट करत आहे...';
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
         submitBtn.disabled = true;
         
         // Send AJAX request
@@ -1184,7 +1380,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                     
                     if (response.success) {
                         // Show success message
-                        showToast(response.message, 'success');
+                        showToast('Your comment has been posted successfully!', 'success');
                         
                         // Clear form
                         document.getElementById('name').value = '';
@@ -1192,101 +1388,34 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         document.getElementById('comment').value = '';
                         document.getElementById('saveInfo').checked = false;
                         
-                        // Add new comment to the list
-                        addCommentToList({
-                            name: name,
-                            comment: comment,
-                            formatted_date: 'आत्ताच'
-                        });
+                        // Reset character counter
+                        document.getElementById('charCount').textContent = '0';
+                        document.getElementById('charCount').className = 'remaining';
                         
-                        // Hide "no comments" message if it exists
-                        const noCommentsMessage = document.getElementById('noCommentsMessage');
-                        if (noCommentsMessage) {
-                            noCommentsMessage.style.display = 'none';
-                        }
+                        // Note: We don't add comment to list immediately because it needs approval
+                        // The comment will appear after admin approves it
                         
-                        // Update comments count
-                        updateCommentsCount();
-                        
-                        // Scroll to the new comment
-                        setTimeout(() => {
-                            const commentsContainer = document.getElementById('commentsContainer');
-                            const firstComment = commentsContainer.querySelector('.comment-item');
-                            if (firstComment) {
-                                firstComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                        }, 500);
                     } else {
                         showToast(response.message, 'error');
                     }
                 } catch (e) {
-                    showToast('त्रुटी: अवैध प्रतिसाद', 'error');
+                    showToast('Error: Invalid response', 'error');
                     console.error('Parse error:', e);
                 }
             } else {
-                showToast('सर्व्हर त्रुटी: ' + xhr.status, 'error');
+                showToast('Server error: ' + xhr.status, 'error');
             }
         };
         
         xhr.onerror = function() {
             submitBtn.innerHTML = originalBtnText;
             submitBtn.disabled = false;
-            showToast('नेटवर्क त्रुटी', 'error');
+            showToast('Network error', 'error');
         };
         
         // Send the request
         xhr.send(formData);
     });
-    
-    // Function to add new comment to the list
-    function addCommentToList(commentData) {
-        const commentsContainer = document.getElementById('commentsContainer');
-        
-        // Create new comment element
-        const commentElement = document.createElement('div');
-        commentElement.className = 'comment-item';
-        commentElement.innerHTML = `
-            <div class="comment-header">
-                <div class="comment-avatar">
-                    ${commentData.name.charAt(0)}
-                </div>
-                <div class="comment-author">
-                    <h6>${commentData.name}</h6>
-                    <div class="comment-date">
-                        <i class="bi bi-clock"></i> ${commentData.formatted_date}
-                    </div>
-                </div>
-            </div>
-            <p class="comment-text">${commentData.comment}</p>
-        `;
-        
-        // Insert at the top
-        commentsContainer.insertBefore(commentElement, commentsContainer.firstChild);
-        
-        // Remove comments if more than 15
-        removeExtraComments();
-    }
-    
-    // Function to remove extra comments if more than 15
-    function removeExtraComments() {
-        const commentsContainer = document.getElementById('commentsContainer');
-        const comments = commentsContainer.querySelectorAll('.comment-item');
-        
-        if (comments.length > 15) {
-            for (let i = 15; i < comments.length; i++) {
-                commentsContainer.removeChild(comments[i]);
-            }
-        }
-    }
-    
-    // Function to update comments count
-    function updateCommentsCount() {
-        const commentsCountElement = document.querySelector('.comments-count');
-        if (commentsCountElement) {
-            const currentCount = parseInt(commentsCountElement.textContent.split(' ')[0]) || 0;
-            commentsCountElement.textContent = (currentCount + 1) + ' प्रतिक्रिया';
-        }
-    }
     
     // Clear form function with toast
     function clearForm() {
@@ -1294,7 +1423,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         document.getElementById('email').value = '';
         document.getElementById('comment').value = '';
         document.getElementById('saveInfo').checked = false;
-        showToast('फॉर्म क्लियर झाला', 'info');
+        document.getElementById('charCount').textContent = '0';
+        document.getElementById('charCount').className = 'remaining';
+        showToast('Form cleared', 'info');
     }
     
     // Handle keyboard shortcuts
@@ -1354,7 +1485,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                     const platform = this.classList.contains('facebook') ? 'Facebook' :
                                   this.classList.contains('twitter') ? 'Twitter' :
                                   'LinkedIn';
-                    showToast(`${platform} वर शेअर करत आहे...`, 'info');
+                    showToast(`Sharing on ${platform}...`, 'info');
                 });
             }
         });
@@ -1364,7 +1495,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         if (saveInfoCheckbox) {
             saveInfoCheckbox.addEventListener('change', function() {
                 if (this.checked) {
-                    showToast('तुमची माहिती पुढील वेळीसाठी सेव्ह केली जाईल', 'info');
+                    showToast('Your information will be saved for next time', 'info');
                 }
             });
         }
@@ -1380,6 +1511,14 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 this.style.transform = 'translateY(0)';
             });
         });
+        
+        // Initialize character counter
+        const commentTextarea = document.getElementById('comment');
+        if (commentTextarea) {
+            commentTextarea.addEventListener('input', function() {
+                updateCharCounter(this);
+            });
+        }
         
         // Initialize meta tags
         updateMetaTags();
