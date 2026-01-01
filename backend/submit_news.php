@@ -201,12 +201,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Set MySQL session timezone to IST to match PHP
         $conn->query("SET time_zone = '+05:30'");
         
+
+
+        date_default_timezone_set('Asia/Kolkata'); // Set PHP timezone to IST
+        $current_ist_time = date('Y-m-d H:i:s'); // Get current IST time
+
         // Determine is_approved value based on user role
         $is_approved = 1; // Default to approved for admin and division_head
         if (isset($_SESSION['roll']) && $_SESSION['roll'] === 'district_user') {
             $is_approved = 0; // Not approved for district_user
         }
         
+
         // Prepare SQL statement - Use NOW() which will use the session timezone (IST)
         $sql = "INSERT INTO news_articles (
                     Region, 
@@ -225,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     is_approved, 
                     view,
                     topnews
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NOW(), NOW(), ?, 0, ?)";
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 0, ?, 0, ?)";
         
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
@@ -234,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Bind parameters: 12 parameters total
         $stmt->bind_param(
-            "ssssssssssii", // 12 parameters: 10 strings + 2 integers
+            "sssssssssssii", // 12 parameters: 10 strings + 2 integers
             $region,
             $district,
             $category,
@@ -245,6 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $full_news,
             $publisher_name,
             $publish_date, // Store exactly what user selected
+            $current_ist_time, // Pass IST timestamp here
             $is_approved,
             $topnews
         );
