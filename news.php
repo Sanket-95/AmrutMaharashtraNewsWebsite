@@ -28,7 +28,7 @@ $query = "SELECT
     published_date,
     view
 FROM news_articles 
-WHERE news_id = ? and is_approved = 1 and published_date <= NOW()";
+WHERE news_id = ? and is_approved = 1";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $news_id);
