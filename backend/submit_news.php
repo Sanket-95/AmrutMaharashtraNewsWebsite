@@ -203,8 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
 
 
-        date_default_timezone_set('Asia/Kolkata'); // Set PHP timezone to IST
-        $current_ist_time = date('Y-m-d H:i:s'); // Get current IST time
+        // date_default_timezone_set('Asia/Kolkata'); // Set PHP timezone to IST
+        // $current_ist_time = date('Y-m-d H:i:s'); // Get current IST time
+        $ist_timestamp = date('Y-m-d H:i:s', strtotime('+5 hours 30 minutes'));
 
         // Determine is_approved value based on user role
         $is_approved = 1; // Default to approved for admin and division_head
@@ -251,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $full_news,
             $publisher_name,
             $publish_date, // Store exactly what user selected
-            $current_ist_time, // Pass IST timestamp here
+            $ist_timestamp, // Pass IST timestamp here
             $is_approved,
             $topnews
         );
