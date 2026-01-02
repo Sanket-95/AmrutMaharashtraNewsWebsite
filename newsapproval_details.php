@@ -54,30 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $status_text = "नामंजूर केली";
         }
         
-        // Update news with all data AND approval status
+        // Update news with approval status only (keep other fields as they are)
         $update_sql = "UPDATE news_articles 
-                       SET title = ?,
-                           summary = ?,
-                           content = ?,
-                           category_name = ?,
-                           district_name = ?,
-                           Region = ?,
-                           topnews = ?,
-                           is_approved = ?, 
+                       SET is_approved = ?, 
                            approved_by = ?,
                            updated_at = NOW()
                        WHERE news_id = ?";
         
         $update_stmt = $conn->prepare($update_sql);
         $update_stmt->bind_param(
-            "ssssssissi",
-            $title,
-            $summary,
-            $content,
-            $category,
-            $district,
-            $region,
-            $topnews,
+            "isi",
             $is_approved,
             $approver_name,
             $news_id
@@ -730,11 +716,66 @@ include 'components/login_navbar.php';
             background: transparent;
             border: none;
         }
+        
+        /* Custom confirmation modal */
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .confirmation-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .confirmation-title {
+            color: #FF6600;
+            font-family: 'Khand', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .confirmation-message {
+            font-family: 'Mukta', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .confirmation-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?>">
   
 <div class="container mt-4 mb-5">
+    <!-- Custom Confirmation Modal -->
+    <div class="confirmation-modal" id="confirmationModal">
+        <div class="confirmation-content">
+            <div class="confirmation-title" id="confirmationTitle">निश्चित करा</div>
+            <div class="confirmation-message" id="confirmationMessage"></div>
+            <div class="confirmation-buttons">
+                <button type="button" class="btn btn-secondary" id="confirmationCancel">रद्द करा</button>
+                <button type="button" class="btn btn-danger" id="confirmationConfirm">होय</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Back Button and Action Buttons -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="newsapproval.php?status=<?php echo $news['is_approved'] == 0 ? 'pending' : ($news['is_approved'] == 1 ? 'approved' : 'disapproved'); ?>" 
@@ -745,12 +786,12 @@ include 'components/login_navbar.php';
         
         <div class="d-flex gap-2">
             <!-- Delete Button (Always visible) -->
-            <a href="?news_id=<?php echo $news_id; ?>&delete=1" 
-               class="btn delete-btn" 
-               style="font-family: 'Mukta', sans-serif;"
-               onclick="return confirmDelete()">
+            <button type="button" 
+                    class="btn delete-btn" 
+                    style="font-family: 'Mukta', sans-serif;"
+                    onclick="confirmDelete()">
                 <i class="fas fa-trash-alt me-2"></i> डिलीट करा
-            </a>
+            </button>
             
             <!-- Edit Button (Always visible) -->
             <?php if (!$edit_mode): ?>
@@ -1054,21 +1095,21 @@ include 'components/login_navbar.php';
                                         <!-- Pending News: Save and Approve -->
                                         <button type="button" 
                                                 class="btn btn-lg btn-success shadow"
-                                                onclick="saveAndApprove()">
+                                                onclick="showSaveAndApproveConfirmation()">
                                             <i class="fas fa-check-circle me-2"></i> सेव्ह करा आणि मान्य करा
                                         </button>
                                     <?php elseif ($news['is_approved'] == 1): ?>
                                         <!-- Approved News: Save and Disapprove -->
                                         <button type="button" 
                                                 class="btn btn-lg btn-danger shadow"
-                                                onclick="saveAndDisapprove()">
+                                                onclick="showSaveAndDisapproveConfirmation()">
                                             <i class="fas fa-times-circle me-2"></i> सेव्ह करा आणि नामंजूर करा
                                         </button>
                                     <?php elseif ($news['is_approved'] == 2): ?>
                                         <!-- Disapproved News: Save and Approve -->
                                         <button type="button" 
                                                 class="btn btn-lg btn-success shadow"
-                                                onclick="saveAndApprove()">
+                                                onclick="showSaveAndApproveConfirmation()">
                                             <i class="fas fa-check-circle me-2"></i> सेव्ह करा आणि मान्य करा
                                         </button>
                                     <?php endif; ?>
@@ -1092,17 +1133,15 @@ include 'components/login_navbar.php';
                                 </div>
                                 <div class="card-body">
                                     <div class="d-grid gap-2">
-                                        <button type="submit" 
-                                                name="action" 
-                                                value="approve"
-                                                class="btn btn-lg btn-success shadow approve-btn">
+                                        <button type="button" 
+                                                class="btn btn-lg btn-success shadow approve-btn"
+                                                onclick="showApproveConfirmation()">
                                             <i class="fas fa-check-circle me-2"></i> मान्य करा
                                         </button>
                                         
-                                        <button type="submit" 
-                                                name="action" 
-                                                value="disapprove"
-                                                class="btn btn-lg btn-danger shadow disapprove-btn">
+                                        <button type="button" 
+                                                class="btn btn-lg btn-danger shadow disapprove-btn"
+                                                onclick="showDisapproveConfirmation()">
                                             <i class="fas fa-times-circle me-2"></i> नामंजूर करा
                                         </button>
                                     </div>
@@ -1227,21 +1266,52 @@ include 'components/login_navbar.php';
         showToast("बातमी अपडेट केली जात आहे... कृपया प्रतीक्षा करा", "info", 3000);
     }
     
+    // Function to show custom confirmation modal
+    function showConfirmationModal(title, message, onConfirm) {
+        const modal = document.getElementById('confirmationModal');
+        const titleElement = document.getElementById('confirmationTitle');
+        const messageElement = document.getElementById('confirmationMessage');
+        const confirmBtn = document.getElementById('confirmationConfirm');
+        const cancelBtn = document.getElementById('confirmationCancel');
+        
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        
+        modal.style.display = 'flex';
+        
+        confirmBtn.onclick = function() {
+            modal.style.display = 'none';
+            if (onConfirm) onConfirm();
+        };
+        
+        cancelBtn.onclick = function() {
+            modal.style.display = 'none';
+        };
+        
+        // Close modal when clicking outside
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    }
+    
     // Function to confirm delete
     function confirmDelete() {
-        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी डिलीट करायची आहे?\n\nही क्रिया परत येणार नाही!')) {
-            return false;
-        }
-        showToast("बातमी डिलीट केली जात आहे...", "info", 2000);
-        return true;
+        showConfirmationModal(
+            "डिलीट करण्याची खात्री करा",
+            "तुम्हाला खात्री आहे की तुम्हाला ही बातमी डिलीट करायची आहे?\n\nही क्रिया परत येणार नाही!",
+            function() {
+                showToast("बातमी डिलीट केली जात आहे...", "info", 2000);
+                setTimeout(function() {
+                    window.location.href = "?news_id=<?php echo $news_id; ?>&delete=1";
+                }, 1500);
+            }
+        );
     }
     
     // Function to save and approve
     function saveAndApprove() {
-        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि मान्य करायची आहे?')) {
-            return false;
-        }
-        
         // Set the hidden field to indicate approve after save
         document.getElementById('approveAfterSave').value = '1';
         
@@ -1260,10 +1330,6 @@ include 'components/login_navbar.php';
     
     // Function to save and disapprove
     function saveAndDisapprove() {
-        if (!confirm('तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि नामंजूर करायची आहे?')) {
-            return false;
-        }
-        
         // Set the hidden field to indicate disapprove after save
         document.getElementById('approveAfterSave').value = '2';
         
@@ -1280,26 +1346,66 @@ include 'components/login_navbar.php';
         form.submit();
     }
     
-    // Handle form submission for approval
-    function handleApprovalSubmit(e) {
-        const submitter = e.submitter;
-        const action = submitter.value;
-        
-        let confirmMessage = '';
-        
-        if (action === 'approve') {
-            confirmMessage = 'तुम्हाला खात्री आहे की तुम्हाला ही बातमी मान्य करायची आहे?';
-        } else if (action === 'disapprove') {
-            confirmMessage = 'तुम्हाला खात्री आहे की तुम्हाला ही बातमी नामंजूर करायची आहे?';
-        }
-        
-        if (!confirm(confirmMessage)) {
-            e.preventDefault();
-            return false;
-        }
-        
-        showToast(action === 'approve' ? "बातमी मान्य केली जात आहे..." : "बातमी नामंजूर केली जात आहे...", "info", 2000);
-        return true;
+    // Show confirmation for save and approve
+    function showSaveAndApproveConfirmation() {
+        showConfirmationModal(
+            "सेव्ह आणि मान्य करण्याची खात्री करा",
+            "तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि मान्य करायची आहे?",
+            saveAndApprove
+        );
+    }
+    
+    // Show confirmation for save and disapprove
+    function showSaveAndDisapproveConfirmation() {
+        showConfirmationModal(
+            "सेव्ह आणि नामंजूर करण्याची खात्री करा",
+            "तुम्हाला खात्री आहे की तुम्हाला ही बातमी सेव्ह करायची आहे आणि नामंजूर करायची आहे?",
+            saveAndDisapprove
+        );
+    }
+    
+    // Show confirmation for approve
+    function showApproveConfirmation() {
+        showConfirmationModal(
+            "मान्य करण्याची खात्री करा",
+            "तुम्हाला खात्री आहे की तुम्हाला ही बातमी मान्य करायची आहे?",
+            function() {
+                showToast("बातमी मान्य केली जात आहे...", "info", 2000);
+                // Set action and submit form
+                const form = document.getElementById('mainForm');
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'approve';
+                form.appendChild(actionInput);
+                
+                setTimeout(function() {
+                    form.submit();
+                }, 1500);
+            }
+        );
+    }
+    
+    // Show confirmation for disapprove
+    function showDisapproveConfirmation() {
+        showConfirmationModal(
+            "नामंजूर करण्याची खात्री करा",
+            "तुम्हाला खात्री आहे की तुम्हाला ही बातमी नामंजूर करायची आहे?",
+            function() {
+                showToast("बातमी नामंजूर केली जात आहे...", "info", 2000);
+                // Set action and submit form
+                const form = document.getElementById('mainForm');
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'disapprove';
+                form.appendChild(actionInput);
+                
+                setTimeout(function() {
+                    form.submit();
+                }, 1500);
+            }
+        );
     }
     
     // Display stored toast messages
@@ -1310,14 +1416,11 @@ include 'components/login_navbar.php';
             showToast("<?php echo $toast_message; ?>", "<?php echo $toast_type; ?>");
         <?php endif; ?>
         
-        // Handle approval form submission
+        // Handle form validation
         const mainForm = document.getElementById('mainForm');
         if (mainForm) {
             mainForm.addEventListener('submit', function(e) {
                 const submitter = e.submitter;
-                if (submitter && (submitter.value === 'approve' || submitter.value === 'disapprove')) {
-                    return handleApprovalSubmit(e);
-                }
                 
                 // Handle save form validation
                 if (submitter && submitter.name === 'update_news') {
