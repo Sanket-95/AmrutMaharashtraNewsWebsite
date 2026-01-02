@@ -278,7 +278,8 @@ function generateNewsCard($news) {
     ?>
         
         <!-- Category Section -->
-        <div class="category-section py-5 <?php echo $category_counter % 2 == 0 ? 'bg-light' : ''; ?>" 
+         <!-- <div class="category-section py-5 -->
+        <div class="category-section py-3 <?php echo $category_counter % 2 == 0 ? 'bg-light' : ''; ?>" 
              id="category-<?php echo htmlspecialchars($category['value']); ?>"
              data-category="<?php echo htmlspecialchars($category['value']); ?>">
             
@@ -340,7 +341,8 @@ function generateNewsCard($news) {
                 
                 <!-- ALL NEWS Button at Bottom for EVERY Category (if has any news) -->
                 <?php if ($category_has_news): ?>
-                    <div class="text-center mt-5 pt-3">
+                    <!-- <div class="text-center mt-5 pt-3"> -->
+                        <div class="text-center">
                         <a href="category_news.php?category=<?php echo urlencode($category['value']); ?>" 
                            class="btn btn-lg all-news-btn" 
                            style="background-color: <?php echo $header_color; ?>; 
