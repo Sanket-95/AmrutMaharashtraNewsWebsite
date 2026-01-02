@@ -28,9 +28,11 @@ $category = isset($_GET['category']) ? $_GET['category'] : 'home';
 // Get Marathi label for the category
 $category_label = isset($category_map[$category]) ? $category_map[$category] : $category;
 
+$current_date = date('Y-m-d');
+
 // Handle date filter if provided
 $date_filter = isset($_GET['date']) ? $_GET['date'] : '';
-$where_clause = "WHERE category_name = ? AND is_approved = 1";
+$where_clause = "WHERE category_name = ? AND is_approved = 1 AND DATE(published_date) <= '$current_date'";
 $params = array($category);
 $param_types = "s";
 
