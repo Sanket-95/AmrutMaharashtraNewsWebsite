@@ -61,7 +61,8 @@ $categories = [
     border-bottom: 2px solid #f97316;
     background: #f97316; /* CHANGED: Orange background */
     position: sticky;
-    top: 120px; /* CHANGED: Position below navbar */
+    /*top: 135px; /* CHANGED: Position below navbar */
+     top: 8.4375rem;
     z-index: 900; /* CHANGED: Lower than navbar z-index */
 }
 
@@ -316,12 +317,17 @@ $categories = [
     }
     .mobile-categories-toggle {
         padding: 8px 10px;
-        width: 45px;
-        height: 45px;
+        width: 2.8125rem;
+        height: 1.4375rem;
+        /* width: 45px; */
+        /* height: 45px; old */
+        /* height: 23px; */
     }
     .hamburger-icon {
-        width: 22px;
-        height: 18px;
+        /* width: 20px;
+        height: 16px; */
+        width: 1.25rem;
+        height: 1rem;
     }
 }
 

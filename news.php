@@ -1124,14 +1124,14 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                             </div>
                         </div>
                         
-                        <div class="col-12">
+                        <!-- <div class="col-12">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
                                 <label class="form-check-label" for="saveInfo">
                                     Save my name, email, and website for next time
                                 </label>
                             </div>
-                        </div>
+                        </div> -->
                         
                         <div class="col-12">
                             <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">

@@ -100,7 +100,8 @@
     /* Row 2 styling - HORIZONTAL LAYOUT - ADDED LIGHT ORANGE BACKGROUND */
     .row-2 {
         padding: 12px 0 12px 0;
-        background: linear-gradient(135deg, #fff, var(--light-orange));
+        /* background: linear-gradient(135deg, #fff, var(--light-orange)); */
+         background:#f7f7f7;
         position: relative;
         margin: 0;
         width: 100%;
@@ -381,7 +382,8 @@
         /* Row 2 - MOBILE REARRANGEMENT */
         .row-2 {
             padding: 8px 0;
-            background: linear-gradient(135deg, #fff, var(--light-orange));
+            /* background: linear-gradient(135deg, #fff, var(--light-orange)); */
+             background:#f7f7f7;
             border-bottom: 2px solid #fed7aa;
         }
         
@@ -718,10 +720,10 @@
             <!-- Desktop View (768px and above) -->
             <div class="d-none d-md-block">
                 <div class="row align-items-center justify-content-center">
-                    <!-- 1st: Left Logo - Your custom Amrutmh.jpeg -->
+                    <!-- 1st: Left Logo - Your custom Amrutmh.png -->
                     <div class="col-md-3 left-logo">
                         <div class="logo-container left-logo-container">
-                            <img src="components/assets/Amrutmh.jpeg" 
+                            <img src="components/assets/Amrutmh.png" 
                                  alt="Amrut Maharashtra Left Logo" 
                                  class="side-logo img-fluid">
                         </div>
@@ -730,7 +732,7 @@
                     <!-- 2nd: Center Content -->
                     <div class="col-md-6 center-content text-center">
                         <h1 class="center-title">अमृत महाराष्ट्र</h1>
-                        <p class="subtitle">श्रमेव जयते</p>
+                        <!-- <p class="subtitle">श्रमेव जयते</p> -->
                     </div>
                     
                     <!-- 3rd: Right Content -->
@@ -771,7 +773,7 @@
                 <div class="mobile-top-row">
                     <div class="left-logo">
                         <div class="logo-container left-logo-container">
-                            <img src="components/assets/Amrutmh.jpeg" 
+                            <img src="components/assets/Amrutmh.png" 
                                  alt="Amrut Maharashtra Left Logo" 
                                  class="side-logo img-fluid">
                         </div>
@@ -779,7 +781,7 @@
                     
                     <div class="center-content text-center">
                         <h1 class="center-title">अमृत महाराष्ट्र</h1>
-                        <p class="subtitle">श्रमेव जयते</p>
+                        <!-- <p class="subtitle">श्रमेव जयते</p> -->
                     </div>
                     
                     <div class="right-logo">
@@ -792,7 +794,7 @@
                 </div>
                 
                 <!-- Bottom Row: Social Media Icons (Centered) -->
-                <div class="right-content">
+                <!-- <div class="right-content">
                     <div class="social-container">
                         <a href="#" class="social-circle social-fb" title="Facebook">
                             <i class="bi bi-facebook"></i>
@@ -810,7 +812,7 @@
                             <i class="bi bi-linkedin"></i>
                         </a>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>

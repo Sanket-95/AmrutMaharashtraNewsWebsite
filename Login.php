@@ -402,7 +402,7 @@ $conn->close();
                     <!-- Username Field (but it will check email column) -->
                     <div class="mb-4">
                         <label for="username" class="form-label">
-                            <i class="fas fa-user me-1"></i> वापरकर्तानाव
+                            <i class="fas fa-user me-1"></i> वापरकर्ता नाव
                         </label>
                         <div class="input-group">
                             <span class="input-group-text">
@@ -450,7 +450,7 @@ $conn->close();
                 <!-- Forgot Password Link -->
                 <div class="forgot-password">
                     <a href="#" onclick="showForgotPassword()">
-                        <i class="fas fa-question-circle me-1"></i> पासवर्ड विसरलात?
+                        <!-- <i class="fas fa-question-circle me-1"></i> पासवर्ड विसरलात? -->
                     </a>
                 </div>
             </div>
