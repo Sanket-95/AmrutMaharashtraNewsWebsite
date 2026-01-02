@@ -155,7 +155,7 @@ $comments_result = $comments_stmt->get_result();
 
 // Marathi category names mapping
 $marathi_categories = [
-    'today_special' => 'दिनदिशेष',
+    'today_special' => 'दिनविशेष',
     'amrut_events' => 'अमृत घडामोडी',
     'beneficiary_story' => 'लाभार्थी स्टोरी',
     'successful_entrepreneur' => 'यशस्वी उद्योजक',
@@ -175,16 +175,19 @@ $marathi_categories = [
 $category_marathi = $marathi_categories[$news['category_name']] ?? 'अमृत कार्यदीप';
 
 // FETCH RELATED NEWS
-$related_query =  "SELECT news_id, title, cover_photo_url, category_name 
+
+$current_date = date('Y-m-d');
+$related_query =  "SELECT news_id, title, cover_photo_url, category_name, published_date 
                   FROM `news_articles` 
                   WHERE category_name = ? 
                   AND news_id <> ? 
-                  AND is_approved = 1  
+                  AND is_approved = 1 
+                  AND DATE(published_date) <= ?  -- केवळ मागील दिवसाच्या बातम्या
                   ORDER BY published_date DESC 
                   LIMIT 6";
 
 $related_stmt = $conn->prepare($related_query);
-$related_stmt->bind_param("si", $news['category_name'], $news_id);
+$related_stmt->bind_param("sis", $news['category_name'], $news_id, $current_date);
 $related_stmt->execute();
 $related_result = $related_stmt->get_result();
 $related_news_count = $related_result->num_rows;
