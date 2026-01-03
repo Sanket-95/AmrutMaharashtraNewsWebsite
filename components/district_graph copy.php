@@ -11,16 +11,11 @@ $district_totals = [];
 $category_data = [];
 $views_data = [];
 
-// For PDF - we need English district names
-$english_districts = [];
-$english_district_totals = [];
-
 // Build the query based on region selection
 if ($selected_region == 'all') {
-    // Query for ALL regions (no district filter) - get both English and Marathi names
+    // Query for ALL regions (no district filter)
     $query = "SELECT 
                 na.district_name,
-                na.district_name as english_district_name,
                 cl.marathi_name AS category_name,
                 COUNT(*) AS total_news,
                 SUM(na.`view`) AS total_views
@@ -44,10 +39,9 @@ if ($selected_region == 'all') {
         $stmt->bind_param("ss", $from_date, $to_date);
     }
 } else {
-    // Query for specific region (with district filter) - get both English and Marathi names
+    // Query for specific region (with district filter and Marathi district names)
     $query = "SELECT 
                 md.dmarathi AS district_name_marathi,
-                md.district AS english_district_name,
                 cl.marathi_name AS category_name,
                 COUNT(*) AS total_news,
                 SUM(na.`view`) AS total_views
@@ -63,7 +57,6 @@ if ($selected_region == 'all') {
                 AND md.division = ?
             GROUP BY 
                 md.dmarathi,
-                md.district,
                 cl.marathi_name
             ORDER BY 
                 md.dmarathi,
@@ -84,12 +77,11 @@ if (isset($stmt) && $stmt) {
     while ($row = $result->fetch_assoc()) {
         // Use Marathi district name when region is selected, otherwise use English district name
         $district = ($selected_region == 'all') ? $row['district_name'] : $row['district_name_marathi'];
-        $english_district = $row['english_district_name'];
         $category = $row['category_name'];
         $news_count = $row['total_news'];
         $views_count = $row['total_views'];
         
-        // Store district totals (Marathi for display)
+        // Store district totals
         if (!isset($district_totals[$district])) {
             $district_totals[$district] = 0;
             $category_data[$district] = [];
@@ -97,14 +89,7 @@ if (isset($stmt) && $stmt) {
             $districts[] = $district;
         }
         
-        // Store English district totals for PDF
-        if (!isset($english_district_totals[$english_district])) {
-            $english_district_totals[$english_district] = 0;
-            $english_districts[$english_district] = $district; // Map English to Marathi
-        }
-        
         $district_totals[$district] += $news_count;
-        $english_district_totals[$english_district] += $news_count;
         $category_data[$district][$category] = $news_count;
         $views_data[$district][$category] = $views_count;
     }
@@ -113,19 +98,12 @@ if (isset($stmt) && $stmt) {
     echo "<div class='alert alert-danger'>Error preparing query: " . $conn->error . "</div>";
 }
 
-// Sort districts by total news (descending) - Marathi version
+// Sort districts by total news (descending)
 arsort($district_totals);
 
-// Sort English districts by total news (descending) for PDF
-arsort($english_district_totals);
-
-// Prepare data for Chart.js (Marathi labels)
+// Prepare data for Chart.js
 $district_labels = array_keys($district_totals);
 $news_counts = array_values($district_totals);
-
-// Prepare English data for PDF
-$english_district_labels = array_keys($english_district_totals);
-$english_news_counts = array_values($english_district_totals);
 
 // Prepare hover data (category breakdown)
 $hover_data = [];
@@ -148,33 +126,10 @@ foreach ($category_data as $cats) {
     $allCategories = array_merge($allCategories, array_keys($cats));
 }
 $allCategories = array_unique($allCategories);
-
-// Calculate dynamic height based on number of districts
-$district_count = count($districts);
-$chart_height = max(400, $district_count * 40); // Minimum 400px, 40px per district
-$chart_wrapper_min_width = max(600, $district_count * 80); // Adjust width based on districts
-
-// For PDF - Create English version of data
-$region_names = [
-    'all' => 'All Regions',
-    'Konkan' => 'Konkan',
-    'Pune' => 'Pune',
-    'Sambhajinagar' => 'Sambhajinagar',
-    'Nashik' => 'Nashik',
-    'Amravati' => 'Amravati',
-    'Nagpur' => 'Nagpur'
-];
-
-$pdf_title = $selected_region != 'all' ? $region_names[$selected_region] . ' Region - ' : '';
-$pdf_title .= 'District Wise News Distribution';
-
-// Convert dates to English format for PDF
-$pdf_from_date = date('d M Y', strtotime($from_date));
-$pdf_to_date = date('d M Y', strtotime($to_date));
 ?>
 
 <div class="card shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card-header bg-primary text-white">
         <h5 class="mb-0">
             <i class="bi bi-bar-chart me-2"></i>
             <?php if ($selected_region != 'all'): ?>
@@ -188,13 +143,6 @@ $pdf_to_date = date('d M Y', strtotime($to_date));
                 <?php endif; ?>
             </small>
         </h5>
-        
-        <!-- PDF Download Button -->
-        <?php if (!empty($districts)): ?>
-        <button type="button" class="btn btn-light btn-sm" id="downloadPdfBtn" title="Download as PDF">
-            <i class="bi bi-file-earmark-pdf"></i> PDF
-        </button>
-        <?php endif; ?>
     </div>
     <div class="card-body">
         <?php if (empty($districts)): ?>
@@ -211,7 +159,7 @@ $pdf_to_date = date('d M Y', strtotime($to_date));
         <?php else: ?>
             <!-- Responsive container with scroll for mobile -->
             <div class="chart-responsive-container">
-                <div class="chart-wrapper" style="min-width: <?php echo $chart_wrapper_min_width; ?>px; height: <?php echo $chart_height; ?>px;">
+                <div class="chart-wrapper">
                     <canvas id="districtChart"></canvas>
                 </div>
             </div>
@@ -222,7 +170,7 @@ $pdf_to_date = date('d M Y', strtotime($to_date));
                 <?php if ($selected_region != 'all'): ?>
                     <?php echo htmlspecialchars($selected_region); ?> प्रदेशात
                 <?php endif; ?>
-                <?php if (count($districts) > 10): ?>
+                <?php if (count($districts) > 15): ?>
                     <span class="d-block d-sm-inline">- सर्व पाहण्यासाठी क्षैतिज स्क्रोल करा</span>
                 <?php endif; ?>
             </div>
@@ -267,13 +215,8 @@ $pdf_to_date = date('d M Y', strtotime($to_date));
 
 <!-- Chart.js Library -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- jsPDF Library for PDF generation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-// Make jsPDF available globally
-window.jsPDF = window.jspdf.jsPDF;
-
 document.addEventListener('DOMContentLoaded', function() {
     <?php if (!empty($districts)): ?>
     const ctx = document.getElementById('districtChart').getContext('2d');
@@ -284,22 +227,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const hoverData = <?php echo json_encode($hover_data); ?>;
     const allCategories = <?php echo json_encode(array_values($allCategories)); ?>;
     const selectedRegion = "<?php echo $selected_region; ?>";
-    const fromDate = "<?php echo date('d M Y', strtotime($from_date)); ?>";
-    const toDate = "<?php echo date('d M Y', strtotime($to_date)); ?>";
-    const totalDistricts = <?php echo count($districts); ?>;
-    const totalNews = <?php echo array_sum($news_counts); ?>;
-    
-    // English data for PDF
-    const englishDistrictLabels = <?php echo json_encode($english_district_labels); ?>;
-    const englishNewsCounts = <?php echo json_encode($english_news_counts); ?>;
-    
-    // PDF data
-    const pdfTitle = "<?php echo $pdf_title; ?>";
-    const pdfFromDate = "<?php echo $pdf_from_date; ?>";
-    const pdfToDate = "<?php echo $pdf_to_date; ?>";
     
     // Check if we have many districts (for mobile optimization)
-    const isManyDistricts = districtLabels.length > 15;
+    const isManyDistricts = districtLabels.length > 20;
     
     // Generate colors for categories
     const categoryColors = [
@@ -483,7 +413,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (remaining > 0) {
                                 tooltipText += `... आणि ${remaining} अधिक वर्ग\n`;
                             }
-                                            return tooltipText;
+                            
+                            return tooltipText;
                         },
                         footer: function(context) {
                             const district = context[0].label;
@@ -549,8 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         font: {
                             size: window.innerWidth < 576 ? 10 : 11
                         },
-                        maxTicksLimit: isManyDistricts ? 5 : 8,
-                        padding: 8
+                        maxTicksLimit: isManyDistricts ? 5 : 8
                     },
                     title: {
                         display: true,
@@ -571,7 +501,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         maxRotation: window.innerWidth < 768 ? 0 : 45,
                         minRotation: 0,
                         maxTicksLimit: isManyDistricts ? 15 : 30,
-                        padding: 5,
                         callback: function(value, index) {
                             const label = this.getLabelForValue(value);
                             if (window.innerWidth < 576 && label.length > 12) {
@@ -602,204 +531,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // PDF Download Functionality
-    document.getElementById('downloadPdfBtn').addEventListener('click', function() {
-        // Show loading state
-        const originalText = this.innerHTML;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating PDF...';
-        this.disabled = true;
-        
-        try {
-            // Get chart image data
-            const chartCanvas = document.getElementById('districtChart');
-            
-            // Create a clone of the canvas with higher resolution for PDF
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = chartCanvas.width * 2;
-            tempCanvas.height = chartCanvas.height * 2;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Scale and draw the chart
-            tempCtx.scale(2, 2);
-            tempCtx.drawImage(chartCanvas, 0, 0);
-            
-            const chartImage = tempCanvas.toDataURL('image/png');
-            
-            // Create PDF in landscape mode
-            const pdf = new jsPDF('landscape', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            
-            // Add header
-            pdf.setFontSize(20);
-            pdf.setFont("helvetica", "bold");
-            pdf.setTextColor(13, 110, 253); // Primary blue color
-            
-            pdf.text(pdfTitle, pageWidth / 2, 15, { align: 'center' });
-            
-            // Add date range
-            pdf.setFontSize(12);
-            pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(108, 117, 125); // Gray color
-            pdf.text(`Date: ${pdfFromDate} to ${pdfToDate}`, pageWidth / 2, 22, { align: 'center' });
-            
-            // Add summary info
-            pdf.setFontSize(11);
-            pdf.setTextColor(33, 37, 41); // Dark color
-            
-            const summaryY = 28;
-            pdf.text(`• Districts: ${totalDistricts}`, 20, summaryY);
-            pdf.text(`• Total News: ${totalNews}`, pageWidth / 2, summaryY, { align: 'center' });
-            pdf.text(`• Categories: ${allCategories.length}`, pageWidth - 20, summaryY, { align: 'right' });
-            
-            if (selectedRegion !== 'all') {
-                const regionName = selectedRegion.charAt(0).toUpperCase() + selectedRegion.slice(1);
-                pdf.text(`• Region: ${regionName}`, pageWidth / 2, summaryY + 6, { align: 'center' });
-            }
-            
-            // Adjust chart size based on number of districts
-            let chartHeight = 100;
-            let chartY = 38;
-            
-            if (selectedRegion !== 'all') {
-                chartY = 44;
-            }
-            
-            // Adjust height based on number of districts
-            if (totalDistricts <= 10) {
-                chartHeight = 80;
-            } else if (totalDistricts <= 20) {
-                chartHeight = 110;
-            } else if (totalDistricts <= 30) {
-                chartHeight = 130;
-            } else {
-                chartHeight = 150;
-            }
-            
-            // Adjust Y position based on region and height
-            if (selectedRegion !== 'all') {
-                chartY = summaryY + 16;
-            } else {
-                chartY = summaryY + 10;
-            }
-            
-            const chartWidth = pageWidth - 40;
-            pdf.addImage(chartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
-            
-            // Add data table if we have space
-            const tableStartY = chartY + chartHeight + 15;
-            
-            if (tableStartY < pageHeight - 40 && englishDistrictLabels.length <= 25) {
-                // Add table header
-                pdf.setFontSize(10);
-                pdf.setFont("helvetica", "bold");
-                pdf.setTextColor(255, 255, 255);
-                pdf.setFillColor(13, 110, 253);
-                
-                // Draw header background
-                pdf.rect(20, tableStartY, pageWidth - 40, 8, 'F');
-                
-                // Header text
-                pdf.text('District', 25, tableStartY + 6);
-                pdf.text('News Count', pageWidth - 25, tableStartY + 6, { align: 'right' });
-                
-                // Add table rows
-                pdf.setFont("helvetica", "normal");
-                pdf.setTextColor(33, 37, 41);
-                
-                let rowY = tableStartY + 16;
-                let rowIndex = 0;
-                
-                // Show all districts if less than 20, otherwise show top 20
-                const displayCount = englishDistrictLabels.length <= 20 ? englishDistrictLabels.length : 20;
-                
-                for (let i = 0; i < displayCount; i++) {
-                    // Alternate row colors
-                    if (rowIndex % 2 === 0) {
-                        pdf.setFillColor(248, 249, 250);
-                        pdf.rect(20, rowY - 4, pageWidth - 40, 8, 'F');
-                    }
-                    
-                    // Use English district names (already in English)
-                    const districtName = englishDistrictLabels[i];
-                    
-                    pdf.text(districtName, 25, rowY);
-                    pdf.text(englishNewsCounts[i].toString(), pageWidth - 25, rowY, { align: 'right' });
-                    
-                    rowY += 8;
-                    rowIndex++;
-                    
-                    // Check if we need to add a new page
-                    if (rowY > pageHeight - 20 && i < displayCount - 1) {
-                        // Add new page
-                        pdf.addPage();
-                        pdf.setFontSize(10);
-                        pdf.setFont("helvetica", "normal");
-                        rowY = 20;
-                        
-                        // Add table header on new page
-                        pdf.setFont("helvetica", "bold");
-                        pdf.setTextColor(255, 255, 255);
-                        pdf.setFillColor(13, 110, 253);
-                        pdf.rect(20, rowY - 4, pageWidth - 40, 8, 'F');
-                        pdf.text('District', 25, rowY + 2);
-                        pdf.text('News Count', pageWidth - 25, rowY + 2, { align: 'right' });
-                        
-                        pdf.setFont("helvetica", "normal");
-                        pdf.setTextColor(33, 37, 41);
-                        rowY = 30;
-                    }
-                }
-                
-                // Add "and more" if there are more districts
-                if (englishDistrictLabels.length > displayCount) {
-                    pdf.setFont("helvetica", "italic");
-                    pdf.text(`... and ${englishDistrictLabels.length - displayCount} more districts`, pageWidth / 2, rowY + 5, { align: 'center' });
-                }
-            }
-            
-            // Add footer
-            pdf.setFontSize(9);
-            pdf.setTextColor(108, 117, 125);
-            pdf.setFont("helvetica", "italic");
-            
-            const footerY = pageHeight - 10;
-            pdf.text('Amrut Maharashtra - Official News Portal', pageWidth / 2, footerY, { align: 'center' });
-            
-            // Add generation timestamp
-            const now = new Date();
-            const timestamp = now.toLocaleDateString('en-IN') + ' ' + now.toLocaleTimeString('en-IN', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false 
-            });
-            pdf.setFontSize(8);
-            pdf.text(`Generated: ${timestamp}`, pageWidth - 20, footerY, { align: 'right' });
-            
-            // Add page number
-            const pageCount = pdf.internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                pdf.setPage(i);
-                pdf.text(`Page ${i} of ${pageCount}`, 20, footerY);
-            }
-            
-            // Save the PDF with timestamp in filename
-            const fileName = 'district_news_report_' + 
-                           (selectedRegion !== 'all' ? selectedRegion.toLowerCase() + '_' : '') + 
-                           fromDate.replace(/ /g, '_') + '_to_' + 
-                           toDate.replace(/ /g, '_') + '.pdf';
-            pdf.save(fileName);
-            
-        } catch (error) {
-            console.error('PDF generation error:', error);
-            alert('PDF generation failed. Please try again.');
-        } finally {
-            // Restore button state
-            this.innerHTML = originalText;
-            this.disabled = false;
-        }
-    });
-    
     // Handle window resize for better mobile experience
     let resizeTimer;
     window.addEventListener('resize', function() {
@@ -826,39 +557,39 @@ document.addEventListener('DOMContentLoaded', function() {
     width: 100%;
     overflow-x: auto;
     position: relative;
+    min-height: 400px;
     background: #f8f9fa;
     border-radius: 6px;
     padding: 10px;
-    max-height: 600px; /* Maximum height to prevent excessive growth */
-    overflow-y: auto;
 }
 
 .chart-wrapper {
+    min-width: 600px;
     position: relative;
-    /* Dynamic width and height set inline via PHP */
+    height: 400px;
 }
 
-/* For mobile, adjust minimum width */
+/* For mobile, make the chart wrapper larger to accommodate many bars */
 @media (max-width: 768px) {
     .chart-responsive-container {
-        min-height: 300px;
-        max-height: 500px;
+        min-height: 450px;
     }
     
     .chart-wrapper {
-        min-width: 600px;
+        min-width: 800px;
+        height: 450px;
     }
 }
 
 @media (max-width: 576px) {
     .chart-responsive-container {
-        min-height: 350px;
-        max-height: 450px;
+        min-height: 500px;
         padding: 5px;
     }
     
     .chart-wrapper {
-        min-width: 700px;
+        min-width: 1000px;
+        height: 500px;
     }
 }
 
@@ -898,32 +629,8 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.8rem;
 }
 
-/* PDF Download Button Styles */
-#downloadPdfBtn {
-    font-size: 0.875rem;
-    padding: 0.25rem 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.2s;
-}
-
-#downloadPdfBtn:hover {
-    background-color: #fff;
-    color: #0d6efd;
-    border-color: #fff;
-}
-
-#downloadPdfBtn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-#downloadPdfBtn i {
-    margin-right: 0.25rem;
-}
-
 /* Scrollbar styling */
 .chart-responsive-container::-webkit-scrollbar {
-    width: 8px;
     height: 8px;
 }
 
@@ -952,22 +659,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .card-footer .row > div {
         text-align: center !important;
-    }
-    
-    #downloadPdfBtn {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        z-index: 1;
-    }
-    
-    .card-header {
-        position: relative;
-        padding-right: 80px !important;
-    }
-    
-    .card-header h5 {
-        padding-right: 50px;
     }
 }
 

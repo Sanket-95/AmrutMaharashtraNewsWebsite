@@ -175,6 +175,50 @@
             font-size: 0.9rem;
         }
     }
+
+    /* WhatsApp Floating Button */
+    .whatsapp-float {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+
+    width: 56px;
+    height: 56px;
+    background-color: #25D366 !important;
+    color: #fff !important;
+    border-radius: 50%;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 28px;
+    z-index: 99999; /* above everything */
+
+    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+    text-decoration: none !important;
+}
+
+.whatsapp-float i {
+    color: #fff !important;
+}
+
+.whatsapp-float:hover {
+    transform: scale(1.05);
+    color: #fff;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .whatsapp-float {
+        bottom: 15px !important;
+        right: 15px !important;
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+    }
+}
+
 </style>
 
 <!-- Bootstrap JS Bundle with Popper -->
@@ -261,5 +305,21 @@
         });
     });
 </script>
+<!-- WhatsApp Floating Button -->
+<!-- <a href="https://wa.me/919112226524" 
+   class="whatsapp-float" 
+   target="_blank" 
+   aria-label="Chat on WhatsApp">
+    <i class="bi bi-whatsapp"></i>
+</a> -->
+<?php if (!empty($showWhatsapp) && $showWhatsapp === true): ?>
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/919112226524"
+       class="whatsapp-float"
+       target="_blank"
+       aria-label="Chat on WhatsApp">
+        <i class="bi bi-whatsapp"></i>
+    </a>
+<?php endif; ?>
 </body>
 </html>

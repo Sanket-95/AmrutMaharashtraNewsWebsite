@@ -295,5 +295,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php
+$showWhatsapp = true;
 include 'components/footer.php';
 ?>

@@ -1479,16 +1479,16 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     });
     
     // Back to top button functionality
-    window.onscroll = function() {
-        const scrollBtn = document.getElementById('scrollToTop');
-        if (scrollBtn) {
-            if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
-                scrollBtn.style.display = 'block';
-            } else {
-                scrollBtn.style.display = 'none';
-            }
-        }
-    };
+    // window.onscroll = function() {
+    //     const scrollBtn = document.getElementById('scrollToTop');
+    //     if (scrollBtn) {
+    //         if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+    //             scrollBtn.style.display = 'none';
+    //         } else {
+    //             scrollBtn.style.display = 'none';
+    //         }
+    //     }
+    // };
     
     function scrollToTop() {
         window.scrollTo({top: 0, behavior: 'smooth'});
@@ -1609,5 +1609,6 @@ $stmt->close();
 $comments_stmt->close();
 $related_stmt->close();
 $conn->close();
+$showWhatsapp = true;
 include 'components/footer.php';
 ?>

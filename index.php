@@ -371,6 +371,7 @@ $categories = [
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-color: #cbd5e1;
 }
+
 </style>
 
 <!-- Categories Navigation -->
@@ -623,8 +624,8 @@ if (window.location.hash) {
     }
 }
 </script>
-
 <?php 
 $conn->close();
+$showWhatsapp = true;
 include 'components/footer.php'; 
 ?>
