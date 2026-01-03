@@ -32,12 +32,13 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     // INSERT with approve = 1 (immediately approved)
-    $query = "INSERT INTO news_comments (news_id, name, email, comment, approve) 
-              VALUES (?, ?, ?, ?, 1)";
+    $comment_date = date('Y-m-d H:i:s', strtotime('+5 hours 30 minutes'));
+    $query = "INSERT INTO news_comments (news_id, name, email, comment, approve,comment_date) 
+              VALUES (?, ?, ?, ?, 1,?)";
     
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("isss", $news_id, $name, $email, $comment_text);
-    
+    $stmt->bind_param("issss", $news_id, $name, $email, $comment_text, $comment_date);
+
     if ($stmt->execute()) {
         echo json_encode([
             'success' => true,

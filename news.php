@@ -433,9 +433,11 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         .social-share {
             background: #f8f9fa;
-            padding: 25px;
+            /* padding: 25px; */
+             padding: 5px;
             border-radius: 10px;
-            margin: 40px 0;
+            /* margin: 40px 0; */
+             margin: 5px 0;
             text-align: center;
         }
         
@@ -448,8 +450,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
         
         .share-btn {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -1032,7 +1034,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         </div>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <div class="no-comments text-center py-5" id="noCommentsMessage">
+                    <div class="no-comments text-center py-3" id="noCommentsMessage">
                         <i class="bi bi-chat-left-text display-1 text-muted"></i>
                         <h4 class="mt-3 text-muted">No comments yet</h4>
                         <p class="text-muted">You can start the discussion</p>
@@ -1117,10 +1119,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         <div class="col-12">
                             <label for="comment" class="form-label">Your Comment <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="comment" name="comment" rows="5" required 
-                                      placeholder="Write your comment here (Maximum 100 words)"
+                                      placeholder="Write your comment here (Maximum 50 words)"
                                       oninput="updateCharCounter(this)"></textarea>
                             <div class="char-counter">
-                                <span id="charCount">0</span> / <span id="maxChars">100</span> words
+                                <span id="charCount">0</span> / <span id="maxChars">50</span> words
                             </div>
                         </div>
                         
@@ -1349,18 +1351,18 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             return;
         }
         
-        // Word count validation (max 100 words)
+        // Word count validation (max 50 words)
         const wordCount = countWords(comment);
-        if (wordCount > 100) {
-            showToast('Please write maximum 100 words', 'error');
+        if (wordCount > 50) {
+            showToast('Please write maximum 50 words', 'error');
             return;
         }
         
         // Minimum word count validation (optional)
-        if (wordCount < 2) {
-            showToast('Please write at least 2 words', 'error');
-            return;
-        }
+        // if (wordCount < 2) {
+        //     showToast('Please write at least 2 words', 'error');
+        //     return;
+        // }
         
         // Show loading state
         const submitBtn = document.getElementById('submitBtn');
@@ -1398,11 +1400,12 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         // Note: We don't add comment to list immediately because it needs approval
                         // The comment will appear after admin approves it
                         
+
                     } else {
                         showToast(response.message, 'error');
                     }
                 } catch (e) {
-                    showToast('Error: Invalid response', 'error');
+                    // showToast('Error: Invalid response', 'error');
                     console.error('Parse error:', e);
                 }
             } else {
