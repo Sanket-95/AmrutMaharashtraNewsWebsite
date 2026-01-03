@@ -746,27 +746,29 @@ document.addEventListener('DOMContentLoaded', function() {
             pdf.setTextColor(108, 117, 125); // Gray color
             pdf.text(`Date: ${pdfFromDate} to ${pdfToDate}`, pageWidth / 2, 22, { align: 'center' });
             
-            // Add summary info
+            // Add summary info - FIXED: Show region info for "all" selection too
             pdf.setFontSize(11);
             pdf.setTextColor(33, 37, 41); // Dark color
             
             const summaryY = 28;
+            
+            // Always show first three summary lines
             pdf.text(`• Districts: ${totalDistricts}`, 20, summaryY);
             pdf.text(`• Total News: ${totalNews}`, pageWidth / 2, summaryY, { align: 'center' });
             pdf.text(`• Categories: ${allCategories.length}`, pageWidth - 20, summaryY, { align: 'right' });
             
-            if (selectedRegion !== 'all') {
+            // Add region info on a new line for both "all" and specific regions
+            const regionY = summaryY + 6;
+            if (selectedRegion === 'all') {
+                pdf.text(`• Region: All Regions`, pageWidth / 2, regionY, { align: 'center' });
+            } else {
                 const regionName = selectedRegion.charAt(0).toUpperCase() + selectedRegion.slice(1);
-                pdf.text(`• Region: ${regionName}`, pageWidth / 2, summaryY + 6, { align: 'center' });
+                pdf.text(`• Region: ${regionName}`, pageWidth / 2, regionY, { align: 'center' });
             }
             
             // Adjust chart size based on number of districts
             let chartHeight = 100;
             let chartY = 38;
-            
-            if (selectedRegion !== 'all') {
-                chartY = 44;
-            }
             
             // Adjust height based on number of districts
             if (totalDistricts <= 10) {
@@ -779,12 +781,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 chartHeight = 150;
             }
             
-            // Adjust Y position based on region and height
-            if (selectedRegion !== 'all') {
-                chartY = summaryY + 16;
-            } else {
-                chartY = summaryY + 10;
-            }
+            // Adjust Y position based on whether we showed region info
+            chartY = regionY + 10; // Add some space after region info
             
             const chartWidth = pageWidth - 40;
             pdf.addImage(pdfChartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
@@ -888,7 +886,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Save the PDF with timestamp in filename
             const fileName = 'district_news_report_' + 
-                           (selectedRegion !== 'all' ? selectedRegion.toLowerCase() + '_' : '') + 
+                           (selectedRegion !== 'all' ? selectedRegion.toLowerCase() + '_' : 'all_') + 
                            fromDate.replace(/ /g, '_') + '_to_' + 
                            toDate.replace(/ /g, '_') + '.pdf';
             pdf.save(fileName);
