@@ -1009,7 +1009,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
 
         <!-- Comments Section -->
         <div class="comments-section">
-            <h3 class="mb-4 border-bottom pb-2">
+            <h3 class="mb-4 border-bottom pb-2" style="cursor:pointer;" onclick="scrollToName()">
                 <i class="bi bi-chat-left-text"></i> Comments 
                 <span class="comments-count ms-2"><?php echo $total_approved_comments; ?> Comments</span>
             </h3>
@@ -1189,6 +1189,22 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             <?php endif; ?>
         </div>
     </div>
+
+    <script>
+    function scrollToName() {
+        const el = document.getElementById('name');
+
+        const elementTop = el.getBoundingClientRect().top + window.pageYOffset;
+        const offset = window.innerHeight * 0.3; // 30% from top
+
+        window.scrollTo({
+            top: elementTop - offset,
+            behavior: 'smooth'
+        });
+
+        el.focus();
+    }
+    </script>
 
     <!-- Toastify JS -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
@@ -1401,6 +1417,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         // The comment will appear after admin approves it
                         
 
+
                     } else {
                         showToast(response.message, 'error');
                     }
@@ -1566,6 +1583,15 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             style="bottom: 30px; right: 30px; width: 50px; height: 50px; display: none; z-index: 1000;">
         <i class="bi bi-arrow-up"></i>
     </button>
+    <script>
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+
+    window.addEventListener('load', function () {
+        window.scrollTo(0, 0);
+    });
+    </script>
 </body>
 </html>
 
