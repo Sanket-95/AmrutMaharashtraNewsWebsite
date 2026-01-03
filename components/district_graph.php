@@ -216,6 +216,11 @@ $pdf_to_date = date('d M Y', strtotime($to_date));
                 </div>
             </div>
             
+            <!-- Hidden canvas for PDF generation (always desktop view) -->
+            <div style="display: none;">
+                <canvas id="pdfChartCanvas" width="1200" height="600"></canvas>
+            </div>
+            
             <!-- District count summary -->
             <div class="mt-3 text-center text-muted small">
                 दाखवत आहे <?php echo count($districts); ?> जिल्हे
@@ -277,6 +282,7 @@ window.jsPDF = window.jspdf.jsPDF;
 document.addEventListener('DOMContentLoaded', function() {
     <?php if (!empty($districts)): ?>
     const ctx = document.getElementById('districtChart').getContext('2d');
+    const pdfCtx = document.getElementById('pdfChartCanvas').getContext('2d');
     
     // Data from PHP
     const districtLabels = <?php echo json_encode($district_labels); ?>;
@@ -419,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Create chart with responsive settings
+    // Create main chart for display (responsive - changes based on screen size)
     const chart = new Chart(ctx, {
         type: 'bar',
         plugins: [barCountPlugin],
@@ -602,6 +608,112 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Create PDF chart instance (always desktop view)
+    let pdfChart = null;
+    
+    function createPdfChart() {
+        if (pdfChart) {
+            pdfChart.destroy();
+        }
+        
+        pdfChart = new Chart(pdfCtx, {
+            type: 'bar',
+            data: {
+                labels: districtLabels,
+                datasets: [{
+                    label: selectedRegion === 'all' ? 'एकूण बातम्या' : selectedRegion + ' प्रदेशातील बातम्या',
+                    data: newsCounts,
+                    backgroundColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return '#36A2EB';
+                        
+                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                        gradient.addColorStop(0, '#36A2EB');
+                        gradient.addColorStop(1, '#2a7fc1');
+                        return gradient;
+                    },
+                    borderColor: '#1a6fb3',
+                    borderWidth: 1,
+                    borderRadius: 3,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                indexAxis: 'x', // Always horizontal bars for PDF
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    },
+                    title: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grace: '10%',
+                        grid: {
+                            drawBorder: false,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                if (Number.isInteger(value)) {
+                                    return value;
+                                }
+                            },
+                            font: {
+                                size: 11
+                            },
+                            maxTicksLimit: isManyDistricts ? 5 : 8,
+                            padding: 8
+                        },
+                        title: {
+                            display: true,
+                            text: 'बातम्यांची संख्या',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 9
+                            },
+                            maxRotation: 45,
+                            minRotation: 0,
+                            maxTicksLimit: isManyDistricts ? 15 : 30,
+                            padding: 5,
+                            callback: function(value, index) {
+                                const label = this.getLabelForValue(value);
+                                if (label.length > 15) {
+                                    return label.substring(0, 13) + '...';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                animation: false, // No animation for PDF
+                barPercentage: isManyDistricts ? 0.6 : 0.8,
+                categoryPercentage: isManyDistricts ? 0.7 : 0.9
+            }
+        });
+    }
+    
+    // Create PDF chart initially
+    createPdfChart();
+    
     // PDF Download Functionality
     document.getElementById('downloadPdfBtn').addEventListener('click', function() {
         // Show loading state
@@ -610,20 +722,11 @@ document.addEventListener('DOMContentLoaded', function() {
         this.disabled = true;
         
         try {
-            // Get chart image data
-            const chartCanvas = document.getElementById('districtChart');
+            // Update PDF chart with current data (in case filters changed)
+            createPdfChart();
             
-            // Create a clone of the canvas with higher resolution for PDF
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = chartCanvas.width * 2;
-            tempCanvas.height = chartCanvas.height * 2;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Scale and draw the chart
-            tempCtx.scale(2, 2);
-            tempCtx.drawImage(chartCanvas, 0, 0);
-            
-            const chartImage = tempCanvas.toDataURL('image/png');
+            // Get PDF chart image data
+            const pdfChartImage = document.getElementById('pdfChartCanvas').toDataURL('image/png');
             
             // Create PDF in landscape mode
             const pdf = new jsPDF('landscape', 'mm', 'a4');
@@ -684,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const chartWidth = pageWidth - 40;
-            pdf.addImage(chartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
+            pdf.addImage(pdfChartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
             
             // Add data table if we have space
             const tableStartY = chartY + chartHeight + 15;
