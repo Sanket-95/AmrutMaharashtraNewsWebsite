@@ -952,13 +952,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <!-- Main Content -->
         <div class="news-content">
             <?php
-            echo '<strong>'
-                . ucfirst(htmlspecialchars($news['district_name']))
-                . ' - '
-                . ucfirst(htmlspecialchars($news['published_by']))
-                . ' : '
-                . '</strong>'
-                . nl2br(htmlspecialchars($news['content']));
+            echo  nl2br(htmlspecialchars($news['content']));
             ?>
         </div>
 
