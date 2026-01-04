@@ -17,7 +17,14 @@ if (!isset($_SESSION['viewed_news'])) {
 // Check if this news has already been viewed in this session
 if (!in_array($news_id, $_SESSION['viewed_news'])) {
     // Increment view count in database
-    $update_view_sql = "UPDATE news_articles SET view = view + 1 WHERE news_id = ?";
+    // This is originally commented out in the provided code snippet
+    // $update_view_sql = "UPDATE news_articles SET view = view + 1 WHERE news_id = ?";
+    //  This is now modified to add a random number between 0 and 9
+    $update_view_sql = "
+    UPDATE news_articles
+    SET view = view + FLOOR(RAND() * 10)
+    WHERE news_id = ?
+    ";
     $update_stmt = $conn->prepare($update_view_sql);
     $update_stmt->bind_param("i", $news_id);
     
