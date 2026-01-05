@@ -30,16 +30,41 @@ function adjustBrightness($hex, $steps) {
     return $return;
 }
 
-// Step 1: Get categories array from index.php (excluding 'home')
+// Step 1: Get categories array from index.php 
 global $categories;
 
-// Remove 'home' category (only for navigation, not for sections)
-$dynamic_categories = array_filter($categories, function($cat) {
-    return $cat['value'] !== 'home';
-});
+// Create a new array of ONLY REAL categories (excluding 'home' and groups)
+$real_categories = [];
+
+foreach ($categories as $category) {
+    if (isset($category['is_group']) && $category['is_group']) {
+        // Add group children as separate REAL categories (except links)
+        foreach ($category['children'] as $child) {
+            if (!isset($child['type']) || $child['type'] !== 'link') {
+                $real_categories[] = [
+                    'label' => $child['label'],
+                    'value' => $child['value'],
+                    'is_from_group' => true,
+                    'group_name' => $category['label']
+                ];
+            }
+        }
+    } else if ($category['value'] !== 'home') {
+        // Add regular categories (except home)
+        $real_categories[] = [
+            'label' => $category['label'],
+            'value' => $category['value'],
+            'is_from_group' => false,
+            'group_name' => null
+        ];
+    }
+}
 
 // Reset array keys
-$dynamic_categories = array_values($dynamic_categories);
+$dynamic_categories = array_values($real_categories);
+
+// Debug: Check what categories we have
+error_log("Dynamic categories for sections: " . print_r($dynamic_categories, true));
 
 // Professional colors for category headers
 $professional_colors = [
@@ -262,6 +287,7 @@ function generateNewsCard($news) {
         $header_color = $professional_colors[$color_index];
         
         // Check if category has news in database
+        // Note: We're checking by the category value (like 'amrut_events', 'beneficiary_story', etc.)
         $category_has_news = isset($latest_news_by_category[$category['value']]) && 
                             !empty($latest_news_by_category[$category['value']]);
         
@@ -278,7 +304,6 @@ function generateNewsCard($news) {
     ?>
         
         <!-- Category Section -->
-         <!-- <div class="category-section py-5 -->
         <div class="category-section py-3 <?php echo $category_counter % 2 == 0 ? 'bg-light' : ''; ?>" 
              id="category-<?php echo htmlspecialchars($category['value']); ?>"
              data-category="<?php echo htmlspecialchars($category['value']); ?>">
@@ -296,6 +321,11 @@ function generateNewsCard($news) {
                                        padding-bottom: 8px;
                                        display: inline-block;">
                                 <?php echo htmlspecialchars($category['label']); ?>
+                                <?php if ($category['is_from_group']): ?>
+                                    <small class="text-muted ms-2" style="font-size: 0.8rem; font-weight: normal;">
+                                        (<?php echo htmlspecialchars($category['group_name']); ?>)
+                                    </small>
+                                <?php endif; ?>
                             </h2>
                             <div class="header-underline" 
                                  style="position: absolute; 
@@ -341,8 +371,7 @@ function generateNewsCard($news) {
                 
                 <!-- ALL NEWS Button at Bottom for EVERY Category (if has any news) -->
                 <?php if ($category_has_news): ?>
-                    <!-- <div class="text-center mt-5 pt-3"> -->
-                        <div class="text-center">
+                    <div class="text-center">
                         <a href="category_news.php?category=<?php echo urlencode($category['value']); ?>" 
                            class="btn btn-lg all-news-btn" 
                            style="background-color: <?php echo $header_color; ?>; 
