@@ -175,7 +175,6 @@ $marathi_categories = [
 $category_marathi = $marathi_categories[$news['category_name']] ?? 'अमृत कार्यदीप';
 
 // FETCH RELATED NEWS
-
 $current_date = date('Y-m-d');
 $related_query =  "SELECT news_id, title, cover_photo_url, category_name, published_date 
                   FROM `news_articles` 
@@ -191,18 +190,6 @@ $related_stmt->bind_param("sis", $news['category_name'], $news_id, $current_date
 $related_stmt->execute();
 $related_result = $related_stmt->get_result();
 $related_news_count = $related_result->num_rows;
-
-// Check for secondary photo - use secondary_photo_url if available, otherwise use cover_photo_url
-$has_secondary_photo = false;
-$secondary_photo_url = '';
-
-if (!empty($news['secondary_photo_url']) && isValidImage($news['secondary_photo_url'])) {
-    $has_secondary_photo = true;
-    $secondary_photo_url = $news['secondary_photo_url'];
-} elseif (!empty($news['cover_photo_url']) && isValidImage($news['cover_photo_url'])) {
-    $has_secondary_photo = true;
-    $secondary_photo_url = $news['cover_photo_url'];
-}
 
 // Default images
 $default_cover_image = 'https://images.unsplash.com/photo-1551135049-8a33b2fb2f5e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
@@ -401,15 +388,119 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             box-shadow: none !important;
         }
         
-        /* FIXED IMAGE STYLES - Show full image without cropping */
-        .news-image {
+        /* DUAL IMAGE STYLES */
+        .images-section {
+            margin: 30px 0;
+        }
+        
+        .image-container {
             width: 100%;
-            max-height: 500px;
-            object-fit: contain;
-            border-radius: 10px;
-            margin: 25px 0;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            height: 400px; /* Fixed height for both images */
             background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        
+        .news-dual-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain; /* Show full image without cropping */
+            transition: transform 0.3s ease;
+        }
+        
+        .news-dual-image:hover {
+            transform: scale(1.02);
+        }
+        
+        /* Single image container */
+        .single-image-container {
+            width: 100%;
+            height: 450px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .news-single-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        
+        .single-image-label {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background: rgba(255, 102, 0, 0.9);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Fallback image text */
+        .image-fallback-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #666;
+            z-index: 1;
+        }
+        
+        .image-fallback-text i {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+        
+        .image-fallback-text span {
+            display: block;
+            font-size: 16px;
+        }
+        
+        /* No images message */
+        .no-images-message {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .no-images-icon {
+            font-size: 64px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        
+        .no-images-message h5 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .no-images-message p {
+            color: #888;
+            font-size: 14px;
         }
         
         .news-content {
@@ -433,11 +524,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         .social-share {
             background: #f8f9fa;
-            /* padding: 25px; */
-             padding: 5px;
+            padding: 5px;
             border-radius: 10px;
-            /* margin: 40px 0; */
-             margin: 5px 0;
+            margin: 5px 0;
             text-align: center;
         }
         
@@ -788,6 +877,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             color: #212529;
         }
         
+        /* Mobile responsive adjustments */
         @media (max-width: 768px) {
             .news-title {
                 font-size: 1.5rem;
@@ -827,9 +917,30 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 margin-left: 0;
             }
             
-            /* Mobile image adjustments */
-            .news-image {
-                max-height: 400px;
+            /* DUAL IMAGE MOBILE ADJUSTMENTS */
+            .image-container {
+                height: 300px;
+                margin-bottom: 20px;
+            }
+            
+            .single-image-container {
+                height: 350px;
+            }
+            
+            .news-dual-image, .news-single-image {
+                max-height: 280px;
+            }
+            
+            .image-fallback-text i {
+                font-size: 36px;
+            }
+            
+            .image-fallback-text span {
+                font-size: 14px;
+            }
+            
+            .no-images-icon {
+                font-size: 48px;
             }
         }
         
@@ -838,8 +949,17 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 grid-template-columns: 1fr;
             }
             
-            .news-image {
-                max-height: 350px;
+            /* DUAL IMAGE SMALL MOBILE ADJUSTMENTS */
+            .image-container {
+                height: 250px;
+            }
+            
+            .single-image-container {
+                height: 300px;
+            }
+            
+            .news-dual-image, .news-single-image {
+                max-height: 230px;
             }
         }
         
@@ -874,63 +994,61 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <div class="news-header">
             <h1 class="news-title"><?php echo htmlspecialchars($news['title']); ?></h1>     
         </div>
-         <!-- News Meta Information -->
-            <!-- <div class="news-publish"> -->
-                <div class="news-meta">
-                    <div class="text-center">
-                        <!-- Publisher -->
-                        <span class="meta-item">
-                            <i class="bi bi-person-fill"></i>
-                            <strong>Publisher:</strong>
-                            <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
-                            <span class="meta-tooltip">News publisher name</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Date -->
-                        <span class="meta-item">
-                            <i class="bi bi-calendar-event"></i>
-                            <strong>Date:</strong>
-                            <span class="meta-value"><?php echo $published_date; ?></span>
-                            <span class="meta-tooltip">News publication date</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Time -->
-                        <span class="meta-item">
-                            <i class="bi bi-clock"></i>
-                            <strong>Time:</strong>
-                            <span class="meta-value"><?php echo $published_time; ?></span>
-                            <span class="meta-tooltip">News publication time</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Views -->
-                        <span class="meta-item">
-                            <i class="bi bi-eye-fill"></i>
-                            <strong>Views:</strong>
-                            <span class="meta-value"><?php echo number_format($news['view']); ?></span>
-                            <span class="meta-tooltip">Number of times this news has been viewed</span>
-                        </span>
-                        
-                        <?php if (!empty($news['district_name'])): ?>
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- District -->
-                        <span class="meta-item">
-                            <i class="bi bi-geo-alt"></i>
-                            <strong>District:</strong>
-                            <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
-                            <span class="meta-tooltip">Related district of the news</span>
-                        </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <!-- </div> -->
-
+        
+        <!-- News Meta Information -->
+        <div class="news-meta">
+            <div class="text-center">
+                <!-- Publisher -->
+                <span class="meta-item">
+                    <i class="bi bi-person-fill"></i>
+                    <strong>Publisher:</strong>
+                    <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                    <span class="meta-tooltip">News publisher name</span>
+                </span>
+                
+                <span class="meta-divider">|</span>
+                
+                <!-- Date -->
+                <span class="meta-item">
+                    <i class="bi bi-calendar-event"></i>
+                    <strong>Date:</strong>
+                    <span class="meta-value"><?php echo $published_date; ?></span>
+                    <span class="meta-tooltip">News publication date</span>
+                </span>
+                
+                <span class="meta-divider">|</span>
+                
+                <!-- Time -->
+                <span class="meta-item">
+                    <i class="bi bi-clock"></i>
+                    <strong>Time:</strong>
+                    <span class="meta-value"><?php echo $published_time; ?></span>
+                    <span class="meta-tooltip">News publication time</span>
+                </span>
+                
+                <span class="meta-divider">|</span>
+                
+                <!-- Views -->
+                <span class="meta-item">
+                    <i class="bi bi-eye-fill"></i>
+                    <strong>Views:</strong>
+                    <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                    <span class="meta-tooltip">Number of times this news has been viewed</span>
+                </span>
+                
+                <?php if (!empty($news['district_name'])): ?>
+                <span class="meta-divider">|</span>
+                
+                <!-- District -->
+                <span class="meta-item">
+                    <i class="bi bi-geo-alt"></i>
+                    <strong>District:</strong>
+                    <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                    <span class="meta-tooltip">Related district of the news</span>
+                </span>
+                <?php endif; ?>
+            </div>
+        </div>
 
         <!-- Summary -->
         <?php if (!empty($news['summary'])): ?>
@@ -939,15 +1057,90 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         </div>
         <?php endif; ?>
 
-        <!-- Secondary Photo Section - Only show if photo exists -->
-        <?php if ($has_secondary_photo): ?>
-        <div class="text-center">
-            <img src="<?php echo htmlspecialchars($secondary_photo_url); ?>" 
-                 alt="<?php echo htmlspecialchars($news['title']); ?> अतिरिक्त फोटो" 
-                 class="news-image"
-                 onerror="handleSecondaryPhotoError(this)">
+        <!-- Image Display Section - Show both images if available -->
+        <div class="images-section mb-5">
+            <div class="row g-4">
+                <?php
+                // Check if cover photo exists
+                $has_cover_photo = !empty($news['cover_photo_url']) && isValidImage($news['cover_photo_url']);
+                $cover_photo_url = $has_cover_photo ? $news['cover_photo_url'] : $default_cover_image;
+                
+                // Check if secondary photo exists
+                $has_secondary_photo = !empty($news['secondary_photo_url']) && isValidImage($news['secondary_photo_url']);
+                $secondary_photo_url = $has_secondary_photo ? $news['secondary_photo_url'] : $default_secondary_image;
+                
+                // Determine if we have both images
+                $has_both_images = $has_cover_photo && $has_secondary_photo;
+                
+                // Check if we have at least one real image (not fallback)
+                $has_at_least_one_real_image = $has_cover_photo || $has_secondary_photo;
+                
+                // If we have both images, show them side by side
+                if ($has_both_images): ?>
+                    <!-- Both images exist - show side by side -->
+                    <div class="col-md-6">
+                        <div class="image-container">
+                            <img src="<?php echo htmlspecialchars($cover_photo_url); ?>" 
+                                 alt="<?php echo htmlspecialchars($news['title']); ?> मुख्य फोटो" 
+                                 class="news-dual-image"
+                                 onerror="handleImageError(this, 'cover')">
+                            <?php if (!$has_cover_photo): ?>
+                                <div class="image-fallback-text">
+                                    <i class="bi bi-image"></i>
+                                    <span>मुख्य फोटो उपलब्ध नाही</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="image-container">
+                            <img src="<?php echo htmlspecialchars($secondary_photo_url); ?>" 
+                                 alt="<?php echo htmlspecialchars($news['title']); ?> अतिरिक्त फोटो" 
+                                 class="news-dual-image"
+                                 onerror="handleImageError(this, 'secondary')">
+                            <?php if (!$has_secondary_photo): ?>
+                                <div class="image-fallback-text">
+                                    <i class="bi bi-image"></i>
+                                    <span>अतिरिक्त फोटो उपलब्ध नाही</span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                <?php elseif ($has_at_least_one_real_image): 
+                    // Only one real image exists, show it centered with label
+                    $real_image_url = $has_cover_photo ? $cover_photo_url : $secondary_photo_url;
+                    $image_type = $has_cover_photo ? 'मुख्य फोटो' : 'अतिरिक्त फोटो';
+                    ?>
+                    
+                    <div class="col-12">
+                        <div class="single-image-container">
+                            <img src="<?php echo htmlspecialchars($real_image_url); ?>" 
+                                 alt="<?php echo htmlspecialchars($news['title'] . ' ' . $image_type); ?>" 
+                                 class="news-single-image"
+                                 onerror="handleSingleImageError(this)">
+                            <div class="single-image-label">
+                                <?php echo $image_type; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
+                <?php else: 
+                    // No images exist, show fallback message
+                    ?>
+                    <div class="col-12">
+                        <div class="no-images-message">
+                            <div class="no-images-icon">
+                                <i class="bi bi-images"></i>
+                            </div>
+                            <h5>फोटो उपलब्ध नाहीत</h5>
+                            <p>या बातमीशी संबंधित कोणतेही फोटो उपलब्ध नाहीत</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
-        <?php endif; ?>
 
         <!-- Main Content -->
         <div class="news-content">
@@ -955,8 +1148,6 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             echo  nl2br(htmlspecialchars($news['content']));
             ?>
         </div>
-
-      
 
         <!-- Social Share Section -->
         <div class="social-share">
@@ -1128,15 +1319,6 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                             </div>
                         </div>
                         
-                        <!-- <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="saveInfo" name="save_info">
-                                <label class="form-check-label" for="saveInfo">
-                                    Save my name, email, and website for next time
-                                </label>
-                            </div>
-                        </div> -->
-                        
                         <div class="col-12">
                             <button type="submit" class="btn submit-btn px-4 py-2" id="submitBtn">
                                 <i class="bi bi-send"></i> Post Comment
@@ -1275,20 +1457,44 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         showToast('लिंक कॉपी झाला!', 'success');
     }
     
-    // Handle image errors
-    function handleSecondaryPhotoError(img) {
+    // Handle image errors for dual images
+    function handleImageError(img, imageType) {
         img.onerror = null;
         
-        // Try to use cover photo as fallback if available
-        const coverPhotoUrl = "<?php echo !empty($news['cover_photo_url']) ? htmlspecialchars($news['cover_photo_url']) : ''; ?>";
+        // Show fallback image based on type
+        const fallbackImage = imageType === 'cover' ? 
+            '<?php echo $default_cover_image; ?>' : 
+            '<?php echo $default_secondary_image; ?>';
         
-        if (coverPhotoUrl) {
-            img.src = coverPhotoUrl;
-        } else {
-            // If no cover photo either, hide the image container
-            const imageContainer = img.closest('.text-center');
-            if (imageContainer) {
-                imageContainer.style.display = 'none';
+        img.src = fallbackImage;
+        
+        // Show fallback text if not already showing
+        const container = img.closest('.image-container');
+        if (container) {
+            const existingFallback = container.querySelector('.image-fallback-text');
+            if (!existingFallback) {
+                const fallbackDiv = document.createElement('div');
+                fallbackDiv.className = 'image-fallback-text';
+                fallbackDiv.innerHTML = `
+                    <i class="bi bi-image"></i>
+                    <span>${imageType === 'cover' ? 'मुख्य फोटो उपलब्ध नाही' : 'अतिरिक्त फोटो उपलब्ध नाही'}</span>
+                `;
+                container.appendChild(fallbackDiv);
+            }
+        }
+    }
+    
+    // Handle single image error
+    function handleSingleImageError(img) {
+        img.onerror = null;
+        img.src = '<?php echo $default_cover_image; ?>';
+        
+        const container = img.closest('.single-image-container');
+        if (container) {
+            const label = container.querySelector('.single-image-label');
+            if (label) {
+                label.textContent = 'फॉलबॅक फोटो';
+                label.style.background = 'rgba(108, 117, 125, 0.9)';
             }
         }
     }
@@ -1346,6 +1552,18 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
     }
     
+    // Function to check if image exists
+    function checkImageExists(url, callback) {
+        const img = new Image();
+        img.onload = function() {
+            callback(true);
+        };
+        img.onerror = function() {
+            callback(false);
+        };
+        img.src = url;
+    }
+    
     // Handle comment form submission with AJAX
     document.getElementById('commentForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1375,12 +1593,6 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             showToast('Please write maximum 50 words', 'error');
             return;
         }
-        
-        // Minimum word count validation (optional)
-        // if (wordCount < 2) {
-        //     showToast('Please write at least 2 words', 'error');
-        //     return;
-        // }
         
         // Show loading state
         const submitBtn = document.getElementById('submitBtn');
@@ -1415,16 +1627,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                         document.getElementById('charCount').textContent = '0';
                         document.getElementById('charCount').className = 'remaining';
                         
-                        // Note: We don't add comment to list immediately because it needs approval
-                        // The comment will appear after admin approves it
-                        
-
-
                     } else {
                         showToast(response.message, 'error');
                     }
                 } catch (e) {
-                    // showToast('Error: Invalid response', 'error');
                     console.error('Parse error:', e);
                 }
             } else {
@@ -1472,31 +1678,33 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
     });
     
-    // Back to top button functionality
-    // window.onscroll = function() {
-    //     const scrollBtn = document.getElementById('scrollToTop');
-    //     if (scrollBtn) {
-    //         if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
-    //             scrollBtn.style.display = 'none';
-    //         } else {
-    //             scrollBtn.style.display = 'none';
-    //         }
-    //     }
-    // };
-    
-    function scrollToTop() {
-        window.scrollTo({top: 0, behavior: 'smooth'});
-    }
-    
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', function() {
+        // Check cover image
+        const coverImage = document.querySelector('img[alt*="मुख्य फोटो"]');
+        if (coverImage && coverImage.src !== '<?php echo $default_cover_image; ?>') {
+            checkImageExists(coverImage.src, function(exists) {
+                if (!exists) {
+                    handleImageError(coverImage, 'cover');
+                }
+            });
+        }
+        
+        // Check secondary image
+        const secondaryImage = document.querySelector('img[alt*="अतिरिक्त फोटो"]');
+        if (secondaryImage && secondaryImage.src !== '<?php echo $default_secondary_image; ?>') {
+            checkImageExists(secondaryImage.src, function(exists) {
+                if (!exists) {
+                    handleImageError(secondaryImage, 'secondary');
+                }
+            });
+        }
+        
         // Add error handlers to images
-        const images = document.querySelectorAll('.news-image, .related-news-image');
+        const images = document.querySelectorAll('.news-dual-image, .news-single-image, .related-news-image');
         images.forEach(function(img) {
             img.addEventListener('error', function() {
-                if (this.classList.contains('news-image')) {
-                    handleSecondaryPhotoError(this);
-                } else if (this.classList.contains('related-news-image')) {
+                if (this.classList.contains('related-news-image')) {
                     handleRelatedImageError(this);
                 }
             });
