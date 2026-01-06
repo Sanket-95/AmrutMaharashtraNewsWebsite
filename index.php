@@ -49,7 +49,9 @@ $categories = [
     ['label' => 'अध्यात्म', 'value' => 'spirituality', 'group' => 'content'],
     ['label' => 'सामाजिक परिवर्तक', 'value' => 'social_situation', 'group' => 'content'],
     ['label' => 'स्त्रीशक्ती', 'value' => 'women_power', 'group' => 'content'],
-    ['label' => 'पर्यटन', 'value' => 'tourism', 'group' => 'content']
+    ['label' => 'पर्यटन', 'value' => 'tourism', 'group' => 'content'],
+    ['label' => 'वार्ता', 'value' => 'news', 'group' => 'content'],
+    ['label' => 'लेख', 'value' => 'articles', 'group' => 'content']
 ];
 
 // Create a flattened version of ALL REAL categories (including group children)

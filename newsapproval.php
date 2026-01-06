@@ -61,7 +61,9 @@ function getMarathiCategoryName($category) {
         'spirituality' => 'अध्यात्म',
         'social_situation' => 'सामाजिक परिवर्तक',
         'women_power' => 'स्त्रीशक्ती',
-        'tourism' => 'पर्यटन'
+        'tourism' => 'पर्यटन',
+        'news' => 'वार्ता',
+        'articles' => 'लेख'
     ];
     return $category_map[$category] ?? $category;
 }
