@@ -83,7 +83,8 @@
     }
     
     .amrut-orange {
-        color: var(--orange-color);
+        /* color: var(--orange-color); */
+        color:black
         font-weight: 700;
     }
     
