@@ -324,7 +324,7 @@
             padding-right: 0 !important;
         }
         
-        /* Row 1 - MOBILE - IMPROVED TEXT WRAPPING */
+        /* Row 1 - MOBILE - Logo + First line combined */
         .row-1 {
             padding: 6px 0;
             background: linear-gradient(to right, var(--very-light-orange), #ffedd5, var(--very-light-orange));
@@ -336,32 +336,25 @@
             text-align: center;
         }
         
-        .emblem-logo {
-            margin-right: 0;
-            margin-bottom: 8px;
-            height: 30px;
-        }
-        
-        /* Mobile: Split heading into 3 lines */
-        .mobile-heading-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-        
-        .mobile-heading-line-1 {
+        /* Mobile first row - logo + text in same line */
+        .mobile-first-row {
             display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
             margin-bottom: 4px;
+        }
+        
+        .emblem-logo {
+            height: 30px;
+            margin-right: 8px;
+            margin-bottom: 0;
         }
         
         .mobile-heading-line-2 {
             font-weight: 700;
             color: #333;
             font-size: 0.85rem;
-            margin-bottom: 3px;
             line-height: 1.2;
             text-align: center;
         }
@@ -495,7 +488,7 @@
         
         .emblem-logo {
             height: 28px;
-            margin-bottom: 6px;
+            margin-right: 6px;
         }
         
         .center-title {
@@ -566,7 +559,7 @@
         
         .emblem-logo {
             height: 26px;
-            margin-bottom: 5px;
+            margin-right: 5px;
         }
         
         .center-title {
@@ -635,6 +628,11 @@
             font-size: 0.65rem;
         }
         
+        .emblem-logo {
+            height: 24px;
+            margin-right: 4px;
+        }
+        
         .center-title {
             font-size: 0.85rem;
         }
@@ -684,26 +682,28 @@
             <div class="row">
                 <div class="col-12">
                     <div class="heading-container">
-                        <!-- Logo (visible on all devices) -->
-                        <div class="mobile-heading-line-1">
+                        <!-- Desktop View with Logo -->
+                        <div class="d-none d-md-flex align-items-center justify-content-center w-100">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                  alt="National Emblem of India" 
                                  class="emblem-logo img-fluid">
+                            <h2 class="main-heading mb-0">
+                                महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
+                            </h2>
                         </div>
                         
-                        <!-- Desktop Heading (hidden on mobile) -->
-                        <h2 class="main-heading d-none d-md-block">
-                            महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
-                        </h2>
-                        
-                        <!-- Mobile Heading (3 lines, visible only on mobile) -->
+                        <!-- Mobile Heading (2 lines with logo in first line) -->
                         <div class="d-md-none mobile-heading-wrapper">
-                            <!-- Line 2: Main part (bold) -->
-                            <div class="mobile-heading-line-2">
-                                महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span>
+                            <!-- First line: Logo + Main text combined -->
+                            <div class="mobile-first-row">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                     alt="National Emblem of India" 
+                                     class="emblem-logo img-fluid">
+                                <div class="mobile-heading-line-2">
+                                    महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span>
+                                </div>
                             </div>
-                            
-                            <!-- Line 3: Secondary part (lighter) -->
+                            <!-- Second line: Secondary text -->
                             <div class="mobile-heading-line-3">
                                 महाराष्ट्र शासनाची स्वायत्त संस्था
                             </div>
@@ -792,27 +792,6 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Bottom Row: Social Media Icons (Centered) -->
-                <!-- <div class="right-content">
-                    <div class="social-container">
-                        <a href="#" class="social-circle social-fb" title="Facebook">
-                            <i class="bi bi-facebook"></i>
-                        </a>
-                        <a href="#" class="social-circle social-tw" title="Twitter">
-                            <i class="bi bi-twitter"></i>
-                        </a>
-                        <a href="#" class="social-circle social-ig" title="Instagram">
-                            <i class="bi bi-instagram"></i>
-                        </a>
-                        <a href="#" class="social-circle social-yt" title="YouTube">
-                            <i class="bi bi-youtube"></i>
-                        </a>
-                        <a href="#" class="social-circle social-in" title="LinkedIn">
-                            <i class="bi bi-linkedin"></i>
-                        </a>
-                    </div>
-                </div> -->
             </div>
         </div>
     </div>
