@@ -43,6 +43,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $region = $_POST['region'] ?? '';
     $topnews = isset($_POST['topnews']) ? 1 : 0;
     
+    // Initialize image update variables
+    $cover_photo_update = false;
+    $secondary_photo_update = false;
+    $new_cover_photo_path = '';
+    $new_secondary_photo_path = '';
+    
+    // Handle image uploads if in edit mode
+    if ($edit_mode && isset($_POST['update_news'])) {
+        // Handle cover photo upload
+        if (!empty($_FILES['cover_photo']['name']) && $_FILES['cover_photo']['error'] == 0) {
+            $cover_result = uploadImage($_FILES['cover_photo'], $district, 'cover_photos');
+            if ($cover_result['success']) {
+                $new_cover_photo_path = $cover_result['file_path'];
+                $cover_photo_update = true;
+            } else {
+                $toast_message = "मुख्य चित्र अपलोड त्रुटी: " . $cover_result['error'];
+                $toast_type = "error";
+            }
+        }
+        
+        // Handle secondary photo upload
+        if (!empty($_FILES['secondary_photo']['name']) && $_FILES['secondary_photo']['error'] == 0) {
+            $secondary_result = uploadImage($_FILES['secondary_photo'], $district, 'secondary_photos');
+            if ($secondary_result['success']) {
+                $new_secondary_photo_path = $secondary_result['file_path'];
+                $secondary_photo_update = true;
+            } else {
+                $toast_message = "दुय्यम चित्र अपलोड त्रुटी: " . $secondary_result['error'];
+                $toast_type = "error";
+            }
+        }
+    }
+    
     // Check what action to perform
     if ($action == 'approve' || $action == 'disapprove') {
         // Approval/disapproval action
@@ -82,31 +115,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $update_stmt->close();
     } 
-    elseif (isset($_POST['update_news'])) {
-        // Edit/save action
-        $update_sql = "UPDATE news_articles SET 
-                        title = ?, 
-                        summary = ?, 
-                        content = ?, 
-                        category_name = ?,
-                        district_name = ?,
-                        Region = ?,
-                        topnews = ?,
-                        updated_at = NOW()
-                    WHERE news_id = ?";
-
+    elseif (isset($_POST['update_news']) && empty($toast_message)) {
+        // Edit/save action - Build dynamic SQL query based on what's being updated
+        
+        // Start with basic fields
+        $update_fields = [
+            "title = ?",
+            "summary = ?", 
+            "content = ?", 
+            "category_name = ?",
+            "district_name = ?",
+            "Region = ?",
+            "topnews = ?",
+            "updated_at = NOW()"
+        ];
+        
+        $params = [
+            "types" => "ssssssi",
+            "values" => [
+                $title,
+                $summary,
+                $content,
+                $category,
+                $district,
+                $region,
+                $topnews
+            ]
+        ];
+        
+        // Add cover photo if updated
+        if ($cover_photo_update) {
+            $update_fields[] = "cover_photo_url = ?";
+            $params["types"] .= "s";
+            $params["values"][] = $new_cover_photo_path;
+        }
+        
+        // Add secondary photo if updated
+        if ($secondary_photo_update) {
+            $update_fields[] = "secondary_photo_url = ?";
+            $params["types"] .= "s";
+            $params["values"][] = $new_secondary_photo_path;
+        }
+        
+        // Add news_id parameter
+        $params["types"] .= "i";
+        $params["values"][] = $news_id;
+        
+        // Build and execute SQL query
+        $update_sql = "UPDATE news_articles SET " . implode(", ", $update_fields) . " WHERE news_id = ?";
+        
         $update_stmt = $conn->prepare($update_sql);
-        $update_stmt->bind_param(
-            "ssssssii",
-            $title,
-            $summary,
-            $content,
-            $category,
-            $district,
-            $region,
-            $topnews,
-            $news_id
-        );
+        $update_stmt->bind_param($params["types"], ...$params["values"]);
         
         if ($update_stmt->execute()) {
             $toast_message = "बातमी यशस्वीरित्या अपडेट केली गेली!";
@@ -174,6 +233,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Function to handle image upload - Preserves folder structure
+function uploadImage($file, $district, $photo_type) {
+    $result = [
+        'success' => false,
+        'file_path' => '',
+        'error' => ''
+    ];
+    
+    // Check for errors
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $result['error'] = "फाइल अपलोड त्रुटी: " . $file['error'];
+        return $result;
+    }
+    
+    // Check file size (max 5MB)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        $result['error'] = "फाइल आकार 5MB पेक्षा कमी असावा";
+        return $result;
+    }
+    
+    // Check file type
+    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $file_type = mime_content_type($file['tmp_name']);
+    
+    if (!in_array($file_type, $allowed_types)) {
+        $result['error'] = "फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात";
+        return $result;
+    }
+    
+    // Create upload directory based on district folder structure
+    $district_folder = strtolower($district);
+    $upload_dir = 'photos/' . $district_folder . '/' . $photo_type . '/';
+    
+    // Create directory if it doesn't exist
+    if (!file_exists($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+    
+    // Generate unique filename but preserve the naming pattern
+    $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $timestamp = date('Ymd_His');
+    $random_string = substr(md5(uniqid()), 0, 6);
+    $random_number = rand(1000, 9999);
+    
+    // Create filename similar to your pattern: cover_20251207_105825_131306_4775.jpeg
+    if ($photo_type == 'cover_photos') {
+        $file_name = 'cover_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
+    } else {
+        $file_name = 'secondary_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
+    }
+    
+    $file_path = $upload_dir . $file_name;
+    
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $file_path)) {
+        $result['success'] = true;
+        $result['file_path'] = $file_path;
+    } else {
+        $result['error'] = "फाइल हलविण्यात त्रुटी";
+    }
+    
+    return $result;
+}
+
+// Rest of the code remains the same until the HTML section...
 // Check if quick approve button was clicked
 if (isset($_GET['quick_approve']) && $_GET['quick_approve'] == '1') {
     // Quick approve the news
@@ -554,176 +678,116 @@ include 'components/login_navbar.php';
     <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Khand:wght@400;500;600&display=swap" rel="stylesheet">
     
     <style>
-        body {
-            background-color: #FFF8F0;
-            font-family: 'Mukta', sans-serif;
+        /* Add these styles to existing CSS */
+        
+        /* Image preview styles */
+        .image-preview-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 10px;
         }
         
-        .btn {
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #FFA500;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background-color: #f8f9fa;
+        }
+        
+        .image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .image-preview .no-image {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #FF6600;
+        }
+        
+        .image-preview .no-image i {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .image-remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .image-remove-btn:hover {
+            background-color: #dc3545;
+        }
+        
+        /* File input styling */
+        .custom-file-input {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .custom-file-input input[type="file"] {
+            opacity: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .custom-file-label {
+            display: block;
+            padding: 10px;
+            background-color: #FF6600;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
             transition: all 0.3s ease;
+            font-family: 'Mukta', sans-serif;
+            font-size: 14px;
         }
         
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        }
-        
-        .card {
-            transition: transform 0.3s ease;
-        }
-        
-        .card:hover {
+        .custom-file-label:hover {
+            background-color: #FF5500;
             transform: translateY(-2px);
         }
         
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        .custom-file-label i {
+            margin-right: 8px;
         }
         
-        ::-webkit-scrollbar-track {
-            background: #FFF3E0;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #FFA500;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #FF6600;
-        }
-        
-        /* Form styles for edit mode */
-        .form-control:focus, .form-select:focus {
-            border-color: #FF6600 !important;
-            box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25) !important;
-        }
-        
-        textarea.form-control {
-            font-family: 'Mukta', sans-serif !important;
-        }
-        
-        /* Edit mode indicator */
-        .badge.bg-warning {
-            font-family: 'Mukta', sans-serif;
+        /* Image info text */
+        .image-info {
             font-size: 12px;
-        }
-        
-        /* Switch checkbox styles */
-        .form-check-input:checked {
-            background-color: #FF6600 !important;
-            border-color: #FF6600 !important;
-        }
-        
-        .form-check-input:focus {
-            border-color: #FFA500 !important;
-            box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25) !important;
-        }
-        
-        /* Responsive styles */
-        @media (max-width: 768px) {
-            .card-header h4 {
-                font-size: 1.2rem !important;
-            }
-            
-            h3 {
-                font-size: 1.5rem !important;
-            }
-            
-            .card-body {
-                padding: 1rem !important;
-            }
-            
-            .container {
-                padding-left: 15px !important;
-                padding-right: 15px !important;
-            }
-            
-            .d-flex.justify-content-between {
-                flex-direction: column !important;
-                gap: 10px;
-            }
-        }
-        
-        /* Toastify custom styles */
-        .custom-toast {
-            font-family: 'Mukta', sans-serif !important;
-            font-size: 16px !important;
-            border-radius: 8px !important;
-            padding: 15px 20px !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
-        }
-        
-        .custom-toast-success {
-            background: linear-gradient(135deg, #28a745, #20c997) !important;
-            color: white !important;
-        }
-        
-        .custom-toast-error {
-            background: linear-gradient(135deg, #dc3545, #fd7e14) !important;
-            color: white !important;
-        }
-        
-        .custom-toast-warning {
-            background: linear-gradient(135deg, #ffc107, #ff8c00) !important;
-            color: black !important;
-        }
-        
-        /* Hide approval buttons in edit mode */
-        .edit-mode .approval-buttons {
-            display: none !important;
-        }
-        
-        /* Hide save buttons when not in edit mode */
-        .view-mode .save-buttons {
-            display: none !important;
-        }
-        
-        /* Hide edit button in edit mode */
-        .edit-mode .edit-button {
-            display: none !important;
-        }
-        
-        /* Delete button styles */
-        .delete-btn {
-            background: linear-gradient(135deg, #dc3545, #c82333) !important;
-            border: none !important;
-            color: white !important;
-        }
-        
-        .delete-btn:hover {
-            background: linear-gradient(135deg, #c82333, #bd2130) !important;
-            transform: translateY(-3px) !important;
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3) !important;
-        }
-        
-        /* Always show form fields, just disable them in view mode */
-        .view-mode .form-control,
-        .view-mode .form-select,
-        .view-mode .form-check-input {
-            pointer-events: none;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6 !important;
-        }
-        
-        .view-mode textarea.form-control {
-            resize: none;
-        }
-        
-        /* Style for view mode fields to look like normal text */
-        .view-mode .form-control-plaintext {
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
             font-family: 'Mukta', sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            padding: 0;
-            background: transparent;
-            border: none;
         }
-        
-        /* Custom confirmation modal */
+        /* Custom confirmation modal - FIXED */
         .confirmation-modal {
-            display: none;
+            display: none; /* इथे none असावे */
             position: fixed;
             top: 0;
             left: 0;
@@ -734,7 +798,7 @@ include 'components/login_navbar.php';
             justify-content: center;
             align-items: center;
         }
-        
+
         .confirmation-content {
             background-color: white;
             padding: 30px;
@@ -743,26 +807,28 @@ include 'components/login_navbar.php';
             max-width: 500px;
             width: 90%;
         }
-        
+
         .confirmation-title {
             color: #FF6600;
             font-family: 'Khand', sans-serif;
             font-size: 1.5rem;
             margin-bottom: 15px;
         }
-        
+
         .confirmation-message {
             font-family: 'Mukta', sans-serif;
             font-size: 1.1rem;
             margin-bottom: 20px;
             color: #333;
         }
-        
+
         .confirmation-buttons {
             display: flex;
             gap: 10px;
             justify-content: flex-end;
         }
+        
+        /* Existing CSS remains the same, just add above styles */
     </style>
 </head>
 <body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?>">
@@ -791,7 +857,7 @@ include 'components/login_navbar.php';
         <div class="d-flex gap-2">
             <!-- Delete Button (Always visible) -->
             <button type="button" 
-                    class="btn delete-btn" 
+                    class="btn btn-danger delete-btn" 
                     style="font-family: 'Mukta', sans-serif;"
                     onclick="confirmDelete()">
                 <i class="fas fa-trash-alt me-2"></i> डिलीट करा
@@ -844,66 +910,140 @@ include 'components/login_navbar.php';
         </div>
         
         <div class="card-body p-4">
-            <!-- Images Section -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header" style="background-color: #FFF3E0;">
-                            <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                <i class="fas fa-image me-2"></i> मुख्य चित्र
-                            </h5>
-                        </div>
-                        <div class="card-body text-center">
-                            <?php if (!empty($news['cover_photo_url'])): ?>
-                                <img src="<?php echo htmlspecialchars($news['cover_photo_url']); ?>" 
-                                     class="img-fluid rounded" 
-                                     alt="मुख्य चित्र"
-                                     style="max-height: 300px; object-fit: contain;">
-                            <?php else: ?>
-                                <div class="py-5 text-center">
-                                    <i class="fas fa-image" style="font-size: 80px; color: #FFA500;"></i>
-                                    <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
-                                        चित्र उपलब्ध नाही
-                                    </p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="card h-100 shadow-sm">
-                        <div class="card-header" style="background-color: #FFF3E0;">
-                            <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
-                                <i class="fas fa-images me-2"></i> दुय्यम चित्र
-                            </h5>
-                        </div>
-                        <div class="card-body text-center">
-                            <?php if (!empty($news['secondary_photo_url'])): ?>
-                                <img src="<?php echo htmlspecialchars($news['secondary_photo_url']); ?>" 
-                                     class="img-fluid rounded" 
-                                     alt="दुय्यम चित्र"
-                                     style="max-height: 300px; object-fit: contain;">
-                            <?php else: ?>
-                                <div class="py-5 text-center">
-                                    <i class="fas fa-images" style="font-size: 80px; color: #FFA500;"></i>
-                                    <p class="mt-3 text-muted" style="font-family: 'Mukta', sans-serif;">
-                                        दुय्यम चित्र उपलब्ध नाही
-                                    </p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- SINGLE FORM for everything -->
-            <form method="POST" action="" id="mainForm">
+            <!-- SINGLE FORM for everything - ADD enctype="multipart/form-data" -->
+            <form method="POST" action="" id="mainForm" enctype="multipart/form-data">
                 <input type="hidden" name="news_id" value="<?php echo $news['news_id']; ?>">
                 <input type="hidden" name="approve_after_save" id="approveAfterSave" value="0">
                 
                 <div class="row">
                     <div class="col-lg-8">
+                        <!-- Images Section with upload in edit mode -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-header" style="background-color: #FFF3E0;">
+                                        <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                            <i class="fas fa-image me-2"></i> मुख्य चित्र
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Image preview -->
+                                        <div class="image-preview-container">
+                                            <div class="image-preview" id="coverPreview">
+                                                <?php if (!empty($news['cover_photo_url'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($news['cover_photo_url']); ?>" 
+                                                         alt="मुख्य चित्र"
+                                                         id="coverImage">
+                                                    <?php if ($edit_mode): ?>
+                                                    <button type="button" class="image-remove-btn" onclick="removeImage('cover')">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <div class="no-image">
+                                                        <i class="fas fa-image"></i>
+                                                        <span>चित्र उपलब्ध नाही</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <?php if ($edit_mode): ?>
+                                            <!-- File input for edit mode -->
+                                            <div class="custom-file-input mb-2">
+                                                <input type="file" 
+                                                       name="cover_photo" 
+                                                       id="coverPhoto" 
+                                                       accept="image/*"
+                                                       onchange="previewImage(this, 'cover')">
+                                                <label for="coverPhoto" class="custom-file-label">
+                                                    <i class="fas fa-upload"></i> नवीन मुख्य चितर सिलेक्ट करा
+                                                </label>
+                                            </div>
+                                            <div class="image-info">
+                                                Max 5MB | JPEG, JPG, PNG, GIF, WEBP
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <?php if (!$edit_mode && !empty($news['cover_photo_url'])): ?>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-link me-1"></i>
+                                                <?php 
+                                                $cover_path_parts = explode('/', $news['cover_photo_url']);
+                                                $cover_filename = end($cover_path_parts);
+                                                echo htmlspecialchars($cover_filename);
+                                                ?>
+                                            </small>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-header" style="background-color: #FFF3E0;">
+                                        <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                                            <i class="fas fa-images me-2"></i> दुय्यम चित्र
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Image preview -->
+                                        <div class="image-preview-container">
+                                            <div class="image-preview" id="secondaryPreview">
+                                                <?php if (!empty($news['secondary_photo_url'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($news['secondary_photo_url']); ?>" 
+                                                         alt="दुय्यम चित्र"
+                                                         id="secondaryImage">
+                                                    <?php if ($edit_mode): ?>
+                                                    <button type="button" class="image-remove-btn" onclick="removeImage('secondary')">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <div class="no-image">
+                                                        <i class="fas fa-images"></i>
+                                                        <span>दुय्यम चित्र उपलब्ध नाही</span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <?php if ($edit_mode): ?>
+                                            <!-- File input for edit mode -->
+                                            <div class="custom-file-input mb-2">
+                                                <input type="file" 
+                                                       name="secondary_photo" 
+                                                       id="secondaryPhoto" 
+                                                       accept="image/*"
+                                                       onchange="previewImage(this, 'secondary')">
+                                                <label for="secondaryPhoto" class="custom-file-label">
+                                                    <i class="fas fa-upload"></i> नवीन दुय्यम चितर सिलेक्ट करा
+                                                </label>
+                                            </div>
+                                            <div class="image-info">
+                                                Max 5MB | JPEG, JPG, PNG, GIF, WEBP
+                                            </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <?php if (!$edit_mode && !empty($news['secondary_photo_url'])): ?>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-link me-1"></i>
+                                                <?php 
+                                                $secondary_path_parts = explode('/', $news['secondary_photo_url']);
+                                                $secondary_filename = end($secondary_path_parts);
+                                                echo htmlspecialchars($secondary_filename);
+                                                ?>
+                                            </small>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Title -->
                         <div class="card shadow-sm mb-4">
                             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
@@ -1065,18 +1205,6 @@ include 'components/login_navbar.php';
                             </div>
                         </div>
                         
-                        <!-- Debug: Show news approval status -->
-                        <?php 
-                        // Debug code - remove this after testing
-                        if ($edit_mode) {
-                            echo '<div class="alert alert-info small" style="display:none;">';
-                            echo 'Debug: News ID = ' . $news_id . '<br>';
-                            echo 'is_approved = ' . $news['is_approved'] . ' (Type: ' . gettype($news['is_approved']) . ')<br>';
-                            echo 'Status: ' . getMarathiStatusName($news['is_approved']);
-                            echo '</div>';
-                        }
-                        ?>
-                        
                         <!-- Save Buttons (Only in Edit Mode) -->
                         <?php if ($edit_mode): ?>
                         <div class="card shadow-sm mb-4 border-primary save-buttons">
@@ -1221,6 +1349,129 @@ include 'components/login_navbar.php';
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
 <script>
+    // Function to preview selected image
+    function previewImage(input, type) {
+        const preview = document.getElementById(type + 'Preview');
+        const file = input.files[0];
+        
+        if (file) {
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast("फाइल आकार 5MB पेक्षा कमी असावा", "error");
+                input.value = '';
+                return;
+            }
+            
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast("फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात", "error");
+                input.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // Create new image element
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.alt = type === 'cover' ? 'मुख्य चित्र' : 'दुय्यम चित्र';
+                img.id = type + 'Image';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                
+                // Clear existing content
+                preview.innerHTML = '';
+                
+                // Add image
+                preview.appendChild(img);
+                
+                // Add remove button
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'image-remove-btn';
+                removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                removeBtn.onclick = function() {
+                    removeImage(type);
+                };
+                preview.appendChild(removeBtn);
+                
+                // Show success message
+                showToast("चित्र सिलेक्ट केले गेले आहे", "success");
+            };
+            
+            reader.readAsDataURL(file);
+        }
+    }
+    
+    // Function to remove image
+    function removeImage(type) {
+        const preview = document.getElementById(type + 'Preview');
+        const fileInput = document.getElementById(type + 'Photo');
+        
+        // Reset file input
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Reset preview to default state
+        preview.innerHTML = `
+            <div class="no-image">
+                <i class="fas fa-${type === 'cover' ? 'image' : 'images'}"></i>
+                <span>${type === 'cover' ? 'चित्र उपलब्ध नाही' : 'दुय्यम चित्र उपलब्ध नाही'}</span>
+            </div>
+        `;
+        
+        showToast("चित्र काढून टाकले", "info");
+    }
+    
+    // Function to validate images before form submission
+    function validateImages() {
+        const coverPhoto = document.getElementById('coverPhoto');
+        const secondaryPhoto = document.getElementById('secondaryPhoto');
+        
+        // Check cover photo if exists
+        if (coverPhoto && coverPhoto.files.length > 0) {
+            const file = coverPhoto.files[0];
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast("मुख्य चित्राचा आकार 5MB पेक्षा कमी असावा", "error");
+                return false;
+            }
+            
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast("मुख्य चित्र: फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात", "error");
+                return false;
+            }
+        }
+        
+        // Check secondary photo if exists
+        if (secondaryPhoto && secondaryPhoto.files.length > 0) {
+            const file = secondaryPhoto.files[0];
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast("दुय्यम चित्राचा आकार 5MB पेक्षा कमी असावा", "error");
+                return false;
+            }
+            
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                showToast("दुय्यम चित्र: फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात", "error");
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    // Existing functions remain the same...
     // Function to show toast notification
     function showToast(message, type = 'info', duration = 5000) {
         let backgroundColor;
@@ -1316,6 +1567,11 @@ include 'components/login_navbar.php';
     
     // Function to save and approve
     function saveAndApprove() {
+        // Validate images first
+        if (!validateImages()) {
+            return;
+        }
+        
         // Set the hidden field to indicate approve after save
         document.getElementById('approveAfterSave').value = '1';
         
@@ -1334,6 +1590,11 @@ include 'components/login_navbar.php';
     
     // Function to save and disapprove
     function saveAndDisapprove() {
+        // Validate images first
+        if (!validateImages()) {
+            return;
+        }
+        
         // Set the hidden field to indicate disapprove after save
         document.getElementById('approveAfterSave').value = '2';
         
@@ -1428,6 +1689,12 @@ include 'components/login_navbar.php';
                 
                 // Handle save form validation
                 if (submitter && submitter.name === 'update_news') {
+                    // Validate images first
+                    if (!validateImages()) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
                     const title = this.querySelector('[name="title"]');
                     const summary = this.querySelector('[name="summary"]');
                     const content = this.querySelector('[name="content"]');
