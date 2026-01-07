@@ -29,6 +29,48 @@ $toast_type = '';
 $redirect_needed = false;
 $redirect_url = '';
 
+// Function to sanitize rich text content (for security)
+function sanitizeRichText($content) {
+    // Decode HTML entities
+    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    
+    // Remove script tags and other dangerous elements
+    $content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $content);
+    $content = preg_replace('/<iframe\b[^>]*>(.*?)<\/iframe>/is', '', $content);
+    $content = preg_replace('/<object\b[^>]*>(.*?)<\/object>/is', '', $content);
+    $content = preg_replace('/<embed\b[^>]*>(.*?)<\/embed>/is', '', $content);
+    $content = preg_replace('/on\w+=\s*"[^"]*"/i', '', $content);
+    $content = preg_replace('/on\w+=\s*\'[^\']*\'/i', '', $content);
+    
+    // Allow only safe tags
+    $allowed_tags = '<br><p><strong><b><em><i><u><a><ul><ol><li><span><div><h1><h2><h3><h4><h5><h6>';
+    $content = strip_tags($content, $allowed_tags);
+    
+    // Clean up attributes on allowed tags
+    $content = preg_replace_callback('/(<[^>]+)/', function($matches) {
+        $tag = $matches[1];
+        // For anchor tags, keep only href, title, target, rel
+        if (preg_match('/^<a/i', $tag)) {
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*\s*=\s*"[^"]*")/i', '', $tag);
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*\s*=\s*\'[^\']*\')/i', '', $tag);
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*)/i', '', $tag);
+            // Ensure target="_blank" and rel="noopener" for external links
+            if (!str_contains($tag, 'target=')) {
+                $tag = str_replace('<a', '<a target="_blank" rel="noopener"', $tag);
+            }
+        }
+        // For other tags, remove all attributes
+        else {
+            $tag = preg_replace('/\s[a-z][a-z0-9]*\s*=\s*"[^"]*"/i', '', $tag);
+            $tag = preg_replace('/\s[a-z][a-z0-9]*\s*=\s*\'[^\']*\'/i', '', $tag);
+            $tag = preg_replace('/\s[a-z][a-z0-9]*/i', '', $tag);
+        }
+        return $tag;
+    }, $content);
+    
+    return $content;
+}
+
 // Handle ALL form submissions (both edit and approve)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -38,6 +80,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = $_POST['title'] ?? '';
     $summary = $_POST['summary'] ?? '';
     $content = $_POST['content'] ?? '';
+    
+    // Sanitize rich text content
+    $content = sanitizeRichText($content);
+    
     $category = $_POST['category'] ?? '';
     $district = $_POST['district'] ?? '';
     $region = $_POST['region'] ?? '';
@@ -297,7 +343,6 @@ function uploadImage($file, $district, $photo_type) {
     return $result;
 }
 
-// Rest of the code remains the same until the HTML section...
 // Check if quick approve button was clicked
 if (isset($_GET['quick_approve']) && $_GET['quick_approve'] == '1') {
     // Quick approve the news
@@ -674,6 +719,9 @@ include 'components/login_navbar.php';
     <!-- Toastify CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     
+    <!-- Quill Rich Text Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    
     <!-- Include Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Khand:wght@400;500;600&display=swap" rel="stylesheet">
     
@@ -785,9 +833,10 @@ include 'components/login_navbar.php';
             margin-top: 5px;
             font-family: 'Mukta', sans-serif;
         }
+        
         /* Custom confirmation modal - FIXED */
         .confirmation-modal {
-            display: none; /* इथे none असावे */
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
@@ -826,6 +875,116 @@ include 'components/login_navbar.php';
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+        }
+        
+        /* Quill Editor Custom Styles */
+        #editor-container {
+            border: 2px solid #FFA500;
+            border-radius: 5px;
+            font-family: 'Mukta', sans-serif;
+        }
+        
+        .ql-toolbar {
+            border: none !important;
+            border-bottom: 1px solid #ccc !important;
+            background-color: #f8f9fa;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+        
+        .ql-container {
+            border: none !important;
+            font-family: 'Mukta', sans-serif !important;
+            font-size: 16px;
+        }
+        
+        .ql-editor {
+            min-height: 350px;
+            line-height: 1.8;
+            padding: 15px;
+        }
+        
+        .ql-editor p {
+            margin-bottom: 1em;
+        }
+        
+        .ql-editor a {
+            color: #FF6600;
+            text-decoration: underline;
+        }
+        
+        .ql-editor a:hover {
+            color: #FF8C00;
+        }
+        
+        .ql-editor strong {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .ql-editor em {
+            font-style: italic;
+        }
+        
+        .ql-editor u {
+            text-decoration: underline;
+        }
+        
+        /* Read-only view styling */
+        .ql-editor-viewonly {
+            border: 2px solid #FFA500;
+            border-radius: 5px;
+            min-height: 400px;
+            background-color: #fff;
+            padding: 15px;
+            line-height: 1.8;
+        }
+        
+        .ql-editor-viewonly p {
+            margin-bottom: 1em;
+        }
+        
+        .ql-editor-viewonly a {
+            color: #FF6600;
+            text-decoration: underline;
+        }
+        
+        .ql-editor-viewonly a:hover {
+            color: #FF8C00;
+        }
+        
+        .ql-editor-viewonly strong {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .ql-editor-viewonly em {
+            font-style: italic;
+        }
+        
+        .ql-editor-viewonly u {
+            text-decoration: underline;
+        }
+        
+        .ql-editor-viewonly ul,
+        .ql-editor-viewonly ol {
+            padding-left: 20px;
+            margin-bottom: 1em;
+        }
+        
+        .ql-editor-viewonly li {
+            margin-bottom: 0.5em;
+        }
+        
+        .ql-editor-viewonly h1,
+        .ql-editor-viewonly h2,
+        .ql-editor-viewonly h3,
+        .ql-editor-viewonly h4,
+        .ql-editor-viewonly h5,
+        .ql-editor-viewonly h6 {
+            font-weight: bold;
+            margin-bottom: 0.5em;
+            color: #2c3e50;
         }
         
         /* Existing CSS remains the same, just add above styles */
@@ -1083,7 +1242,7 @@ include 'components/login_navbar.php';
                             </div>
                         </div>
                         
-                        <!-- Full Content -->
+                        <!-- Full Content - Rich Text Editor -->
                         <div class="card shadow-sm mb-4">
                             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: #FFF3E0;">
                                 <h5 class="mb-0" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
@@ -1094,11 +1253,18 @@ include 'components/login_navbar.php';
                                 <?php endif; ?>
                             </div>
                             <div class="card-body">
-                                <textarea class="form-control <?php echo !$edit_mode ? 'form-control-plaintext' : ''; ?>" 
-                                          name="content" 
-                                          rows="15"
-                                          <?php echo !$edit_mode ? 'readonly' : 'required'; ?>
-                                          style="font-family: 'Mukta', sans-serif; font-size: 16px; line-height: 1.8; border: 2px solid #FFA500;"><?php echo htmlspecialchars($news['content']); ?></textarea>
+                                <?php if ($edit_mode): ?>
+                                <!-- Rich Text Editor for Edit Mode -->
+                                <div id="editor-container" style="height: 400px; border: 2px solid #FFA500;">
+                                    <?php echo htmlspecialchars_decode($news['content']); ?>
+                                </div>
+                                <textarea id="content" name="content" style="display: none;"></textarea>
+                                <?php else: ?>
+                                <!-- Read-only view for non-edit mode -->
+                                <div class="ql-editor-viewonly">
+                                    <?php echo htmlspecialchars_decode($news['content']); ?>
+                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -1348,7 +1514,53 @@ include 'components/login_navbar.php';
 <!-- Toastify JS -->
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
+<!-- Quill Editor JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
 <script>
+    // Initialize Quill Editor if in edit mode
+    <?php if ($edit_mode): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Quill editor
+        const quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline'],
+                    ['link'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'align': [] }],
+                    ['clean']
+                ]
+            },
+            placeholder: 'बातमीचा संपूर्ण विषय येथे लिहा...',
+            scrollingContainer: '#editor-container'
+        });
+        
+        // Set editor content
+        quill.root.innerHTML = `<?php echo addslashes(htmlspecialchars_decode($news['content'])); ?>`;
+        
+        // Update hidden textarea before form submission
+        const form = document.getElementById('mainForm');
+        form.addEventListener('submit', function(e) {
+            const hiddenInput = document.getElementById('content');
+            hiddenInput.value = quill.root.innerHTML;
+            
+            // Validate content is not empty
+            const plainText = quill.getText().trim();
+            if (plainText.length === 0) {
+                e.preventDefault();
+                showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
+                quill.focus();
+                return false;
+            }
+            
+            return true;
+        });
+    });
+    <?php endif; ?>
+    
     // Function to preview selected image
     function previewImage(input, type) {
         const preview = document.getElementById(type + 'Preview');
@@ -1471,7 +1683,6 @@ include 'components/login_navbar.php';
         return true;
     }
     
-    // Existing functions remain the same...
     // Function to show toast notification
     function showToast(message, type = 'info', duration = 5000) {
         let backgroundColor;
@@ -1697,7 +1908,6 @@ include 'components/login_navbar.php';
                     
                     const title = this.querySelector('[name="title"]');
                     const summary = this.querySelector('[name="summary"]');
-                    const content = this.querySelector('[name="content"]');
                     
                     if (title && !title.value.trim()) {
                         e.preventDefault();
@@ -1713,10 +1923,12 @@ include 'components/login_navbar.php';
                         return false;
                     }
                     
+                    // Get content from hidden textarea (set by Quill editor)
+                    const content = document.getElementById('content');
                     if (content && !content.value.trim()) {
                         e.preventDefault();
                         showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
-                        content.focus();
+                        <?php if ($edit_mode): ?>quill.focus();<?php endif; ?>
                         return false;
                     }
                     
@@ -1732,6 +1944,36 @@ include 'components/login_navbar.php';
                 return true;
             });
         }
+        
+        // Format rich text content in read-only view
+        <?php if (!$edit_mode): ?>
+        const viewOnlyContent = document.querySelector('.ql-editor-viewonly');
+        if (viewOnlyContent) {
+            // Ensure proper link formatting
+            const content = viewOnlyContent.innerHTML;
+            viewOnlyContent.innerHTML = content
+                .replace(/<p>/g, '<p style="margin-bottom: 1em;">')
+                .replace(/<strong>/g, '<strong style="font-weight: bold; color: #2c3e50;">')
+                .replace(/<b>/g, '<b style="font-weight: bold; color: #2c3e50;">')
+                .replace(/<em>/g, '<em style="font-style: italic;">')
+                .replace(/<i>/g, '<i style="font-style: italic;">')
+                .replace(/<u>/g, '<u style="text-decoration: underline;">')
+                .replace(/<a href="([^"]*)"[^>]*>/g, '<a href="$1" target="_blank" rel="noopener" style="color: #FF6600; text-decoration: underline;">');
+            
+            // Add click handlers to links
+            const links = viewOnlyContent.querySelectorAll('a');
+            links.forEach(link => {
+                if (!link.getAttribute('href') || link.getAttribute('href') === '#') {
+                    link.style.color = '#dc3545';
+                    link.style.cursor = 'not-allowed';
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        showToast('लिंक उपलब्ध नाही', 'warning');
+                    });
+                }
+            });
+        }
+        <?php endif; ?>
     });
 </script>
 

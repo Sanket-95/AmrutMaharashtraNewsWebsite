@@ -115,7 +115,51 @@ $meta_description = htmlspecialchars($meta_description . '...');
 
 // Also fix title if needed
 $meta_title = htmlspecialchars($news['title']);
-// ============ END OG TAGS CONFIGURATION ============
+
+// Function to sanitize and format rich text content for display
+function formatRichTextForDisplay($content) {
+    // Decode HTML entities
+    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    
+    // Remove script tags and other dangerous elements
+    $content = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $content);
+    $content = preg_replace('/<iframe\b[^>]*>(.*?)<\/iframe>/is', '', $content);
+    $content = preg_replace('/<object\b[^>]*>(.*?)<\/object>/is', '', $content);
+    $content = preg_replace('/<embed\b[^>]*>(.*?)<\/embed>/is', '', $content);
+    $content = preg_replace('/on\w+=\s*"[^"]*"/i', '', $content);
+    $content = preg_replace('/on\w+=\s*\'[^\']*\'/i', '', $content);
+    
+    // Allow only safe tags
+    $allowed_tags = '<br><p><strong><b><em><i><u><a><ul><ol><li><span><div><h1><h2><h3><h4><h5><h6>';
+    $content = strip_tags($content, $allowed_tags);
+    
+    // Clean up attributes on allowed tags
+    $content = preg_replace_callback('/(<[^>]+)/', function($matches) {
+        $tag = $matches[1];
+        // For anchor tags, keep only href, title, target, rel
+        if (preg_match('/^<a/i', $tag)) {
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*\s*=\s*"[^"]*")/i', '', $tag);
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*\s*=\s*\'[^\']*\')/i', '', $tag);
+            $tag = preg_replace('/(\s(?!href|title|target|rel)[a-z][a-z0-9]*)/i', '', $tag);
+            // Ensure target="_blank" and rel="noopener" for external links
+            if (!str_contains($tag, 'target=')) {
+                $tag = str_replace('<a', '<a target="_blank" rel="noopener"', $tag);
+            }
+        }
+        // For other tags, remove all attributes
+        else {
+            $tag = preg_replace('/\s[a-z][a-z0-9]*\s*=\s*"[^"]*"/i', '', $tag);
+            $tag = preg_replace('/\s[a-z][a-z0-9]*\s*=\s*\'[^\']*\'/i', '', $tag);
+            $tag = preg_replace('/\s[a-z][a-z0-9]*/i', '', $tag);
+        }
+        return $tag;
+    }, $content);
+    
+    return $content;
+}
+
+// Format the content for display
+$formatted_content = formatRichTextForDisplay($news['content']);
 
 // COMMENT PAGINATION CONFIGURATION
 $comments_per_page = 5; // Show only 5 comments per page
@@ -168,7 +212,9 @@ $marathi_categories = [
     'tourism' => 'पर्यटन',
     'amrut_service' => 'अमृत सेवा कार्य',
     'about_us' => 'आमच्या दिशयी',
-    'home' => 'मुख्य पृष्ठ'
+    'home' => 'मुख्य पृष्ठ',
+    'news' => 'वार्ता',
+    'articles' => 'लेख'
 ];
 
 // Get Marathi category name
@@ -247,6 +293,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     
+    <!-- Include Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Khand:wght@400;500;600&display=swap" rel="stylesheet">
+    
     <!-- Hidden OG image for better WhatsApp sharing -->
     <div class="og-image-placeholder" style="display:none;">
         <img src="<?php echo htmlspecialchars($share_image_url); ?>" 
@@ -258,7 +307,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         .news-detail-container {
             max-width: 1200px;
             margin: 30px auto;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Mukta', sans-serif;
         }
         
         .news-header {
@@ -279,6 +328,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             line-height: 1.4;
             margin: 20px 0;
             font-size: 2rem;
+            font-family: 'Khand', sans-serif;
         }
         
         .news-meta {
@@ -503,13 +553,75 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             font-size: 14px;
         }
         
+        /* Rich Text Content Styling */
         .news-content {
             line-height: 1.8;
             font-size: 18px;
             color: #333;
             text-align: justify;
             margin-top: 25px;
+            font-family: 'Mukta', sans-serif;
         }
+        
+        .news-content p {
+            margin-bottom: 1.5em;
+        }
+        
+        .news-content strong,
+        .news-content b {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .news-content em,
+        .news-content i {
+            font-style: italic;
+        }
+        
+        .news-content u {
+            text-decoration: underline;
+        }
+        
+        .news-content a {
+            color: #FF6600;
+            text-decoration: underline;
+            transition: all 0.3s ease;
+        }
+        
+        .news-content a:hover {
+            color: #FF8C00;
+            text-decoration: underline;
+        }
+        
+        .news-content ul,
+        .news-content ol {
+            padding-left: 20px;
+            margin-bottom: 1.5em;
+        }
+        
+        .news-content li {
+            margin-bottom: 0.5em;
+        }
+        
+        .news-content h1,
+        .news-content h2,
+        .news-content h3,
+        .news-content h4,
+        .news-content h5,
+        .news-content h6 {
+            font-weight: bold;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #2c3e50;
+            font-family: 'Khand', sans-serif;
+        }
+        
+        .news-content h1 { font-size: 2rem; }
+        .news-content h2 { font-size: 1.75rem; }
+        .news-content h3 { font-size: 1.5rem; }
+        .news-content h4 { font-size: 1.25rem; }
+        .news-content h5 { font-size: 1.1rem; }
+        .news-content h6 { font-size: 1rem; }
         
         .news-summary {
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
@@ -744,6 +856,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             margin-bottom: 30px;
             position: relative;
             padding-bottom: 10px;
+            font-family: 'Khand', sans-serif;
         }
         
         .section-title:after {
@@ -851,7 +964,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         /* Custom Toastify styles */
         .custom-toast {
             border-radius: 8px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Mukta', sans-serif;
             font-size: 14px;
             padding: 15px 20px;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
@@ -1142,11 +1255,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             </div>
         </div>
 
-        <!-- Main Content -->
+        <!-- Main Content with Rich Text Formatting -->
         <div class="news-content">
-            <?php
-            echo  nl2br(htmlspecialchars($news['content']));
-            ?>
+            <?php echo $formatted_content; ?>
         </div>
 
         <!-- Social Share Section -->
@@ -1564,6 +1675,28 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         img.src = url;
     }
     
+    // Function to initialize rich text content links
+    function initializeContentLinks() {
+        const contentContainer = document.querySelector('.news-content');
+        if (contentContainer) {
+            const links = contentContainer.querySelectorAll('a');
+            links.forEach(link => {
+                if (!link.hasAttribute('target')) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener');
+                }
+                if (!link.hasAttribute('href') || link.getAttribute('href') === '#') {
+                    link.style.color = '#dc3545';
+                    link.style.cursor = 'not-allowed';
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        showToast('लिंक उपलब्ध नाही', 'warning');
+                    });
+                }
+            });
+        }
+    }
+    
     // Handle comment form submission with AJAX
     document.getElementById('commentForm').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -1755,6 +1888,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         // Initialize meta tags
         updateMetaTags();
+        
+        // Initialize rich text content links
+        initializeContentLinks();
     });
     
     // Function to update meta tags for social sharing
