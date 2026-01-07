@@ -988,6 +988,56 @@ include 'components/login_navbar.php';
         }
         
         /* Existing CSS remains the same, just add above styles */
+        /* Add to existing CSS in newsapproval_details.php */
+
+/* Fix Quill.js link tooltip positioning */
+.ql-tooltip {
+    position: fixed !important;
+    z-index: 9999 !important;
+    max-width: 400px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: auto !important;
+    bottom: 100px !important;
+}
+
+/* Make editor container taller with scrolling */
+#editor-container {
+    height: 500px !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+#editor-container .ql-editor {
+    max-height: 450px !important;
+    overflow-y: auto !important;
+    padding: 15px !important;
+}
+
+/* Ensure editor content has enough space at bottom */
+#editor-container .ql-editor {
+    padding-bottom: 150px !important;
+}
+
+/* Mobile responsive fix */
+@media (max-width: 768px) {
+    .ql-tooltip {
+        width: 90% !important;
+        left: 5% !important;
+        right: 5% !important;
+        transform: none !important;
+        bottom: 80px !important;
+    }
+    
+    #editor-container {
+        height: 400px !important;
+    }
+    
+    #editor-container .ql-editor {
+        max-height: 350px !important;
+    }
+}
     </style>
 </head>
 <body class="<?php echo $edit_mode ? 'edit-mode' : 'view-mode'; ?>">
