@@ -1306,13 +1306,13 @@ include 'components/login_navbar.php';
                                 <?php if ($edit_mode): ?>
                                 <!-- Rich Text Editor for Edit Mode -->
                                 <div id="editor-container" style="height: 400px; border: 2px solid #FFA500;">
-                                    <?php echo htmlspecialchars_decode($news['content']); ?>
+                                    <?php echo htmlspecialchars_decode($news['content'], ENT_QUOTES); ?>
                                 </div>
                                 <textarea id="content" name="content" style="display: none;"></textarea>
                                 <?php else: ?>
                                 <!-- Read-only view for non-edit mode -->
                                 <div class="ql-editor-viewonly">
-                                    <?php echo htmlspecialchars_decode($news['content']); ?>
+                                    <?php echo htmlspecialchars_decode($news['content'], ENT_QUOTES); ?>
                                 </div>
                                 <?php endif; ?>
                             </div>
@@ -1568,11 +1568,14 @@ include 'components/login_navbar.php';
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
+    // Make quill variable global so it can be accessed in functions
+    let quill = null;
+
     // Initialize Quill Editor if in edit mode
     <?php if ($edit_mode): ?>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Quill editor
-        const quill = new Quill('#editor-container', {
+        quill = new Quill('#editor-container', {
             theme: 'snow',
             modules: {
                 toolbar: [
@@ -1588,22 +1591,19 @@ include 'components/login_navbar.php';
             scrollingContainer: '#editor-container'
         });
         
-        // Set editor content
-        quill.root.innerHTML = `<?php echo addslashes(htmlspecialchars_decode($news['content'])); ?>`;
+        // Set editor content - ensure it's properly decoded
+        const initialContent = `<?php 
+            // Use htmlspecialchars_decode to properly handle HTML content
+            echo addslashes(htmlspecialchars_decode($news['content'], ENT_QUOTES));
+        ?>`;
+        quill.root.innerHTML = initialContent;
         
         // Update hidden textarea before form submission
         const form = document.getElementById('mainForm');
         form.addEventListener('submit', function(e) {
             const hiddenInput = document.getElementById('content');
-            hiddenInput.value = quill.root.innerHTML;
-            
-            // Validate content is not empty
-            const plainText = quill.getText().trim();
-            if (plainText.length === 0) {
-                e.preventDefault();
-                showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
-                quill.focus();
-                return false;
+            if (hiddenInput && quill) {
+                hiddenInput.value = quill.root.innerHTML;
             }
             
             return true;
@@ -1833,6 +1833,24 @@ include 'components/login_navbar.php';
             return;
         }
         
+        <?php if ($edit_mode): ?>
+        // Ensure Quill content is transferred to hidden field
+        if (quill) {
+            const hiddenContent = document.getElementById('content');
+            if (hiddenContent) {
+                hiddenContent.value = quill.root.innerHTML;
+            }
+            
+            // Validate content is not empty
+            const plainText = quill.getText().trim();
+            if (plainText.length === 0) {
+                showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
+                quill.focus();
+                return;
+            }
+        }
+        <?php endif; ?>
+        
         // Set the hidden field to indicate approve after save
         document.getElementById('approveAfterSave').value = '1';
         
@@ -1855,6 +1873,24 @@ include 'components/login_navbar.php';
         if (!validateImages()) {
             return;
         }
+        
+        <?php if ($edit_mode): ?>
+        // Ensure Quill content is transferred to hidden field
+        if (quill) {
+            const hiddenContent = document.getElementById('content');
+            if (hiddenContent) {
+                hiddenContent.value = quill.root.innerHTML;
+            }
+            
+            // Validate content is not empty
+            const plainText = quill.getText().trim();
+            if (plainText.length === 0) {
+                showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
+                quill.focus();
+                return;
+            }
+        }
+        <?php endif; ?>
         
         // Set the hidden field to indicate disapprove after save
         document.getElementById('approveAfterSave').value = '2';
@@ -1973,14 +2009,25 @@ include 'components/login_navbar.php';
                         return false;
                     }
                     
-                    // Get content from hidden textarea (set by Quill editor)
-                    const content = document.getElementById('content');
-                    if (content && !content.value.trim()) {
-                        e.preventDefault();
-                        showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
-                        <?php if ($edit_mode): ?>quill.focus();<?php endif; ?>
-                        return false;
+                    // Get content from Quill editor if in edit mode
+                    <?php if ($edit_mode): ?>
+                    if (quill) {
+                        // Update hidden textarea before validation
+                        const hiddenContent = document.getElementById('content');
+                        if (hiddenContent) {
+                            hiddenContent.value = quill.root.innerHTML;
+                        }
+                        
+                        // Validate content is not empty
+                        const plainText = quill.getText().trim();
+                        if (plainText.length === 0) {
+                            e.preventDefault();
+                            showToast("कृपया बातमी विषय प्रविष्ट करा", "error");
+                            quill.focus();
+                            return false;
+                        }
                     }
+                    <?php endif; ?>
                     
                     const approveAfterSave = document.getElementById('approveAfterSave').value;
                     if (approveAfterSave === '1') {
