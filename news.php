@@ -118,7 +118,7 @@ $meta_title = htmlspecialchars($news['title']);
 
 // Function to sanitize and format rich text content for display
 function formatRichTextForDisplay($content) {
-    // Decode HTML entities
+    // Decode HTML entities first
     $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     
     // Remove script tags and other dangerous elements
@@ -128,10 +128,34 @@ function formatRichTextForDisplay($content) {
     $content = preg_replace('/<embed\b[^>]*>(.*?)<\/embed>/is', '', $content);
     $content = preg_replace('/on\w+=\s*"[^"]*"/i', '', $content);
     $content = preg_replace('/on\w+=\s*\'[^\']*\'/i', '', $content);
+    $content = preg_replace('/style\s*=\s*"[^"]*"/i', '', $content);
+    $content = preg_replace('/style\s*=\s*\'[^\']*\'/i', '', $content);
     
-    // Allow only safe tags
-    $allowed_tags = '<br><p><strong><b><em><i><u><a><ul><ol><li><span><div><h1><h2><h3><h4><h5><h6>';
+    // Allow safe HTML tags
+    $allowed_tags = '<p><br><br/><br /><strong><b><em><i><u><a><ul><ol><li><span><div><h1><h2><h3><h4><h5><h6>';
     $content = strip_tags($content, $allowed_tags);
+    
+    // Preserve manual paragraph spacing - convert multiple line breaks to paragraph breaks
+    // First, if content already has <p> tags, clean them up
+    if (strpos($content, '<p>') !== false || strpos($content, '</p>') !== false) {
+        // Remove empty paragraphs
+        $content = preg_replace('/<p>\s*<\/p>/', '', $content);
+        // Ensure proper spacing
+        $content = preg_replace('/<\/p>\s*<p>/', '</p><p>', $content);
+    } else {
+        // If no <p> tags, convert manual spacing to paragraphs
+        // Split by multiple newlines (2 or more)
+        $paragraphs = preg_split('/\n\s*\n/', trim($content));
+        $content = '';
+        foreach ($paragraphs as $paragraph) {
+            $trimmed = trim($paragraph);
+            if (!empty($trimmed)) {
+                // Convert single line breaks within paragraph to <br>
+                $paragraph_with_breaks = nl2br($trimmed);
+                $content .= '<p>' . $paragraph_with_breaks . '</p>' . "\n";
+            }
+        }
+    }
     
     // Clean up attributes on allowed tags
     $content = preg_replace_callback('/(<[^>]+)/', function($matches) {
@@ -155,7 +179,11 @@ function formatRichTextForDisplay($content) {
         return $tag;
     }, $content);
     
-    return $content;
+    // Final cleanup - remove extra whitespace
+    $content = preg_replace('/\s+/', ' ', $content);
+    $content = preg_replace('/>\s+</', '><', $content);
+    
+    return trim($content);
 }
 
 // Format the content for display
@@ -312,8 +340,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         .news-header {
             border-bottom: 3px solid #ff6600;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .news-publish {
@@ -325,17 +353,21 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         .news-title {
             color: #2c3e50;
             font-weight: 700;
-            line-height: 1.4;
-            margin: 20px 0;
+            line-height: 1.3;
+            margin: 5px 0 15px 0;
             font-size: 2rem;
             font-family: 'Khand', sans-serif;
+        }
+        
+        /* DESKTOP META SECTION - After title, before summary */
+        .desktop-meta-section {
+            margin-bottom: 20px;
         }
         
         .news-meta {
             background: #f8f9fa;
             padding: 15px;
             border-radius: 8px;
-            margin-bottom: 20px;
             position: relative;
         }
         
@@ -565,6 +597,12 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         .news-content p {
             margin-bottom: 1.5em;
+            text-align: justify;
+            text-indent: 40px;
+        }
+        
+        .news-content p:first-of-type {
+            text-indent: 0;
         }
         
         .news-content strong,
@@ -677,7 +715,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         .breadcrumb {
             background: transparent;
-            padding: 15px 0;
+            padding: 2px 0;
         }
         
         .breadcrumb-item a {
@@ -990,7 +1028,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             color: #212529;
         }
         
-        /* Mobile responsive adjustments */
+        /* MOBILE RESPONSIVE ADJUSTMENTS */
         @media (max-width: 768px) {
             .news-title {
                 font-size: 1.5rem;
@@ -1000,19 +1038,78 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 font-size: 16px;
             }
             
+            .news-content p {
+                text-indent: 30px;
+            }
+            
             .share-btn {
                 width: 45px;
                 height: 45px;
                 font-size: 18px;
             }
             
-            .news-meta .meta-item {
-                display: block;
-                margin: 5px 0;
-                text-align: center;
+            /* MOBILE META SECTION - After content, before share section */
+            .mobile-news-meta {
+                padding: 12px;
+                margin: 25px 0 15px 0;
+                background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+                border-radius: 12px;
+                border: 1px solid rgba(255, 102, 0, 0.1);
             }
             
-            .meta-divider {
+            .mobile-news-meta .text-center {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+                row-gap: 10px;
+                align-items: center;
+            }
+            
+            .mobile-news-meta .meta-item {
+                display: flex;
+                align-items: center;
+                margin: 0;
+                padding: 6px 12px;
+                background: white;
+                border-radius: 20px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+                border: 1px solid rgba(255, 102, 0, 0.2);
+                min-height: 36px;
+                white-space: nowrap;
+                cursor: default;
+            }
+            
+            .mobile-news-meta .meta-item i {
+                font-size: 14px;
+                margin-right: 6px;
+                color: #ff6600;
+            }
+            
+            .mobile-news-meta .meta-item strong {
+                font-size: 12px;
+                margin-right: 4px;
+                color: #555;
+                display: inline;
+            }
+            
+            .mobile-news-meta .meta-item .meta-value {
+                font-size: 12px;
+                color: #ff6600;
+                font-weight: 500;
+            }
+            
+            /* Hide tooltips on mobile (touch devices) */
+            .mobile-news-meta .meta-tooltip {
+                display: none;
+            }
+            
+            .mobile-meta-divider {
+                display: none !important;
+            }
+            
+            /* Ensure items don't break into new lines individually */
+            .mobile-news-meta .meta-item br {
                 display: none;
             }
             
@@ -1057,9 +1154,14 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             }
         }
         
+        /* Adjust for very small screens */
         @media (max-width: 576px) {
             .related-news-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .news-content p {
+                text-indent: 20px;
             }
             
             /* DUAL IMAGE SMALL MOBILE ADJUSTMENTS */
@@ -1074,6 +1176,102 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             .news-dual-image, .news-single-image {
                 max-height: 230px;
             }
+            
+            /* Mobile meta section for very small screens */
+            .mobile-news-meta {
+                padding: 10px;
+            }
+            
+            .mobile-news-meta .meta-item {
+                padding: 5px 10px;
+                min-height: 32px;
+            }
+            
+            .mobile-news-meta .meta-item i {
+                font-size: 12px;
+                margin-right: 4px;
+            }
+            
+            .mobile-news-meta .meta-item strong {
+                font-size: 13px;
+            }
+            
+            .mobile-news-meta .meta-item .meta-value {
+                font-size: 13px;
+            }
+            
+            .mobile-news-meta .text-center {
+                gap: 6px;
+                row-gap: 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .mobile-news-meta .text-center {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            .mobile-news-meta .meta-item {
+                width: 100%;
+                justify-content: center;
+                padding: 8px 5px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .mobile-news-meta .text-center {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            
+            .mobile-news-meta .meta-item {
+                justify-content: flex-start;
+                padding: 6px 10px;
+            }
+        }
+        
+        /* Desktop view - Show desktop meta, hide mobile meta */
+        @media (min-width: 769px) {
+            .desktop-meta-section {
+                display: block;
+            }
+            
+            .mobile-meta-section {
+                display: none;
+            }
+            
+            .news-meta .text-center {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .news-meta .meta-item {
+                display: inline-flex;
+                align-items: center;
+                margin: 0 15px;
+                padding: 5px 10px;
+            }
+            
+            .meta-divider {
+                display: inline-block;
+                color: #dee2e6;
+                font-weight: bold;
+            }
+        }
+        
+        /* Mobile view - Hide desktop meta, show mobile meta */
+        @media (max-width: 768px) {
+            .desktop-meta-section {
+                display: none;
+            }
+            
+            .mobile-meta-section {
+                display: block;
+            }
         }
         
         /* Loading spinner */
@@ -1081,6 +1279,52 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             width: 1rem;
             height: 1rem;
             border-width: 0.15em;
+        }
+        
+        /* Floating Mobile Meta Bar (optional) */
+        .floating-meta-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 8px 0;
+            z-index: 1050;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: none;
+            border-top: 2px solid #ff6600;
+        }
+        
+        .floating-meta-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+        
+        .floating-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            opacity: 0.9;
+        }
+        
+        .floating-meta-item i {
+            color: #ff6600;
+            font-size: 14px;
+        }
+        
+        .floating-meta-divider {
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .floating-meta-bar {
+                display: none; /* Initially hidden, shown via JS */
+            }
         }
     </style>
 </head>
@@ -1106,60 +1350,62 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <!-- News Header -->
         <div class="news-header">
             <h1 class="news-title"><?php echo htmlspecialchars($news['title']); ?></h1>     
-        </div>
-        
-        <!-- News Meta Information -->
-        <div class="news-meta">
-            <div class="text-center">
-                <!-- Publisher -->
-                <span class="meta-item">
-                    <i class="bi bi-person-fill"></i>
-                    <strong>Publisher:</strong>
-                    <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
-                    <span class="meta-tooltip">News publisher name</span>
-                </span>
-                
-                <span class="meta-divider">|</span>
-                
-                <!-- Date -->
-                <span class="meta-item">
-                    <i class="bi bi-calendar-event"></i>
-                    <strong>Date:</strong>
-                    <span class="meta-value"><?php echo $published_date; ?></span>
-                    <span class="meta-tooltip">News publication date</span>
-                </span>
-                
-                <span class="meta-divider">|</span>
-                
-                <!-- Time -->
-                <span class="meta-item">
-                    <i class="bi bi-clock"></i>
-                    <strong>Time:</strong>
-                    <span class="meta-value"><?php echo $published_time; ?></span>
-                    <span class="meta-tooltip">News publication time</span>
-                </span>
-                
-                <span class="meta-divider">|</span>
-                
-                <!-- Views -->
-                <span class="meta-item">
-                    <i class="bi bi-eye-fill"></i>
-                    <strong>Views:</strong>
-                    <span class="meta-value"><?php echo number_format($news['view']); ?></span>
-                    <span class="meta-tooltip">Number of times this news has been viewed</span>
-                </span>
-                
-                <?php if (!empty($news['district_name'])): ?>
-                <span class="meta-divider">|</span>
-                
-                <!-- District -->
-                <span class="meta-item">
-                    <i class="bi bi-geo-alt"></i>
-                    <strong>District:</strong>
-                    <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
-                    <span class="meta-tooltip">Related district of the news</span>
-                </span>
-                <?php endif; ?>
+            
+            <!-- DESKTOP META SECTION - After title, before summary -->
+            <div class="desktop-meta-section">
+                <div class="news-meta">
+                    <div class="text-center">
+                        <!-- Publisher -->
+                        <span class="meta-item">
+                            <i class="bi bi-person-fill"></i>
+                            <strong>Publisher:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                            <span class="meta-tooltip">News publisher name</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Date -->
+                        <span class="meta-item">
+                            <i class="bi bi-calendar-event"></i>
+                            <strong>Date:</strong>
+                            <span class="meta-value"><?php echo $published_date; ?></span>
+                            <span class="meta-tooltip">News publication date</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Time -->
+                        <span class="meta-item">
+                            <i class="bi bi-clock"></i>
+                            <strong>Time:</strong>
+                            <span class="meta-value"><?php echo $published_time; ?></span>
+                            <span class="meta-tooltip">News publication time</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Views -->
+                        <span class="meta-item">
+                            <i class="bi bi-eye-fill"></i>
+                            <strong>Views:</strong>
+                            <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                            <span class="meta-tooltip">Number of times this news has been viewed</span>
+                        </span>
+                        
+                        <?php if (!empty($news['district_name'])): ?>
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- District -->
+                        <span class="meta-item">
+                            <i class="bi bi-geo-alt"></i>
+                            <strong>District:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                            <span class="meta-tooltip">Related district of the news</span>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1258,6 +1504,63 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <!-- Main Content with Rich Text Formatting -->
         <div class="news-content">
             <?php echo $formatted_content; ?>
+        </div>
+
+        <!-- MOBILE META SECTION - After content, before social share -->
+        <div class="mobile-meta-section">
+            <div class="mobile-news-meta">
+                <div class="text-center">
+                    <!-- Publisher -->
+                    <span class="meta-item">
+                        <i class="bi bi-person-fill"></i>
+                        <strong>Publisher:</strong>
+                        <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                        <span class="meta-tooltip">News publisher name</span>
+                    </span>
+                    
+                    <span class="mobile-meta-divider">|</span>
+                    
+                    <!-- Date -->
+                    <span class="meta-item">
+                        <i class="bi bi-calendar-event"></i>
+                        <strong>Date:</strong>
+                        <span class="meta-value"><?php echo $published_date; ?></span>
+                        <span class="meta-tooltip">News publication date</span>
+                    </span>
+                    
+                    <span class="mobile-meta-divider">|</span>
+                    
+                    <!-- Time -->
+                    <span class="meta-item">
+                        <i class="bi bi-clock"></i>
+                        <strong>Time:</strong>
+                        <span class="meta-value"><?php echo $published_time; ?></span>
+                        <span class="meta-tooltip">News publication time</span>
+                    </span>
+                    
+                    <span class="mobile-meta-divider">|</span>
+                    
+                    <!-- Views -->
+                    <span class="meta-item">
+                        <i class="bi bi-eye-fill"></i>
+                        <strong>Views:</strong>
+                        <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                        <span class="meta-tooltip">Number of times this news has been viewed</span>
+                    </span>
+                    
+                    <?php if (!empty($news['district_name'])): ?>
+                    <span class="mobile-meta-divider">|</span>
+                    
+                    <!-- District -->
+                    <span class="meta-item">
+                        <i class="bi bi-geo-alt"></i>
+                        <strong>District:</strong>
+                        <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                        <span class="meta-tooltip">Related district of the news</span>
+                    </span>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
         <!-- Social Share Section -->
@@ -1484,6 +1787,27 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Floating Mobile Meta Bar -->
+    <!-- <div class="floating-meta-bar d-lg-none">
+        <div class="container">
+            <div class="floating-meta-content">
+                <span class="floating-meta-item">
+                    <i class="bi bi-eye-fill"></i> <?php echo number_format($news['view']); ?>
+                </span>
+                <span class="floating-meta-divider">•</span>
+                <span class="floating-meta-item">
+                    <i class="bi bi-calendar-event"></i> <?php echo $published_date; ?>
+                </span>
+                <?php if (!empty($news['district_name'])): ?>
+                <span class="floating-meta-divider">•</span>
+                <span class="floating-meta-item">
+                    <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($news['district_name']); ?>
+                </span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div> -->
 
     <script>
     function scrollToName() {
@@ -1811,6 +2135,18 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         }
     });
     
+    // Show floating meta bar after scrolling past news
+    window.addEventListener('scroll', function() {
+        const floatingBar = document.querySelector('.floating-meta-bar');
+        if (floatingBar && window.innerWidth < 768) {
+            if (window.scrollY > 400) {
+                floatingBar.style.display = 'block';
+            } else {
+                floatingBar.style.display = 'none';
+            }
+        }
+    });
+    
     // Initialize on DOM load
     document.addEventListener('DOMContentLoaded', function() {
         // Check cover image
@@ -1923,12 +2259,12 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     </script>
 
     <!-- Back to Top Button -->
-    <button onclick="scrollToTop()" 
+    <!-- <button onclick="scrollToTop()" 
             id="scrollToTop" 
             class="btn btn-primary rounded-circle position-fixed"
             style="bottom: 30px; right: 30px; width: 50px; height: 50px; display: none; z-index: 1000;">
         <i class="bi bi-arrow-up"></i>
-    </button>
+    </button> -->
     <script>
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
@@ -1937,6 +2273,25 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     window.addEventListener('load', function () {
         window.scrollTo(0, 0);
     });
+    
+    // Back to top button functionality
+    window.addEventListener('scroll', function() {
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        if (scrollToTopBtn) {
+            if (window.scrollY > 300) {
+                scrollToTopBtn.style.display = 'block';
+            } else {
+                scrollToTopBtn.style.display = 'none';
+            }
+        }
+    });
+    
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
     </script>
 </body>
 </html>
