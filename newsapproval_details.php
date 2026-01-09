@@ -540,9 +540,10 @@ function getMarathiStatusName($status) {
 
 function getMarathiCategoryName($category) {
     $category_map = [
-        'home' => 'मुख्यपृष्ठ',
+        // 'home' => 'मुख्यपृष्ठ',
         'amrut_events' => 'अमृत घडामोडी',
         'beneficiary_story' => 'लाभार्थी स्टोरी',
+        'blog' => 'ब्लॉग',
         'today_special' => 'दिनविशेष',
         'successful_entrepreneur' => 'यशस्वी उद्योजक',
         'words_amrut' => 'शब्दांमृत',
@@ -632,9 +633,10 @@ function getMarathiDistrictName($districtValue) {
 
 // Get all categories for dropdown
 $categories = [
-    'home' => 'मुख्यपृष्ठ',
+    // 'home' => 'मुख्यपृष्ठ',
     'amrut_events' => 'अमृत घडामोडी',
     'beneficiary_story' => 'लाभार्थी स्टोरी',
+    'blog' => 'ब्लॉग',
     'today_special' => 'दिनविशेष',
     'successful_entrepreneur' => 'यशस्वी उद्योजक',
     'words_amrut' => 'शब्दांमृत',
