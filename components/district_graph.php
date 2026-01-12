@@ -123,6 +123,12 @@ arsort($english_district_totals);
 $district_labels = array_keys($district_totals);
 $news_counts = array_values($district_totals);
 
+// Find the longest district name for dynamic sizing
+$max_label_length = 0;
+foreach ($district_labels as $label) {
+    $max_label_length = max($max_label_length, mb_strlen($label, 'UTF-8'));
+}
+
 // Prepare English data for PDF
 $english_district_labels = array_keys($english_district_totals);
 $english_news_counts = array_values($english_district_totals);
@@ -152,7 +158,11 @@ $allCategories = array_unique($allCategories);
 // Calculate dynamic height based on number of districts
 $district_count = count($districts);
 $chart_height = max(400, $district_count * 40); // Minimum 400px, 40px per district
-$chart_wrapper_min_width = max(600, $district_count * 80); // Adjust width based on districts
+
+// Calculate dynamic width based on longest label and number of districts
+$base_width_per_district = 70; // Base width per district
+$additional_width_for_long_labels = min(30, ($max_label_length - 10) * 3); // Extra width for long labels
+$chart_wrapper_min_width = max(600, $district_count * ($base_width_per_district + $additional_width_for_long_labels));
 
 // For PDF - Create English version of data
 $region_names = [
@@ -294,6 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const toDate = "<?php echo date('d M Y', strtotime($to_date)); ?>";
     const totalDistricts = <?php echo count($districts); ?>;
     const totalNews = <?php echo array_sum($news_counts); ?>;
+    const maxLabelLength = <?php echo $max_label_length; ?>;
     
     // English data for PDF
     const englishDistrictLabels = <?php echo json_encode($english_district_labels); ?>;
@@ -306,6 +317,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check if we have many districts (for mobile optimization)
     const isManyDistricts = districtLabels.length > 15;
+    
+    // Calculate dynamic settings based on number of districts and label length
+    const maxTicksLimitDesktop = Math.min(40, districtLabels.length); // Show all labels up to 40
+    const maxTicksLimitMobile = Math.min(30, districtLabels.length); // Show all labels up to 30 on mobile
+    
+    // Calculate font size based on longest label
+    const calculateFontSize = (isMobile) => {
+        if (isMobile) {
+            // Mobile: larger base font
+            return Math.max(10, 12 - Math.max(0, maxLabelLength - 12) * 0.3);
+        } else {
+            // Desktop: adjust based on label length
+            if (maxLabelLength <= 10) return 12;
+            if (maxLabelLength <= 15) return 11;
+            if (maxLabelLength <= 20) return 10;
+            return 9; // For very long labels like "चत्रपती संभाजीनगर"
+        }
+    };
     
     // Generate colors for categories
     const categoryColors = [
@@ -356,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const { ctx, data, chartArea: { top, bottom, left, right }, scales } = chart;
             
             ctx.save();
-            ctx.font = 'bold 12px Arial';
+            ctx.font = 'bold 13px Arial, sans-serif';
             ctx.fillStyle = '#333';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
@@ -425,7 +454,251 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Create main chart for display (responsive - changes based on screen size)
+    // Custom plugin for PDF chart to show bar values
+    const pdfBarCountPlugin = {
+        id: 'pdfBarCountPlugin',
+        afterDatasetsDraw(chart, args, options) {
+            const { ctx, data, chartArea: { top, bottom, left, right }, scales } = chart;
+            
+            ctx.save();
+            ctx.font = 'bold 14px Arial, sans-serif';
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            
+            data.datasets.forEach((dataset, datasetIndex) => {
+                const meta = chart.getDatasetMeta(datasetIndex);
+                
+                meta.data.forEach((bar, index) => {
+                    const value = dataset.data[index];
+                    
+                    // Only show count if value > 0 and bar is visible
+                    if (value > 0) {
+                        const x = bar.x;
+                        const y = bar.y - 10; // Position above the bar
+                        
+                        // Check if bar is within chart area
+                        const barTop = bar.y;
+                        const barBottom = scales.y.getPixelForValue(0);
+                        
+                        // Only draw count if bar is tall enough
+                        if (barTop > top + 30 && barBottom > top + 30) {
+                            // Add background for better readability
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                            ctx.fillRect(x - 20, y - 20, 40, 20);
+                            
+                            // Draw border
+                            ctx.strokeStyle = '#ddd';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(x - 20, y - 20, 40, 20);
+                            
+                            // Draw the count
+                            ctx.fillStyle = '#333';
+                            ctx.fillText(value, x, y);
+                        }
+                    }
+                });
+            });
+            ctx.restore();
+        }
+    };
+    
+    // Function to create chart options
+    function getChartOptions(isMobile) {
+        const fontSize = calculateFontSize(isMobile);
+        const rotationAngle = isMobile ? 0 : 45;
+        const paddingBottom = isMobile ? 20 : (maxLabelLength > 15 ? 50 : 40);
+        
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: isMobile ? 'y' : 'x',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const district = context.label;
+                            const total = context.raw;
+                            return `एकूण बातम्या: ${total}`;
+                        },
+                        afterLabel: function(context) {
+                            const district = context.label;
+                            const categories = hoverData[district];
+                            
+                            if (!categories || categories.length === 0) {
+                                return '';
+                            }
+                            
+                            let tooltipText = '\nवर्गवार विभागणी:\n';
+                            const maxCategories = isMobile && window.innerWidth < 576 ? 5 : 10;
+                            const displayedCategories = categories.slice(0, maxCategories);
+                            const remaining = categories.length - maxCategories;
+                            
+                            displayedCategories.forEach((item, index) => {
+                                const color = categoryColorMap[item.category] || '#999';
+                                
+                                // Create colored square and category info
+                                tooltipText += `■ ${item.category}: ${item.count} बातम्या (${item.views} दृश्ये)\n`;
+                            });
+                            
+                            if (remaining > 0) {
+                                tooltipText += `... आणि ${remaining} अधिक वर्ग\n`;
+                            }
+                            return tooltipText;
+                        },
+                        footer: function(context) {
+                            const district = context[0].label;
+                            const total = context[0].raw;
+                            const categories = hoverData[district] || [];
+                            const totalViews = categories.reduce((sum, cat) => sum + (cat.views || 0), 0);
+                            
+                            if (selectedRegion === 'all') {
+                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews}`;
+                            } else {
+                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews} | प्रदेश: ${selectedRegion}`;
+                            }
+                        }
+                    },
+                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                    titleColor: '#fff',
+                    bodyColor: function(context) {
+                        if (context.dataIndex >= 0) {
+                            const district = districtLabels[context.dataIndex];
+                            const categories = hoverData[district] || [];
+                            const lineIndex = context.dataIndex - 1;
+                            
+                            if (lineIndex >= 0 && lineIndex < categories.length) {
+                                const category = categories[lineIndex].category;
+                                return categoryColorMap[category] || '#fff';
+                            }
+                        }
+                        return '#fff';
+                    },
+                    footerColor: '#36A2EB',
+                    padding: 12,
+                    displayColors: false,
+                    bodyFont: {
+                        size: isMobile && window.innerWidth < 576 ? 12 : 13,
+                        weight: '500',
+                        family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                    },
+                    titleFont: {
+                        size: isMobile && window.innerWidth < 576 ? 13 : 14,
+                        weight: '600',
+                        family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                    },
+                    footerFont: {
+                        size: isMobile && window.innerWidth < 576 ? 11 : 12,
+                        weight: '500',
+                        family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grace: '10%',
+                    grid: {
+                        drawBorder: false,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            if (Number.isInteger(value)) {
+                                return value;
+                            }
+                        },
+                        font: {
+                            size: isMobile && window.innerWidth < 576 ? 12 : 13,
+                            weight: '600',
+                            family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                        },
+                        maxTicksLimit: 8,
+                        padding: 8
+                    },
+                    title: {
+                        display: true,
+                        text: 'बातम्यांची संख्या',
+                        font: {
+                            size: isMobile && window.innerWidth < 576 ? 14 : 15,
+                            weight: '700',
+                            family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: fontSize,
+                            weight: '600',
+                            family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                        },
+                        maxRotation: rotationAngle,
+                        minRotation: rotationAngle,
+                        maxTicksLimit: isMobile ? maxTicksLimitMobile : maxTicksLimitDesktop,
+                        autoSkip: false,
+                        padding: 5,
+                        callback: function(value, index) {
+                            const label = this.getLabelForValue(value);
+                            
+                            // For very long labels, show full text with smaller font
+                            if (isMobile) {
+                                if (label.length > 12) {
+                                    return label.substring(0, 11) + '...';
+                                }
+                            } else {
+                                // Desktop: with 45 degree rotation, we can show more text
+                                if (label.length > 25) {
+                                    return label.substring(0, 24) + '...';
+                                }
+                            }
+                            return label;
+                        }
+                    },
+                    offset: true,
+                    afterFit: function(scale) {
+                        if (!isMobile) {
+                            // More height for long labels on desktop
+                            scale.height = maxLabelLength > 15 ? 100 : 80;
+                        }
+                    }
+                }
+            },
+            onClick: function(evt, elements) {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const district = districtLabels[index];
+                    console.log('Clicked on district:', district);
+                    // You could add functionality here to drill down to district details
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            },
+            // FIXED: Dynamic bar width based on number of districts
+            barPercentage: isMobile ? 
+                (districtLabels.length > 20 ? 0.8 : 0.9) : 
+                (districtLabels.length > 20 ? 0.6 : 0.7),
+            categoryPercentage: isMobile ? 
+                (districtLabels.length > 20 ? 0.85 : 0.9) : 
+                (districtLabels.length > 20 ? 0.7 : 0.8),
+            layout: {
+                padding: {
+                    bottom: paddingBottom
+                }
+            }
+        };
+    }
+    
+    // Create main chart for display
+    const isMobileInitial = window.innerWidth < 768;
     const chart = new Chart(ctx, {
         type: 'bar',
         plugins: [barCountPlugin],
@@ -451,162 +724,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 hoverBackgroundColor: '#1a6fb3'
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: window.innerWidth < 768 ? 'y' : 'x',
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const district = context.label;
-                            const total = context.raw;
-                            return `एकूण बातम्या: ${total}`;
-                        },
-                        afterLabel: function(context) {
-                            const district = context.label;
-                            const categories = hoverData[district];
-                            
-                            if (!categories || categories.length === 0) {
-                                return '';
-                            }
-                            
-                            let tooltipText = '\nवर्गवार विभागणी:\n';
-                            const maxCategories = window.innerWidth < 576 ? 5 : 10;
-                            const displayedCategories = categories.slice(0, maxCategories);
-                            const remaining = categories.length - maxCategories;
-                            
-                            displayedCategories.forEach((item, index) => {
-                                const color = categoryColorMap[item.category] || '#999';
-                                
-                                // Create colored square and category info
-                                tooltipText += `■ ${item.category}: ${item.count} बातम्या (${item.views} दृश्ये)\n`;
-                            });
-                            
-                            if (remaining > 0) {
-                                tooltipText += `... आणि ${remaining} अधिक वर्ग\n`;
-                            }
-                                            return tooltipText;
-                        },
-                        footer: function(context) {
-                            const district = context[0].label;
-                            const total = context[0].raw;
-                            const categories = hoverData[district] || [];
-                            const totalViews = categories.reduce((sum, cat) => sum + (cat.views || 0), 0);
-                            
-                            if (selectedRegion === 'all') {
-                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews}`;
-                            } else {
-                                return `${categories.length} वर्ग | एकूण दृश्ये: ${totalViews} | प्रदेश: ${selectedRegion}`;
-                            }
-                        }
-                    },
-                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                    titleColor: '#fff',
-                    bodyColor: function(context) {
-                        // Color each line based on category
-                        if (context.dataIndex >= 0) {
-                            const district = districtLabels[context.dataIndex];
-                            const categories = hoverData[district] || [];
-                            const lineIndex = context.dataIndex - 1; // Adjust for label line
-                            
-                            if (lineIndex >= 0 && lineIndex < categories.length) {
-                                const category = categories[lineIndex].category;
-                                return categoryColorMap[category] || '#fff';
-                            }
-                        }
-                        return '#fff';
-                    },
-                    footerColor: '#36A2EB',
-                    padding: 12,
-                    displayColors: false, // We'll handle colors manually
-                    bodyFont: {
-                        size: window.innerWidth < 576 ? 11 : 12
-                    },
-                    titleFont: {
-                        size: window.innerWidth < 576 ? 12 : 13
-                    },
-                    footerFont: {
-                        size: window.innerWidth < 576 ? 10 : 11
-                    }
-                },
-                title: {
-                    display: false,
-                    text: selectedRegion === 'all' ? 'सर्व प्रदेश - जिल्हावार बातमी वितरण' : selectedRegion + ' प्रदेश - जिल्हावार बातमी वितरण'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grace: '10%', // Add 10% grace at top to prevent cutting
-                    grid: {
-                        drawBorder: false,
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    },
-                    ticks: {
-                        callback: function(value) {
-                            if (Number.isInteger(value)) {
-                                return value;
-                            }
-                        },
-                        font: {
-                            size: window.innerWidth < 576 ? 10 : 11
-                        },
-                        maxTicksLimit: isManyDistricts ? 5 : 8,
-                        padding: 8
-                    },
-                    title: {
-                        display: true,
-                        text: 'बातम्यांची संख्या',
-                        font: {
-                            size: window.innerWidth < 576 ? 11 : 12
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: window.innerWidth < 576 ? 9 : 10
-                        },
-                        maxRotation: window.innerWidth < 768 ? 0 : 45,
-                        minRotation: 0,
-                        maxTicksLimit: isManyDistricts ? 15 : 30,
-                        padding: 5,
-                        callback: function(value, index) {
-                            const label = this.getLabelForValue(value);
-                            if (window.innerWidth < 576 && label.length > 12) {
-                                return label.substring(0, 10) + '...';
-                            }
-                            if (window.innerWidth < 768 && label.length > 15) {
-                                return label.substring(0, 13) + '...';
-                            }
-                            return label;
-                        }
-                    }
-                }
-            },
-            onClick: function(evt, elements) {
-                if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const district = districtLabels[index];
-                    console.log('Clicked on district:', district);
-                    // You could add functionality here to drill down to district details
-                }
-            },
-            animation: {
-                duration: 1000,
-                easing: 'easeOutQuart'
-            },
-            barPercentage: isManyDistricts ? 0.6 : 0.8,
-            categoryPercentage: isManyDistricts ? 0.7 : 0.9
-        }
+        options: getChartOptions(isMobileInitial)
     });
+    
+    // Force font updates after chart initialization
+    setTimeout(function() {
+        if (chart && chart.options && chart.options.scales) {
+            // Update X-axis font
+            if (chart.options.scales.x && chart.options.scales.x.ticks) {
+                const isMobile = window.innerWidth < 768;
+                const fontSize = calculateFontSize(isMobile);
+                chart.options.scales.x.ticks.font = {
+                    size: fontSize,
+                    weight: '600',
+                    family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                };
+            }
+            
+            // Update Y-axis font
+            if (chart.options.scales.y && chart.options.scales.y.ticks) {
+                chart.options.scales.y.ticks.font = {
+                    size: window.innerWidth < 768 ? 13 : 14,
+                    weight: '600',
+                    family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                };
+            }
+            
+            // Update Y-axis title font
+            if (chart.options.scales.y && chart.options.scales.y.title) {
+                chart.options.scales.y.title.font = {
+                    size: window.innerWidth < 768 ? 14 : 15,
+                    weight: '700',
+                    family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
+                };
+            }
+            
+            chart.update('none');
+        }
+    }, 100);
     
     // Create PDF chart instance (always desktop view)
     let pdfChart = null;
@@ -616,8 +771,14 @@ document.addEventListener('DOMContentLoaded', function() {
             pdfChart.destroy();
         }
         
+        // Calculate font size for PDF based on longest label
+        const pdfFontSize = maxLabelLength <= 10 ? 10 : 
+                           maxLabelLength <= 15 ? 9 : 
+                           maxLabelLength <= 20 ? 8 : 7;
+        
         pdfChart = new Chart(pdfCtx, {
             type: 'bar',
+            plugins: [pdfBarCountPlugin],
             data: {
                 labels: districtLabels,
                 datasets: [{
@@ -642,16 +803,13 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: false,
                 maintainAspectRatio: false,
-                indexAxis: 'x', // Always horizontal bars for PDF
+                indexAxis: 'x',
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
                         enabled: false
-                    },
-                    title: {
-                        display: false
                     }
                 },
                 scales: {
@@ -669,16 +827,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }
                             },
                             font: {
-                                size: 11
+                                size: 12,
+                                weight: '600',
+                                family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
                             },
-                            maxTicksLimit: isManyDistricts ? 5 : 8,
+                            maxTicksLimit: 8,
                             padding: 8
                         },
                         title: {
                             display: true,
                             text: 'बातम्यांची संख्या',
                             font: {
-                                size: 12
+                                size: 14,
+                                weight: '700',
+                                family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
                             }
                         }
                     },
@@ -688,25 +850,38 @@ document.addEventListener('DOMContentLoaded', function() {
                         },
                         ticks: {
                             font: {
-                                size: 9
+                                size: pdfFontSize,
+                                weight: '600',
+                                family: "'Segoe UI', 'Roboto', 'Arial', sans-serif"
                             },
                             maxRotation: 45,
-                            minRotation: 0,
-                            maxTicksLimit: isManyDistricts ? 15 : 30,
+                            minRotation: 45,
+                            maxTicksLimit: maxTicksLimitDesktop,
+                            autoSkip: false,
                             padding: 5,
                             callback: function(value, index) {
                                 const label = this.getLabelForValue(value);
-                                if (label.length > 15) {
-                                    return label.substring(0, 13) + '...';
+                                // PDF can handle longer labels with smaller font
+                                if (label.length > 30) {
+                                    return label.substring(0, 29) + '...';
                                 }
                                 return label;
                             }
+                        },
+                        offset: true,
+                        afterFit: function(scale) {
+                            scale.height = maxLabelLength > 15 ? 120 : 100;
                         }
                     }
                 },
-                animation: false, // No animation for PDF
-                barPercentage: isManyDistricts ? 0.6 : 0.8,
-                categoryPercentage: isManyDistricts ? 0.7 : 0.9
+                animation: false,
+                barPercentage: districtLabels.length > 20 ? 0.6 : 0.7,
+                categoryPercentage: districtLabels.length > 20 ? 0.7 : 0.8,
+                layout: {
+                    padding: {
+                        bottom: maxLabelLength > 15 ? 70 : 60
+                    }
+                }
             }
         });
     }
@@ -722,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
         this.disabled = true;
         
         try {
-            // Update PDF chart with current data (in case filters changed)
+            // Update PDF chart with current data
             createPdfChart();
             
             // Get PDF chart image data
@@ -733,31 +908,35 @@ document.addEventListener('DOMContentLoaded', function() {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             
+            // Calculate chart height based on label length
+            const baseChartHeight = 120;
+            const extraHeightForLongLabels = maxLabelLength > 15 ? 30 : 20;
+            const totalChartHeight = baseChartHeight + extraHeightForLongLabels;
+            
             // Add header
             pdf.setFontSize(20);
             pdf.setFont("helvetica", "bold");
-            pdf.setTextColor(13, 110, 253); // Primary blue color
+            pdf.setTextColor(13, 110, 253);
             
             pdf.text(pdfTitle, pageWidth / 2, 15, { align: 'center' });
             
             // Add date range
             pdf.setFontSize(12);
             pdf.setFont("helvetica", "normal");
-            pdf.setTextColor(108, 117, 125); // Gray color
+            pdf.setTextColor(108, 117, 125);
             pdf.text(`Date: ${pdfFromDate} to ${pdfToDate}`, pageWidth / 2, 22, { align: 'center' });
             
-            // Add summary info - FIXED: Show region info for "all" selection too
+            // Add summary info
             pdf.setFontSize(11);
-            pdf.setTextColor(33, 37, 41); // Dark color
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(33, 37, 41);
             
             const summaryY = 28;
             
-            // Always show first three summary lines
             pdf.text(`• Districts: ${totalDistricts}`, 20, summaryY);
             pdf.text(`• Total News: ${totalNews}`, pageWidth / 2, summaryY, { align: 'center' });
             pdf.text(`• Categories: ${allCategories.length}`, pageWidth - 20, summaryY, { align: 'right' });
             
-            // Add region info on a new line for both "all" and specific regions
             const regionY = summaryY + 6;
             if (selectedRegion === 'all') {
                 pdf.text(`• Region: All Regions`, pageWidth / 2, regionY, { align: 'center' });
@@ -766,94 +945,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 pdf.text(`• Region: ${regionName}`, pageWidth / 2, regionY, { align: 'center' });
             }
             
-            // Adjust chart size based on number of districts
-            let chartHeight = 100;
-            let chartY = 38;
-            
-            // Adjust height based on number of districts
-            if (totalDistricts <= 10) {
-                chartHeight = 80;
-            } else if (totalDistricts <= 20) {
-                chartHeight = 110;
-            } else if (totalDistricts <= 30) {
-                chartHeight = 130;
-            } else {
-                chartHeight = 150;
-            }
-            
-            // Adjust Y position based on whether we showed region info
-            chartY = regionY + 10; // Add some space after region info
-            
+            // Position chart with extra space for long labels
+            const chartY = regionY + 12;
             const chartWidth = pageWidth - 40;
-            pdf.addImage(pdfChartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
             
-            // Add data table if we have space
-            const tableStartY = chartY + chartHeight + 15;
+            // Add chart to PDF
+            pdf.addImage(pdfChartImage, 'PNG', 20, chartY, chartWidth, totalChartHeight);
             
-            if (tableStartY < pageHeight - 40 && englishDistrictLabels.length <= 25) {
-                // Add table header
+            // Add data table if space permits
+            const tableStartY = chartY + totalChartHeight + 15;
+            
+            if (tableStartY < pageHeight - 60 && englishDistrictLabels.length <= 12) {
                 pdf.setFontSize(10);
                 pdf.setFont("helvetica", "bold");
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFillColor(13, 110, 253);
                 
-                // Draw header background
                 pdf.rect(20, tableStartY, pageWidth - 40, 8, 'F');
-                
-                // Header text
                 pdf.text('District', 25, tableStartY + 6);
                 pdf.text('News Count', pageWidth - 25, tableStartY + 6, { align: 'right' });
                 
-                // Add table rows
                 pdf.setFont("helvetica", "normal");
                 pdf.setTextColor(33, 37, 41);
                 
                 let rowY = tableStartY + 16;
                 let rowIndex = 0;
                 
-                // Show all districts if less than 20, otherwise show top 20
-                const displayCount = englishDistrictLabels.length <= 20 ? englishDistrictLabels.length : 20;
+                const displayCount = Math.min(12, englishDistrictLabels.length);
                 
                 for (let i = 0; i < displayCount; i++) {
-                    // Alternate row colors
+                    if (rowY > pageHeight - 35) break;
+                    
                     if (rowIndex % 2 === 0) {
                         pdf.setFillColor(248, 249, 250);
                         pdf.rect(20, rowY - 4, pageWidth - 40, 8, 'F');
                     }
                     
-                    // Use English district names (already in English)
-                    const districtName = englishDistrictLabels[i];
-                    
-                    pdf.text(districtName, 25, rowY);
+                    pdf.text(englishDistrictLabels[i], 25, rowY);
                     pdf.text(englishNewsCounts[i].toString(), pageWidth - 25, rowY, { align: 'right' });
                     
                     rowY += 8;
                     rowIndex++;
-                    
-                    // Check if we need to add a new page
-                    if (rowY > pageHeight - 20 && i < displayCount - 1) {
-                        // Add new page
-                        pdf.addPage();
-                        pdf.setFontSize(10);
-                        pdf.setFont("helvetica", "normal");
-                        rowY = 20;
-                        
-                        // Add table header on new page
-                        pdf.setFont("helvetica", "bold");
-                        pdf.setTextColor(255, 255, 255);
-                        pdf.setFillColor(13, 110, 253);
-                        pdf.rect(20, rowY - 4, pageWidth - 40, 8, 'F');
-                        pdf.text('District', 25, rowY + 2);
-                        pdf.text('News Count', pageWidth - 25, rowY + 2, { align: 'right' });
-                        
-                        pdf.setFont("helvetica", "normal");
-                        pdf.setTextColor(33, 37, 41);
-                        rowY = 30;
-                    }
                 }
                 
-                // Add "and more" if there are more districts
-                if (englishDistrictLabels.length > displayCount) {
+                if (englishDistrictLabels.length > displayCount && rowY < pageHeight - 25) {
                     pdf.setFont("helvetica", "italic");
                     pdf.text(`... and ${englishDistrictLabels.length - displayCount} more districts`, pageWidth / 2, rowY + 5, { align: 'center' });
                 }
@@ -864,10 +999,10 @@ document.addEventListener('DOMContentLoaded', function() {
             pdf.setTextColor(108, 117, 125);
             pdf.setFont("helvetica", "italic");
             
-            const footerY = pageHeight - 10;
+            const footerY = pageHeight - 12;
+            
             pdf.text('Amrut Maharashtra - Official News Portal', pageWidth / 2, footerY, { align: 'center' });
             
-            // Add generation timestamp
             const now = new Date();
             const timestamp = now.toLocaleDateString('en-IN') + ' ' + now.toLocaleTimeString('en-IN', { 
                 hour: '2-digit', 
@@ -877,14 +1012,13 @@ document.addEventListener('DOMContentLoaded', function() {
             pdf.setFontSize(8);
             pdf.text(`Generated: ${timestamp}`, pageWidth - 20, footerY, { align: 'right' });
             
-            // Add page number
             const pageCount = pdf.internal.getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 pdf.setPage(i);
                 pdf.text(`Page ${i} of ${pageCount}`, 20, footerY);
             }
             
-            // Save the PDF with timestamp in filename
+            // Save the PDF
             const fileName = 'district_news_report_' + 
                            (selectedRegion !== 'all' ? selectedRegion.toLowerCase() + '_' : 'all_') + 
                            fromDate.replace(/ /g, '_') + '_to_' + 
@@ -895,18 +1029,19 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('PDF generation error:', error);
             alert('PDF generation failed. Please try again.');
         } finally {
-            // Restore button state
             this.innerHTML = originalText;
             this.disabled = false;
         }
     });
     
-    // Handle window resize for better mobile experience
+    // Handle window resize
     let resizeTimer;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
-            chart.options.indexAxis = window.innerWidth < 768 ? 'y' : 'x';
+            const isMobile = window.innerWidth < 768;
+            chart.options = getChartOptions(isMobile);
+            chart.options.indexAxis = isMobile ? 'y' : 'x';
             chart.update('none');
         }, 250);
     });
@@ -930,7 +1065,7 @@ document.addEventListener('DOMContentLoaded', function() {
     background: #f8f9fa;
     border-radius: 6px;
     padding: 10px;
-    max-height: 600px; /* Maximum height to prevent excessive growth */
+    max-height: 600px;
     overflow-y: auto;
 }
 
@@ -965,7 +1100,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Category badges */
 .category-badge {
-    font-size: 0.7rem;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
     padding: 0.25em 0.5em;
     border-radius: 4px;
     cursor: default;
@@ -1069,14 +1205,127 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .card-header h5 {
         padding-right: 50px;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
     }
 }
 
-/* Chart.js tooltip custom colors */
-.chartjs-tooltip-key {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-right: 5px;
+/* Chart.js font improvements */
+@media (min-width: 768px) {
+    /* Desktop view - vertical bars with 45 degree labels */
+    .chartjs-render-monitor .chartjs-scale-x .chartjs-tick {
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* Y-axis labels */
+    .chartjs-render-monitor .chartjs-scale-y .chartjs-tick {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* Y-axis title */
+    .chartjs-render-monitor .chartjs-scale-y .chartjs-axis-title {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* Bar value labels (on top of bars) */
+    .chartjs-render-monitor .chartjs-datalabels {
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* Mobile view - horizontal bars */
+    .chartjs-render-monitor .chartjs-scale-y .chartjs-tick {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* X-axis labels for mobile (horizontal bars) */
+    .chartjs-render-monitor .chartjs-scale-x .chartjs-tick {
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* X-axis title for mobile */
+    .chartjs-render-monitor .chartjs-scale-x .chartjs-axis-title {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+    
+    /* Bar value labels for mobile */
+    .chartjs-render-monitor .chartjs-datalabels {
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+    }
+}
+
+/* Make rotated labels more readable with bolder font */
+.chartjs-tick-text {
+    text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Improve tooltip font */
+.chartjs-tooltip {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif !important;
+}
+
+/* For better label display when there are many bars */
+@media (min-width: 768px) {
+    .chart-wrapper canvas {
+        width: 100% !important;
+    }
+    
+    /* Ensure labels are visible */
+    .chartjs-render-monitor {
+        overflow: visible !important;
+    }
+    
+    /* Style for cross-angle labels */
+    .chartjs-axis-x .chartjs-tick {
+        transform: rotate(45deg);
+        transform-origin: top left;
+        text-align: start;
+    }
+}
+
+/* Adjust bar spacing for many districts */
+@media (max-width: 767px) and (min-width: 576px) {
+    .chart-wrapper {
+        min-width: 800px;
+    }
+}
+
+/* Ensure chart area is visible */
+.chart-container {
+    overflow: visible !important;
+}
+
+.chart-wrapper {
+    overflow: visible !important;
+}
+
+/* Adjust for very long labels */
+.long-label-chart {
+    min-width: 900px !important;
+}
+
+/* Summary text in footer */
+.card-footer {
+    font-weight: 500 !important;
+    font-size: 0.85rem !important;
 }
 </style>
