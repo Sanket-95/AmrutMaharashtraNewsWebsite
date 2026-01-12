@@ -145,6 +145,11 @@ foreach ($category_data as $districtCats) {
             जिल्हावार बातमी डेटा तक्ता
         </h5>
         <div class="d-flex align-items-center gap-2">
+            <?php if (!empty($districts)): ?>
+            <button type="button" class="btn btn-light btn-sm" id="downloadTablePdf" title="PDF डाउनलोड करा">
+                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+            </button>
+            <?php endif; ?>
             <small class="d-none d-md-inline">
                 <?php echo date('d M Y', strtotime($from_date)); ?> ते <?php echo date('d M Y', strtotime($to_date)); ?>
                 <?php if ($selected_region != 'all'): ?>
@@ -396,9 +401,368 @@ document.addEventListener('DOMContentLoaded', function() {
     const tableSearch = document.getElementById('tableSearch');
     const clearSearch = document.getElementById('clearSearch');
     const sortBy = document.getElementById('sortBy');
+    const downloadPdfBtn = document.getElementById('downloadTablePdf');
     
     // Store original data for sorting
     const districtRows = Array.from(table.querySelectorAll('.district-row'));
+    
+    // PDF Download functionality
+    downloadPdfBtn.addEventListener('click', function() {
+        downloadPdfBtn.disabled = true;
+        const originalText = downloadPdfBtn.innerHTML;
+        downloadPdfBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> तयार करत आहे...';
+        
+        // Prepare data for PDF
+        const pdfData = {
+            title: '<?php echo ($selected_region != "all" ? $selected_region . " प्रदेश - " : "") ?>जिल्हावार बातमी डेटा तक्ता',
+            from_date: '<?php echo $from_date; ?>',
+            to_date: '<?php echo $to_date; ?>',
+            region: '<?php echo $selected_region; ?>',
+            total_districts: <?php echo count($districts); ?>,
+            total_news: <?php echo $total_all_news; ?>,
+            total_views: <?php echo $total_all_views; ?>,
+            districts: [],
+            generated_at: new Date().toLocaleString('mr-IN')
+        };
+        
+        // Collect district data from the table
+        districtRows.forEach(row => {
+            const districtName = row.getAttribute('data-district');
+            const totalNews = parseInt(row.querySelector('td:nth-child(2)').textContent.replace(/,/g, ''));
+            const totalViews = parseInt(row.querySelector('td:nth-child(3) .badge').textContent.replace(/,/g, ''));
+            const avgViews = parseFloat(row.querySelector('td:nth-child(4) .badge').textContent);
+            const categoryCount = parseInt(row.querySelector('td:nth-child(5) .badge').textContent.match(/\d+/)[0]);
+            
+            const districtData = {
+                name: districtName,
+                total_news: totalNews,
+                total_views: totalViews,
+                avg_views: avgViews,
+                category_count: categoryCount,
+                categories: []
+            };
+            
+            // Get category details if available
+            const detailsId = row.querySelector('.district-toggle')?.getAttribute('data-bs-target');
+            if (detailsId) {
+                const detailsRow = document.querySelector(detailsId);
+                if (detailsRow) {
+                    const categoryCards = detailsRow.querySelectorAll('.category-card-link');
+                    categoryCards.forEach(card => {
+                        const categoryName = card.querySelector('.card-title').textContent.trim();
+                        const newsCount = parseInt(card.querySelector('.row .col-6:first-child .fw-bold').textContent.replace(/,/g, ''));
+                        const viewsCount = parseInt(card.querySelector('.row .col-6:last-child .fw-bold').textContent.replace(/,/g, ''));
+                        const percentage = parseInt(card.querySelector('.badge.bg-primary').textContent.replace('%', ''));
+                        
+                        districtData.categories.push({
+                            name: categoryName,
+                            news_count: newsCount,
+                            views_count: viewsCount,
+                            percentage: percentage
+                        });
+                    });
+                }
+            }
+            
+            pdfData.districts.push(districtData);
+        });
+        
+        // Generate PDF
+        generatePDF(pdfData);
+        
+        // Reset button after 1 second
+        setTimeout(() => {
+            downloadPdfBtn.disabled = false;
+            downloadPdfBtn.innerHTML = originalText;
+        }, 1000);
+    });
+    
+    // PDF Generation function
+    function generatePDF(data) {
+        // Create a new window for PDF
+        const printWindow = window.open('', '_blank');
+        
+        // Prepare date strings
+        const fromDate = new Date(data.from_date);
+        const toDate = new Date(data.to_date);
+        const options = { day: 'numeric', month: 'short', year: 'numeric' };
+        const fromDateStr = fromDate.toLocaleDateString('mr-IN', options);
+        const toDateStr = toDate.toLocaleDateString('mr-IN', options);
+        
+        // Prepare HTML content for PDF
+        const pdfContent = `
+        <!DOCTYPE html>
+        <html lang="mr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${data.title}</title>
+            <style>
+                @page {
+                    size: A4;
+                    margin: 15mm;
+                }
+                body {
+                    font-family: 'Arial Unicode MS', 'Nirmala UI', 'Arial', sans-serif;
+                    direction: ltr;
+                    margin: 0;
+                    padding: 0;
+                    color: #333;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    border-bottom: 3px solid #0d6efd;
+                    padding-bottom: 15px;
+                }
+                .header h1 {
+                    color: #0d6efd;
+                    margin: 0;
+                    font-size: 22px;
+                    margin-bottom: 5px;
+                }
+                .header .subtitle {
+                    color: #666;
+                    font-size: 14px;
+                }
+                .header .date-range {
+                    color: #dc3545;
+                    font-weight: bold;
+                    margin-top: 5px;
+                    font-size: 13px;
+                }
+                .summary-stats {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 25px;
+                    flex-wrap: wrap;
+                    gap: 15px;
+                }
+                .stat-card {
+                    flex: 1;
+                    min-width: 180px;
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 15px;
+                    text-align: center;
+                }
+                .stat-card .label {
+                    font-size: 11px;
+                    color: #666;
+                    text-transform: uppercase;
+                    margin-bottom: 8px;
+                }
+                .stat-card .value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #0d6efd;
+                }
+                .data-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 11px;
+                    margin-top: 15px;
+                }
+                .data-table th {
+                    background-color: #343a40;
+                    color: white;
+                    padding: 10px 8px;
+                    text-align: left;
+                    font-weight: bold;
+                    border: 1px solid #454d55;
+                }
+                .data-table td {
+                    padding: 8px 8px;
+                    border: 1px solid #dee2e6;
+                }
+                .data-table tr:nth-child(even) {
+                    background-color: #f8f9fa;
+                }
+                .data-table .district-name {
+                    font-weight: bold;
+                    color: #0d6efd;
+                }
+                .text-right {
+                    text-align: right;
+                }
+                .text-center {
+                    text-align: center;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: bold;
+                }
+                .badge-primary {
+                    background-color: #0d6efd;
+                    color: white;
+                }
+                .badge-success {
+                    background-color: #198754;
+                    color: white;
+                }
+                .badge-warning {
+                    background-color: #ffc107;
+                    color: #212529;
+                }
+                .badge-info {
+                    background-color: #0dcaf0;
+                    color: #212529;
+                }
+                .table-footer {
+                    background-color: #f8f9fa !important;
+                    font-weight: bold;
+                }
+                .footer {
+                    margin-top: 30px;
+                    padding-top: 15px;
+                    border-top: 1px solid #dee2e6;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #666;
+                }
+                .category-section {
+                    margin-top: 30px;
+                    page-break-inside: avoid;
+                }
+                .category-section h3 {
+                    color: #0d6efd;
+                    border-bottom: 2px solid #0d6efd;
+                    padding-bottom: 5px;
+                    margin-bottom: 15px;
+                    font-size: 16px;
+                }
+                .category-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
+                .category-card {
+                    border: 1px solid #dee2e6;
+                    border-radius: 6px;
+                    padding: 10px;
+                    background: #f8f9fa;
+                    page-break-inside: avoid;
+                }
+                .category-card h4 {
+                    margin: 0 0 8px 0;
+                    font-size: 12px;
+                    color: #495057;
+                }
+                .no-print {
+                    display: none;
+                }
+                @media print {
+                    body {
+                        padding: 0;
+                    }
+                    .stat-card {
+                        break-inside: avoid;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>${data.title}</h1>
+                <div class="subtitle">
+                    ${data.region !== 'all' ? data.region + ' प्रदेश' : 'सर्व प्रदेश'}
+                </div>
+                <div class="date-range">${fromDateStr} ते ${toDateStr}</div>
+            </div>
+            
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="label">एकूण जिल्हे</div>
+                    <div class="value">${data.total_districts}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">एकूण बातम्या</div>
+                    <div class="value">${data.total_news.toLocaleString('mr-IN')}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">एकूण दृश्ये</div>
+                    <div class="value">${data.total_views.toLocaleString('mr-IN')}</div>
+                </div>
+            </div>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th width="35%">जिल्हा</th>
+                        <th width="15%" class="text-right">एकूण बातम्या</th>
+                        <th width="15%" class="text-right">एकूण दृश्ये</th>
+                        <th width="15%" class="text-right">सरासरी दृश्ये</th>
+                        <th width="20%" class="text-center">वर्ग</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.districts.map((district, index) => `
+                        <tr>
+                            <td class="district-name">${district.name}</td>
+                            <td class="text-right">${district.total_news.toLocaleString('mr-IN')}</td>
+                            <td class="text-right">
+                                <span class="badge badge-info">${district.total_views.toLocaleString('mr-IN')}</span>
+                            </td>
+                            <td class="text-right">
+                                <span class="badge ${district.avg_views >= 50 ? 'badge-success' : district.avg_views >= 20 ? 'badge-warning' : 'badge-info'}">
+                                    ${district.avg_views}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-primary">${district.category_count} वर्ग</span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="table-footer">
+                        <td><strong>एकूण:</strong></td>
+                        <td class="text-right"><strong>${data.total_news.toLocaleString('mr-IN')}</strong></td>
+                        <td class="text-right"><strong>${data.total_views.toLocaleString('mr-IN')}</strong></td>
+                        <td class="text-right"><strong>${(data.total_news > 0 ? (data.total_views / data.total_news).toFixed(1) : 0)}</strong></td>
+                        <td class="text-center">
+                            <span class="badge badge-primary">
+                                ${data.districts.reduce((sum, d) => sum + d.category_count, 0)} वर्ग
+                            </span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="footer">
+                <div>रिपोर्ट जनरेट केले: ${data.generated_at}</div>
+                <div>© ${new Date().getFullYear()} न्यूझ डॅशबोर्ड</div>
+            </div>
+            
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                    
+                    window.onafterprint = function() {
+                        setTimeout(function() {
+                            window.close();
+                        }, 500);
+                    };
+                };
+            <\/script>
+        </body>
+        </html>
+        `;
+        
+        // Write content to new window
+        printWindow.document.open();
+        printWindow.document.write(pdfContent);
+        printWindow.document.close();
+    }
     
     // Search functionality
     tableSearch.addEventListener('input', function() {
@@ -613,6 +977,29 @@ document.addEventListener('DOMContentLoaded', function() {
     z-index: 10 !important; /* Lower than navbar */
 }
 
+/* PDF Button Styles */
+#downloadTablePdf {
+    background-color: white;
+    border: 1px solid #dee2e6;
+    color: #dc3545;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+#downloadTablePdf:hover {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+}
+
+#downloadTablePdf:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .card-header .d-flex {
@@ -623,6 +1010,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .card-header small {
         align-self: flex-end;
+    }
+    
+    #downloadTablePdf {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
     }
     
     .table th, .table td {
@@ -664,6 +1059,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .clickable-card {
         margin-bottom: 10px;
+    }
+    
+    #downloadTablePdf {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+        top: 8px;
     }
 }
 </style>
