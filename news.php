@@ -1351,64 +1351,7 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <div class="news-header">
             <h1 class="news-title"><?php echo htmlspecialchars($news['title']); ?></h1>     
             
-            <!-- DESKTOP META SECTION - After title, before summary -->
-            <div class="desktop-meta-section">
-                <div class="news-meta">
-                    <div class="text-center">
-                        <!-- Publisher -->
-                        <span class="meta-item">
-                            <i class="bi bi-person-fill"></i>
-                            <strong>Publisher:</strong>
-                            <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
-                            <span class="meta-tooltip">News publisher name</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Date -->
-                        <span class="meta-item">
-                            <i class="bi bi-calendar-event"></i>
-                            <strong>Date:</strong>
-                            <span class="meta-value"><?php echo $published_date; ?></span>
-                            <span class="meta-tooltip">News publication date</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Time -->
-                        <span class="meta-item">
-                            <i class="bi bi-clock"></i>
-                            <strong>Time:</strong>
-                            <span class="meta-value"><?php echo $published_time; ?></span>
-                            <span class="meta-tooltip">News publication time</span>
-                        </span>
-                        
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- Views -->
-                        <span class="meta-item">
-                            <i class="bi bi-eye-fill"></i>
-                            <strong>Views:</strong>
-                            <span class="meta-value"><?php echo number_format($news['view']); ?></span>
-                            <span class="meta-tooltip">Number of times this news has been viewed</span>
-                        </span>
-                        
-                        <?php if (!empty($news['district_name'])): ?>
-                        <span class="meta-divider">|</span>
-                        
-                        <!-- District -->
-                        <span class="meta-item">
-                            <i class="bi bi-geo-alt"></i>
-                            <strong>District:</strong>
-                            <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
-                            <span class="meta-tooltip">Related district of the news</span>
-                        </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+           
         <!-- Summary -->
         <?php if (!empty($news['summary'])): ?>
         <div class="news-summary">
@@ -1562,6 +1505,65 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 </div>
             </div>
         </div>
+
+         <!-- DESKTOP META SECTION - After title, before summary -->
+            <div class="desktop-meta-section">
+                <div class="news-meta">
+                    <div class="text-center">
+                        <!-- Publisher -->
+                        <span class="meta-item">
+                            <i class="bi bi-person-fill"></i>
+                            <strong>Publisher:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['published_by']); ?></span>
+                            <span class="meta-tooltip">News publisher name</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Date -->
+                        <span class="meta-item">
+                            <i class="bi bi-calendar-event"></i>
+                            <strong>Date:</strong>
+                            <span class="meta-value"><?php echo $published_date; ?></span>
+                            <span class="meta-tooltip">News publication date</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Time -->
+                        <span class="meta-item">
+                            <i class="bi bi-clock"></i>
+                            <strong>Time:</strong>
+                            <span class="meta-value"><?php echo $published_time; ?></span>
+                            <span class="meta-tooltip">News publication time</span>
+                        </span>
+                        
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- Views -->
+                        <span class="meta-item">
+                            <i class="bi bi-eye-fill"></i>
+                            <strong>Views:</strong>
+                            <span class="meta-value"><?php echo number_format($news['view']); ?></span>
+                            <span class="meta-tooltip">Number of times this news has been viewed</span>
+                        </span>
+                        
+                        <?php if (!empty($news['district_name'])): ?>
+                        <span class="meta-divider">|</span>
+                        
+                        <!-- District -->
+                        <span class="meta-item">
+                            <i class="bi bi-geo-alt"></i>
+                            <strong>District:</strong>
+                            <span class="meta-value"><?php echo htmlspecialchars($news['district_name']); ?></span>
+                            <span class="meta-tooltip">Related district of the news</span>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Social Share Section -->
         <div class="social-share">
