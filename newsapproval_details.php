@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (isset($_POST['update_news']) && empty($toast_message)) {
         // Edit/save action - Build dynamic SQL query based on what's being updated
         
-        // Start with basic fields
+       // Start with basic fields
         $update_fields = [
             "title = ?",
             "summary = ?", 
@@ -175,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "topnews = ?",
             "updated_at = NOW()"
         ];
-        
+
         $params = [
             "types" => "ssssssi",
             "values" => [
@@ -188,6 +188,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $topnews
             ]
         ];
+
+        // Add published_date for admin users
+        if ($_SESSION['roll'] === 'admin' || $_SESSION['roll'] === 'Admin') {
+            $published_date = $_POST['published_date'] ?? $news['published_date'];
+            $update_fields[] = "published_date = ?";
+            $params["types"] .= "s";
+            $params["values"][] = $published_date;
+        }
         
         // Add cover photo if updated
         if ($cover_photo_update) {
@@ -1125,7 +1133,10 @@ include 'components/login_navbar.php';
             <form method="POST" action="" id="mainForm" enctype="multipart/form-data">
                 <input type="hidden" name="news_id" value="<?php echo $news['news_id']; ?>">
                 <input type="hidden" name="approve_after_save" id="approveAfterSave" value="0">
-                
+                 <?php if (!$edit_mode || !in_array($_SESSION['roll'], ['admin', 'Admin'])): ?>
+                    <input type="hidden" name="published_date" value="<?php echo $news['published_date']; ?>">
+                <?php endif; ?>
+
                 <div class="row">
                     <div class="col-lg-8">
                         <!-- Images Section with upload in edit mode -->
@@ -1386,10 +1397,21 @@ include 'components/login_navbar.php';
                                         <td><?php echo htmlspecialchars($news['approved_by']); ?></td>
                                     </tr>
                                     <?php endif; ?>
-                                    <tr>
-                                        <th><i class="fas fa-calendar-alt me-2"></i> प्रकाशन तारीख:</th>
-                                        <td><?php echo date('d-m-Y', strtotime($news['published_date'])); ?></td>
-                                    </tr>
+                                  <tr>
+                                    <th><i class="fas fa-calendar-alt me-2"></i> प्रकाशन तारीख:</th>
+                                    <td>
+                                        <?php if ($edit_mode && ($_SESSION['roll'] === 'admin' || $_SESSION['roll'] === 'Admin')): ?>
+                                            <input type="datetime-local" 
+                                                class="form-control form-control-sm" 
+                                                name="published_date" 
+                                                value="<?php echo date('Y-m-d\TH:i', strtotime($news['published_date'])); ?>"
+                                                style="border: 1px solid #FFA500;">
+                                            <small class="text-muted">केवळ Admin साठी</small>
+                                        <?php else: ?>
+                                            <?php echo date('d-m-Y H:i', strtotime($news['published_date'])); ?>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
                                     <tr>
                                         <th><i class="fas fa-clock me-2"></i> तयार केले:</th>
                                         <td><?php echo date('d-m-Y H:i', strtotime($news['created_at'])); ?></td>
