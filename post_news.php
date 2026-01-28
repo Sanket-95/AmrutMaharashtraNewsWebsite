@@ -352,6 +352,7 @@ $currentDateTime = date('Y-m-d\TH:i');
                         <option value="amrut_events">अमृत घडामोडी</option>
                         <option value="beneficiary_story">लाभार्थी स्टोरी</option>
                         <option value="blog">ब्लॉग</option>
+                        <option value="amrut_service">अमृत सेवाकार्य</option>
                         <option value="today_special">दिनविशेष</option>
                         <option value="successful_entrepreneur">यशस्वी उद्योजक</option>
                         <option value="words_amrut">शब्दांमृत</option>
