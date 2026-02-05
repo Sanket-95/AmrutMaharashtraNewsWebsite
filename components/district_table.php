@@ -26,7 +26,9 @@ if ($selected_region == 'all') {
             JOIN catagory_list cl 
                 ON cl.catagory = na.category_name
             JOIN mdistrict md
-                ON md.district = na.district_name
+                -- ON md.district = na.district_name
+                LOWER(REGEXP_REPLACE(md.district, '[^a-zA-Z0-9]', '')) =
+                LOWER(REGEXP_REPLACE(na.district_name, '[^a-zA-Z0-9]', ''))
             WHERE 
                 na.is_approved = 1
                 AND na.published_date >= ?
@@ -58,7 +60,9 @@ if ($selected_region == 'all') {
             JOIN catagory_list cl 
                 ON cl.catagory = na.category_name
             JOIN mdistrict md
-                ON md.district = na.district_name
+                -- ON md.district = na.district_name
+                LOWER(REGEXP_REPLACE(md.district, '[^a-zA-Z0-9]', '')) =
+                LOWER(REGEXP_REPLACE(na.district_name, '[^a-zA-Z0-9]', ''))
             WHERE 
                 na.is_approved = 1
                 AND na.published_date >= ?
