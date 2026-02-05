@@ -14,7 +14,7 @@ $english_district_names = []; // Store English district names for linking
 
 // Build the query based on region selection
 if ($selected_region == 'all') {
-    // Query for ALL regions - Show Marathi district names for all
+    // Query for ALL regions - Show Marathi district names for all ...
     $query = "SELECT 
                 md.dmarathi AS district_name_marathi,
                 md.district AS district_name_english,
@@ -26,9 +26,7 @@ if ($selected_region == 'all') {
             JOIN catagory_list cl 
                 ON cl.catagory = na.category_name
             JOIN mdistrict md
-                -- ON md.district = na.district_name
-                LOWER(REGEXP_REPLACE(md.district, '[^a-zA-Z0-9]', '')) =
-                LOWER(REGEXP_REPLACE(na.district_name, '[^a-zA-Z0-9]', ''))
+                ON md.district = na.district_name
             WHERE 
                 na.is_approved = 1
                 AND na.published_date >= ?
@@ -60,9 +58,9 @@ if ($selected_region == 'all') {
             JOIN catagory_list cl 
                 ON cl.catagory = na.category_name
             JOIN mdistrict md
-                -- ON md.district = na.district_name
-                LOWER(REGEXP_REPLACE(md.district, '[^a-zA-Z0-9]', '')) =
-                LOWER(REGEXP_REPLACE(na.district_name, '[^a-zA-Z0-9]', ''))
+                ON md.district = na.district_name
+                -- LOWER(REGEXP_REPLACE(md.district, '[^a-zA-Z0-9]', '')) =
+                -- LOWER(REGEXP_REPLACE(na.district_name, '[^a-zA-Z0-9]', ''))
             WHERE 
                 na.is_approved = 1
                 AND na.published_date >= ?
