@@ -88,7 +88,7 @@ $region_options = [
     <div class="row">
         <!-- Graph Component -->
         <div class="col-12 mb-4">
-            <?php include 'components/district_graph.php'; ?>
+            <?php include 'components/pie_chart.php'; ?>
         </div>
         
         <!-- Table Component -->
