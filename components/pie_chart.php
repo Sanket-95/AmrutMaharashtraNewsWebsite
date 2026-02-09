@@ -694,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     });
     
-    // PDF Generation - Simplified version with only chart and legend
+    // PDF Generation - With more spacing between chart and legend, larger font, better right-side usage
     document.getElementById('downloadPdfBtn').addEventListener('click', function() {
         const btn = this;
         const originalText = btn.innerHTML;
@@ -702,16 +702,44 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.disabled = true;
         
         try {
-            // Create PDF chart with English labels and better styling
-            const pdfChart = new Chart(pdfCtx, {
+            // IMPORTANT: Create color mapping based on English district labels to ensure same colors
+            const colorMapping = {};
+            pdfEnglishDistrictLabels.forEach((district, index) => {
+                // Find the corresponding Marathi district to get the correct color
+                const marathiDistrict = <?php echo json_encode($english_districts); ?>[district];
+                if (marathiDistrict) {
+                    const marathiIndex = <?php echo json_encode(array_keys($district_totals)); ?>.indexOf(marathiDistrict);
+                    if (marathiIndex !== -1) {
+                        colorMapping[district] = pieColors[marathiIndex];
+                    }
+                }
+                // If no mapping found, use sequential color
+                if (!colorMapping[district]) {
+                    colorMapping[district] = pieColors[index % pieColors.length];
+                }
+            });
+            
+            // Create array of colors in the same order as English districts
+            const pdfColors = pdfEnglishDistrictLabels.map(district => colorMapping[district] || pieColors[0]);
+            
+            // Create a new square canvas for perfect circle with larger size
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Set larger square dimensions for better quality
+            tempCanvas.width = 1400;
+            tempCanvas.height = 1400;
+            
+            // Create PDF chart with English labels on SQUARE canvas
+            const pdfChart = new Chart(tempCtx, {
                 type: 'pie',
                 data: {
                     labels: pdfEnglishDistrictLabels,
                     datasets: [{
                         data: pdfEnglishNewsCounts,
-                        backgroundColor: pieColors,
+                        backgroundColor: pdfColors,
                         borderColor: '#fff',
-                        borderWidth: 2.5, // Thicker border for PDF
+                        borderWidth: 2.5,
                         borderAlign: 'inner'
                     }]
                 },
@@ -723,15 +751,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             position: 'right',
                             labels: {
                                 font: {
-                                    size: 10, // Increased for better readability
+                                    size: 14, // Increased to 14 for larger font
                                     family: "'Segoe UI', 'Roboto', 'Arial', sans-serif",
                                     weight: 'bold'
                                 },
-                                padding: 12, // Increased padding
+                                padding: 16, // Increased for more spacing
                                 usePointStyle: true,
                                 pointStyle: 'circle',
-                                boxWidth: 10, // Increased box width
-                                boxHeight: 10,
+                                boxWidth: 14, // Increased for larger color boxes
+                                boxHeight: 14, // Increased for larger color boxes
                                 generateLabels: function(chart) {
                                     const data = chart.data;
                                     if (data.labels.length && data.datasets.length) {
@@ -761,20 +789,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 display: true,
                                 text: 'District Legend',
                                 font: {
-                                    size: 12,
+                                    size: 16, // Increased for larger title
                                     weight: 'bold'
                                 },
-                                padding: 15
+                                padding: 20 // Increased for more spacing
                             }
                         },
                         tooltip: { enabled: false }
                     },
                     layout: {
                         padding: {
-                            left: 20,
-                            right: 20,
-                            top: 20,
-                            bottom: 20
+                            left: 30, // Increased left padding to move chart more to right
+                            right: 30, // Increased right padding for more spacing
+                            top: 25, // Increased top padding
+                            bottom: 25 // Increased bottom padding
                         }
                     },
                     animation: false
@@ -783,9 +811,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Wait for chart to render
             setTimeout(() => {
-                const pdfChartImage = pdfCtx.canvas.toDataURL('image/png');
+                const pdfChartImage = tempCanvas.toDataURL('image/png');
                 
-                // Create PDF in portrait mode for better chart layout
+                // Create PDF in portrait mode
                 const pdf = new jsPDF('portrait', 'mm', 'a4');
                 const pageWidth = pdf.internal.pageSize.getWidth();
                 const pageHeight = pdf.internal.pageSize.getHeight();
@@ -834,14 +862,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     pdf.text(`Region: ${regionNames[selectedRegion] || selectedRegion}`, pageWidth - 20, 42.5, { align: 'right' });
                 }
                 
-                // Add the pie chart image - larger size
+                // Calculate dimensions for circle - move more to center to use right space
                 const chartY = 52;
-                const chartWidth = pageWidth - 40; // Use full width
-                const chartHeight = 140; // Increased height
-                pdf.addImage(pdfChartImage, 'PNG', 20, chartY, chartWidth, chartHeight);
+                const chartSize = 105; // Slightly reduced to make room for legend
+                const chartX = 30; // Move more to right (from 20 to 30) to use right space better
                 
-                // Add key insights section instead of table
-                const insightsY = chartY + chartHeight + 10;
+                // Add the pie chart image as perfect circle
+                pdf.addImage(pdfChartImage, 'PNG', chartX, chartY, chartSize, chartSize);
+                
+                // Add key insights section - keep at original position (below chart)
+                const insightsY = chartY + chartSize + 15; // Increased from 10 to 15 for more spacing
                 
                 // Insights header
                 pdf.setFontSize(14);
@@ -850,13 +880,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 pdf.text('Key Insights', pageWidth / 2, insightsY, { align: 'center' });
                 
                 // Top districts section
-                const topDistrictsY = insightsY + 10;
+                const topDistrictsY = insightsY + 12; // Increased from 10 to 12 for more spacing
                 
                 // Find top 5 districts
                 const districtsWithData = pdfEnglishDistrictLabels.map((label, index) => ({
                     label: label,
                     count: pdfEnglishNewsCounts[index],
-                    percentage: Math.round((pdfEnglishNewsCounts[index] / totalNews) * 100)
+                    percentage: Math.round((pdfEnglishNewsCounts[index] / totalNews) * 100),
+                    color: pdfColors[index]
                 }));
                 
                 // Sort by count descending
@@ -871,33 +902,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 pdf.text('Top 5 Districts by News Count:', 20, topDistrictsY);
                 
                 // Display top districts
-                let currentY = topDistrictsY + 7;
+                let currentY = topDistrictsY + 8; // Increased from 7 to 8 for more spacing
                 topDistricts.forEach((district, index) => {
-                    pdf.setFontSize(10);
+                    pdf.setFontSize(11); // Increased from 10 to 11
                     pdf.setFont("helvetica", "normal");
                     pdf.setTextColor(33, 37, 41);
                     
                     // District name and count
                     pdf.text(`${index + 1}. ${district.label}: ${district.count} news (${district.percentage}%)`, 25, currentY);
                     
-                    // Add color indicator
-                    const colorIndex = pdfEnglishDistrictLabels.indexOf(district.label);
-                    if (colorIndex >= 0 && colorIndex < pieColors.length) {
-                        pdf.setFillColor(pieColors[colorIndex]);
-                        pdf.circle(20, currentY - 1.5, 2, 'F');
+                    // Add color indicator using the same color
+                    if (district.color) {
+                        // Convert hex to RGB
+                        const hex = district.color.replace('#', '');
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        
+                        pdf.setFillColor(r, g, b);
+                        pdf.circle(20, currentY - 1.5, 2.5, 'F'); // Increased from 2 to 2.5
                     }
                     
-                    currentY += 6;
+                    currentY += 7; // Increased from 6 to 7 for more spacing
                 });
                 
                 // Add distribution summary
-                const summaryY = currentY + 5;
+                const summaryY = currentY + 6; // Increased from 5 to 6 for more spacing
                 pdf.setFontSize(12);
                 pdf.setFont("helvetica", "bold");
                 pdf.setTextColor(33, 37, 41);
                 pdf.text('Distribution Summary:', 20, summaryY);
                 
-                pdf.setFontSize(10);
+                pdf.setFontSize(11); // Increased from 10 to 11
                 pdf.setFont("helvetica", "normal");
                 
                 // Calculate statistics
@@ -907,11 +943,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const maxDistrict = pdfEnglishDistrictLabels[pdfEnglishNewsCounts.indexOf(maxNews)];
                 const minDistrict = pdfEnglishDistrictLabels[pdfEnglishNewsCounts.indexOf(minNews)];
                 
-                let statY = summaryY + 7;
+                let statY = summaryY + 8; // Increased from 7 to 8 for more spacing
                 pdf.text(`• Average news per district: ${avgNews}`, 25, statY);
-                statY += 5;
+                statY += 6; // Increased from 5 to 6 for more spacing
                 pdf.text(`• Highest: ${maxDistrict} (${maxNews} news)`, 25, statY);
-                statY += 5;
+                statY += 6; // Increased from 5 to 6 for more spacing
                 pdf.text(`• Lowest: ${minDistrict} (${minNews} news)`, 25, statY);
                 
                 // Footer
