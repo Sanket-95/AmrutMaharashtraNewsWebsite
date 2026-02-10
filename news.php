@@ -28,7 +28,7 @@ $query = "SELECT
     published_date,
     view
 FROM news_articles 
-WHERE news_id = ? and is_approved = 1";
+WHERE news_id = ? and is_approved = 1 AND published_date <= CONVERT_TZ(UTC_TIMESTAMP(), 'UTC', 'Asia/Kolkata')";
 
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $news_id);

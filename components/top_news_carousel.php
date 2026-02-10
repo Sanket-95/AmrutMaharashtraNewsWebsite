@@ -27,7 +27,8 @@ $sql = "SELECT
         FROM news_articles
         WHERE topnews = 1 AND is_approved = 1 AND cover_photo_url IS NOT NULL
         AND cover_photo_url <> ''
-        AND DATE(published_date) <= CURDATE()
+        -- AND DATE(published_date) <= CURDATE()
+        AND published_date <= CONVERT_TZ(UTC_TIMESTAMP(), 'UTC', 'Asia/Kolkata')
         ORDER BY published_date DESC
         LIMIT 10";
 
