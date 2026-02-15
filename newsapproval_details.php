@@ -71,6 +71,70 @@ function sanitizeRichText($content) {
     return $content;
 }
 
+// Function to handle image upload - Preserves folder structure
+function uploadImage($file, $district, $photo_type) {
+    $result = [
+        'success' => false,
+        'file_path' => '',
+        'error' => ''
+    ];
+    
+    // Check for errors
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $result['error'] = "फाइल अपलोड त्रुटी: " . $file['error'];
+        return $result;
+    }
+    
+    // Check file size (max 5MB)
+    if ($file['size'] > 5 * 1024 * 1024) {
+        $result['error'] = "फाइल आकार 5MB पेक्षा कमी असावा";
+        return $result;
+    }
+    
+    // Check file type
+    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $file_type = mime_content_type($file['tmp_name']);
+    
+    if (!in_array($file_type, $allowed_types)) {
+        $result['error'] = "फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात";
+        return $result;
+    }
+    
+    // Create upload directory based on district folder structure
+    $district_folder = strtolower($district);
+    $upload_dir = 'photos/' . $district_folder . '/' . $photo_type . '/';
+    
+    // Create directory if it doesn't exist
+    if (!file_exists($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+    
+    // Generate unique filename but preserve the naming pattern
+    $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $timestamp = date('Ymd_His');
+    $random_string = substr(md5(uniqid()), 0, 6);
+    $random_number = rand(1000, 9999);
+    
+    // Create filename similar to your pattern: cover_20251207_105825_131306_4775.jpeg
+    if ($photo_type == 'cover_photos') {
+        $file_name = 'cover_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
+    } else {
+        $file_name = 'secondary_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
+    }
+    
+    $file_path = $upload_dir . $file_name;
+    
+    // Move uploaded file
+    if (move_uploaded_file($file['tmp_name'], $file_path)) {
+        $result['success'] = true;
+        $result['file_path'] = $file_path;
+    } else {
+        $result['error'] = "फाइल हलविण्यात त्रुटी";
+    }
+    
+    return $result;
+}
+
 // Handle ALL form submissions (both edit and approve)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -164,7 +228,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (isset($_POST['update_news']) && empty($toast_message)) {
         // Edit/save action - Build dynamic SQL query based on what's being updated
         
-       // Start with basic fields
+        // Determine removal flags
+        $cover_photo_remove = isset($_POST['remove_cover']) && $_POST['remove_cover'] == '1';
+        $secondary_photo_remove = isset($_POST['remove_secondary']) && $_POST['remove_secondary'] == '1';
+
+        // Fetch current news to get old image paths for deletion
+        $old_news_sql = "SELECT cover_photo_url, secondary_photo_url FROM news_articles WHERE news_id = ?";
+        $old_news_stmt = $conn->prepare($old_news_sql);
+        $old_news_stmt->bind_param("i", $news_id);
+        $old_news_stmt->execute();
+        $old_news_result = $old_news_stmt->get_result();
+        $old_news = $old_news_result->fetch_assoc();
+        $old_news_stmt->close();
+
+        // Delete old files if they are being replaced or removed
+        if ($cover_photo_update && !empty($old_news['cover_photo_url'])) {
+            $old_file = $old_news['cover_photo_url'];
+            if (file_exists($old_file)) {
+                unlink($old_file);
+            }
+        }
+        if ($cover_photo_remove && !empty($old_news['cover_photo_url'])) {
+            $old_file = $old_news['cover_photo_url'];
+            if (file_exists($old_file)) {
+                unlink($old_file);
+            }
+        }
+        if ($secondary_photo_update && !empty($old_news['secondary_photo_url'])) {
+            $old_file = $old_news['secondary_photo_url'];
+            if (file_exists($old_file)) {
+                unlink($old_file);
+            }
+        }
+        if ($secondary_photo_remove && !empty($old_news['secondary_photo_url'])) {
+            $old_file = $old_news['secondary_photo_url'];
+            if (file_exists($old_file)) {
+                unlink($old_file);
+            }
+        }
+
+        // Start with basic fields
         $update_fields = [
             "title = ?",
             "summary = ?", 
@@ -197,18 +300,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $params["values"][] = $published_date;
         }
         
-        // Add cover photo if updated
+        // Handle cover photo update/removal
         if ($cover_photo_update) {
             $update_fields[] = "cover_photo_url = ?";
             $params["types"] .= "s";
             $params["values"][] = $new_cover_photo_path;
+        } elseif ($cover_photo_remove) {
+            $update_fields[] = "cover_photo_url = NULL";
         }
         
-        // Add secondary photo if updated
+        // Handle secondary photo update/removal
         if ($secondary_photo_update) {
             $update_fields[] = "secondary_photo_url = ?";
             $params["types"] .= "s";
             $params["values"][] = $new_secondary_photo_path;
+        } elseif ($secondary_photo_remove) {
+            $update_fields[] = "secondary_photo_url = NULL";
         }
         
         // Add news_id parameter
@@ -285,70 +392,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $update_stmt->close();
     }
-}
-
-// Function to handle image upload - Preserves folder structure
-function uploadImage($file, $district, $photo_type) {
-    $result = [
-        'success' => false,
-        'file_path' => '',
-        'error' => ''
-    ];
-    
-    // Check for errors
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        $result['error'] = "फाइल अपलोड त्रुटी: " . $file['error'];
-        return $result;
-    }
-    
-    // Check file size (max 5MB)
-    if ($file['size'] > 5 * 1024 * 1024) {
-        $result['error'] = "फाइल आकार 5MB पेक्षा कमी असावा";
-        return $result;
-    }
-    
-    // Check file type
-    $allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    $file_type = mime_content_type($file['tmp_name']);
-    
-    if (!in_array($file_type, $allowed_types)) {
-        $result['error'] = "फक्त JPEG, JPG, PNG, GIF, WEBP फाइल्स स्वीकारल्या जातात";
-        return $result;
-    }
-    
-    // Create upload directory based on district folder structure
-    $district_folder = strtolower($district);
-    $upload_dir = 'photos/' . $district_folder . '/' . $photo_type . '/';
-    
-    // Create directory if it doesn't exist
-    if (!file_exists($upload_dir)) {
-        mkdir($upload_dir, 0777, true);
-    }
-    
-    // Generate unique filename but preserve the naming pattern
-    $file_extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $timestamp = date('Ymd_His');
-    $random_string = substr(md5(uniqid()), 0, 6);
-    $random_number = rand(1000, 9999);
-    
-    // Create filename similar to your pattern: cover_20251207_105825_131306_4775.jpeg
-    if ($photo_type == 'cover_photos') {
-        $file_name = 'cover_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
-    } else {
-        $file_name = 'secondary_' . $timestamp . '_' . $random_string . '_' . $random_number . '.' . $file_extension;
-    }
-    
-    $file_path = $upload_dir . $file_name;
-    
-    // Move uploaded file
-    if (move_uploaded_file($file['tmp_name'], $file_path)) {
-        $result['success'] = true;
-        $result['file_path'] = $file_path;
-    } else {
-        $result['error'] = "फाइल हलविण्यात त्रुटी";
-    }
-    
-    return $result;
 }
 
 // Check if quick approve button was clicked
@@ -999,7 +1042,6 @@ include 'components/login_navbar.php';
             color: #2c3e50;
         }
         
-        /* Existing CSS remains the same, just add above styles */
         /* Add to existing CSS in newsapproval_details.php */
 
 /* Fix Quill.js link tooltip positioning */
@@ -1172,6 +1214,9 @@ include 'components/login_navbar.php';
                                             </div>
                                             
                                             <?php if ($edit_mode): ?>
+                                            <!-- Hidden input for removal flag -->
+                                            <input type="hidden" name="remove_cover" id="removeCover" value="0">
+                                            
                                             <!-- File input for edit mode -->
                                             <div class="custom-file-input mb-2">
                                                 <input type="file" 
@@ -1234,6 +1279,9 @@ include 'components/login_navbar.php';
                                             </div>
                                             
                                             <?php if ($edit_mode): ?>
+                                            <!-- Hidden input for removal flag -->
+                                            <input type="hidden" name="remove_secondary" id="removeSecondary" value="0">
+                                            
                                             <!-- File input for edit mode -->
                                             <div class="custom-file-input mb-2">
                                                 <input type="file" 
@@ -1639,6 +1687,12 @@ include 'components/login_navbar.php';
     
     // Function to preview selected image
     function previewImage(input, type) {
+        // Reset removal flag when a new file is selected
+        const removeFlag = document.getElementById('remove' + (type === 'cover' ? 'Cover' : 'Secondary'));
+        if (removeFlag) {
+            removeFlag.value = '0';
+        }
+        
         const preview = document.getElementById(type + 'Preview');
         const file = input.files[0];
         
@@ -1698,10 +1752,16 @@ include 'components/login_navbar.php';
     function removeImage(type) {
         const preview = document.getElementById(type + 'Preview');
         const fileInput = document.getElementById(type + 'Photo');
+        const removeFlag = document.getElementById('remove' + (type === 'cover' ? 'Cover' : 'Secondary'));
         
         // Reset file input
         if (fileInput) {
             fileInput.value = '';
+        }
+        
+        // Set removal flag to 1
+        if (removeFlag) {
+            removeFlag.value = '1';
         }
         
         // Reset preview to default state
