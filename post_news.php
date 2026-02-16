@@ -679,8 +679,37 @@ $currentDateTime = date('Y-m-d\TH:i');
             width: 100%;
             margin-bottom: 5px;
         }
+         .input-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .input-group input,
+        .input-group button {
+            width: 100% !important;
+            margin-left: 0 !important;
+            border-radius: 0.375rem !important;
+            height: 50px !important;
+            font-size: 16px !important;      /* Prevents auto-zoom on focus */
+            box-sizing: border-box;
+        }
+
+        .input-group button {
+            margin-top: 8px;
+        }
+
+        /* Ensure the date text fits */
+        input[type="datetime-local"] {
+            padding: 0 0.75rem !important;    /* Enough horizontal padding */
+            text-overflow: clip;               /* Shows full text instead of ellipsis */
+        }   
     }
-    
+    /* For extremely narrow screens (<360px) */
+        @media (max-width: 360px) {
+            input[type="datetime-local"] {
+                font-size: 14px !important;
+            }
+        }
     /* Toastr customization */
     .toast {
         font-family: 'Mukta', sans-serif !important;
