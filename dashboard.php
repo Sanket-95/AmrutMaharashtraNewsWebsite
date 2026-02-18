@@ -35,6 +35,11 @@ $region_options = [
     'Nagpur' => 'नागपूर'
 ];
 ?>
+<!-- Flatpickr CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <div class="container-fluid mt-3 px-2 px-md-3">
     <!-- Unified filter form -->
@@ -54,16 +59,30 @@ $region_options = [
             
             <!-- Date inputs -->
             <div class="d-flex align-items-center gap-1 date-filter">
-                <input type="date" class="form-control form-control-sm date-input" id="from_date" name="from_date" 
+                <input type="text" class="form-control form-control-sm date-input" id="from_date" name="from_date" 
                        value="<?php echo htmlspecialchars($from_date); ?>" 
                        max="<?php echo date('Y-m-d'); ?>">
                 
                 <span class="text-muted mx-1">to</span>
                 
-                <input type="date" class="form-control form-control-sm date-input" id="to_date" name="to_date" 
+                <input type="text" class="form-control form-control-sm date-input" id="to_date" name="to_date" 
                        value="<?php echo htmlspecialchars($to_date); ?>" 
                        max="<?php echo date('Y-m-d'); ?>">
             </div>
+            <script>
+                flatpickr("#from_date", {
+                    dateFormat: "Y-m-d",    // Force YYYY-MM-DD format
+                    maxDate: "today",        // Prevent future dates
+                    defaultDate: "<?php echo $from_date; ?>"
+                });
+
+                flatpickr("#to_date", {
+                    dateFormat: "Y-m-d",    // Force YYYY-MM-DD format
+                    maxDate: "today",
+                    defaultDate: "<?php echo $to_date; ?>"
+                });
+            </script>
+
             
             <!-- Action buttons -->
             <div class="d-flex align-items-center gap-1 action-buttons">
