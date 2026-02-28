@@ -29,30 +29,116 @@ if ($top_news_result && $top_news_result->num_rows > 0) {
     }
 }
 
-// Define categories array with groups - FIXED STRUCTURE
-$categories = [
-    ['label' => 'मुख्य पृष्ठ', 'value' => 'home', 'group' => 'main'],
-    // Group header - NOT a real category, just for dropdown
-    ['label' => 'अमृत विषयी', 'value' => 'amrut_about_group', 'group' => 'main', 'is_group' => true, 'children' => [
-        ['label' => 'आमच्याविषयी', 'value' => 'About Us', 'type' => 'link', 'url' => 'about_us.php'],
-        ['label' => 'अमृत घडामोडी', 'value' => 'Amrut Events'],
-        ['label' => 'लाभार्थी स्टोरी', 'value' => 'Beneficiary Story'],
-        ['label' => 'ब्लॉग', 'value' => 'Blog'],
-        ['label' => 'अमृत सेवाकार्य', 'value' => 'Amrut Service']
-    ]],
-    // Regular categories
-    ['label' => 'दिनविशेष', 'value' => 'Today Special', 'group' => 'content'],
-    ['label' => 'यशस्वी उद्योजक', 'value' => 'Successful Entrepreneur', 'group' => 'content'],
-    ['label' => 'शब्दामृत', 'value' => 'Words Amrut', 'group' => 'content'],
-    ['label' => 'स्मार्ट शेतकरी', 'value' => 'Smart Farmer', 'group' => 'content'],
-    ['label' => 'सक्षम विद्यार्थी', 'value' => 'Capable Student', 'group' => 'content'],
-    ['label' => 'अध्यात्म', 'value' => 'Spirituality', 'group' => 'content'],
-    ['label' => 'सामाजिक परिवर्तक', 'value' => 'Social Situation', 'group' => 'content'],
-    ['label' => 'स्त्रीशक्ती', 'value' => 'Women Power', 'group' => 'content'],
-    ['label' => 'पर्यटन', 'value' => 'Tourism', 'group' => 'content'],
-    ['label' => 'वार्ता', 'value' => 'News', 'group' => 'content'],
-    ['label' => 'लेख', 'value' => 'Articles', 'group' => 'content']
+/////////////////////////////////////////////////
+/////////  New Static Array Code Start   ///////
+$categories = [];
+
+// Static Home
+$categories[] = [
+    'label' => 'मुख्य पृष्ठ',
+    'value' => 'home',
+    'group' => 'main'
 ];
+
+$sql = "SELECT * FROM nav_categories 
+        WHERE is_enable = 1 
+        ORDER BY group_name, parent_id, display_order";
+
+$result = mysqli_query($conn, $sql);
+
+$data = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $data[] = $row;
+}
+
+$indexed = [];
+foreach ($data as $row) {
+    $indexed[$row['cid']] = $row;
+}
+
+foreach ($data as $row) {
+
+    // Top level items
+    if (is_null($row['parent_id'])) {
+
+        if ($row['type'] == 'group') {
+
+            $groupItem = [
+                'label' => $row['label_name'],
+                'value' => $row['value_name'],
+                'group' => $row['group_name'],
+                'is_group' => true,
+                'children' => []
+            ];
+
+            // find children
+            foreach ($data as $child) {
+                if ($child['parent_id'] == $row['cid']) {
+
+                    $childItem = [
+                        'label' => $child['label_name'],
+                        'value' => $child['value_name']
+                    ];
+
+                    if ($child['type'] == 'link') {
+                        $childItem['type'] = 'link';
+                        $childItem['url'] = $child['url'];
+                    }
+
+                    $groupItem['children'][] = $childItem;
+                }
+            }
+
+            $categories[] = $groupItem;
+
+        } elseif ($row['type'] == 'category') {
+
+            $categories[] = [
+                'label' => $row['label_name'],
+                'value' => $row['value_name'],
+                'group' => $row['group_name']
+            ];
+        }
+    }
+}
+echo "<script>";
+echo "console.log(" . json_encode($categories) . ");";
+echo "</script>";
+
+//////////////////////////////////////////////
+/////////  New Static Array Code  End  ///////
+
+/////////////////  Old Static Array Code start Here ////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// Define categories array with groups - FIXED STRUCTURE
+// $categories = [
+//     ['label' => 'मुख्य पृष्ठ', 'value' => 'home', 'group' => 'main'],
+//     // Group header - NOT a real category, just for dropdown
+//     ['label' => 'अमृत विषयी', 'value' => 'amrut_about_group', 'group' => 'main', 'is_group' => true, 'children' => [
+//         ['label' => 'आमच्याविषयी', 'value' => 'About Us', 'type' => 'link', 'url' => 'about_us.php'],
+//         ['label' => 'अमृत घडामोडी', 'value' => 'Amrut Events'],
+//         ['label' => 'लाभार्थी स्टोरी', 'value' => 'Beneficiary Story'],
+//         ['label' => 'ब्लॉग', 'value' => 'Blog'],
+//         ['label' => 'अमृत सेवाकार्य', 'value' => 'Amrut Service']
+//     ]],
+//     // Regular categories
+//     ['label' => 'दिनविशेष', 'value' => 'Today Special', 'group' => 'content'],
+//     ['label' => 'यशस्वी उद्योजक', 'value' => 'Successful Entrepreneur', 'group' => 'content'],
+//     ['label' => 'शब्दामृत', 'value' => 'Words Amrut', 'group' => 'content'],
+//     ['label' => 'स्मार्ट शेतकरी', 'value' => 'Smart Farmer', 'group' => 'content'],
+//     ['label' => 'सक्षम विद्यार्थी', 'value' => 'Capable Student', 'group' => 'content'],
+//     ['label' => 'अध्यात्म', 'value' => 'Spirituality', 'group' => 'content'],
+//     ['label' => 'सामाजिक परिवर्तक', 'value' => 'Social Situation', 'group' => 'content'],
+//     ['label' => 'स्त्रीशक्ती', 'value' => 'Women Power', 'group' => 'content'],
+//     ['label' => 'पर्यटन', 'value' => 'Tourism', 'group' => 'content'],
+//     ['label' => 'वार्ता', 'value' => 'News', 'group' => 'content'],
+//     ['label' => 'लेख', 'value' => 'Articles', 'group' => 'content']
+// ];
+
+
+/////////////////   Old static Array code End Here ///////////////
+///////////////////////////////////////////////////////////////////
 
 // Create a flattened version of ALL REAL categories (including group children)
 $all_real_categories = [];
