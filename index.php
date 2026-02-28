@@ -34,24 +34,24 @@ $categories = [
     ['label' => 'मुख्य पृष्ठ', 'value' => 'home', 'group' => 'main'],
     // Group header - NOT a real category, just for dropdown
     ['label' => 'अमृत विषयी', 'value' => 'amrut_about_group', 'group' => 'main', 'is_group' => true, 'children' => [
-        ['label' => 'आमच्याविषयी', 'value' => 'about_us', 'type' => 'link', 'url' => 'about_us.php'],
-        ['label' => 'अमृत घडामोडी', 'value' => 'amrut_events'],
-        ['label' => 'लाभार्थी स्टोरी', 'value' => 'beneficiary_story'],
-        ['label' => 'ब्लॉग', 'value' => 'blog'],
-        ['label' => 'अमृत सेवाकार्य', 'value' => 'amrut_service']
+        ['label' => 'आमच्याविषयी', 'value' => 'About Us', 'type' => 'link', 'url' => 'about_us.php'],
+        ['label' => 'अमृत घडामोडी', 'value' => 'Amrut Events'],
+        ['label' => 'लाभार्थी स्टोरी', 'value' => 'Beneficiary Story'],
+        ['label' => 'ब्लॉग', 'value' => 'Blog'],
+        ['label' => 'अमृत सेवाकार्य', 'value' => 'Amrut Service']
     ]],
     // Regular categories
-    ['label' => 'दिनविशेष', 'value' => 'today_special', 'group' => 'content'],
-    ['label' => 'यशस्वी उद्योजक', 'value' => 'successful_entrepreneur', 'group' => 'content'],
-    ['label' => 'शब्दामृत', 'value' => 'words_amrut', 'group' => 'content'],
-    ['label' => 'स्मार्ट शेतकरी', 'value' => 'smart_farmer', 'group' => 'content'],
-    ['label' => 'सक्षम विद्यार्थी', 'value' => 'capable_student', 'group' => 'content'],
-    ['label' => 'अध्यात्म', 'value' => 'spirituality', 'group' => 'content'],
-    ['label' => 'सामाजिक परिवर्तक', 'value' => 'social_situation', 'group' => 'content'],
-    ['label' => 'स्त्रीशक्ती', 'value' => 'women_power', 'group' => 'content'],
-    ['label' => 'पर्यटन', 'value' => 'tourism', 'group' => 'content'],
-    ['label' => 'वार्ता', 'value' => 'news', 'group' => 'content'],
-    ['label' => 'लेख', 'value' => 'articles', 'group' => 'content']
+    ['label' => 'दिनविशेष', 'value' => 'Today Special', 'group' => 'content'],
+    ['label' => 'यशस्वी उद्योजक', 'value' => 'Successful Entrepreneur', 'group' => 'content'],
+    ['label' => 'शब्दामृत', 'value' => 'Words Amrut', 'group' => 'content'],
+    ['label' => 'स्मार्ट शेतकरी', 'value' => 'Smart Farmer', 'group' => 'content'],
+    ['label' => 'सक्षम विद्यार्थी', 'value' => 'Capable Student', 'group' => 'content'],
+    ['label' => 'अध्यात्म', 'value' => 'Spirituality', 'group' => 'content'],
+    ['label' => 'सामाजिक परिवर्तक', 'value' => 'Social Situation', 'group' => 'content'],
+    ['label' => 'स्त्रीशक्ती', 'value' => 'Women Power', 'group' => 'content'],
+    ['label' => 'पर्यटन', 'value' => 'Tourism', 'group' => 'content'],
+    ['label' => 'वार्ता', 'value' => 'News', 'group' => 'content'],
+    ['label' => 'लेख', 'value' => 'Articles', 'group' => 'content']
 ];
 
 // Create a flattened version of ALL REAL categories (including group children)

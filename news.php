@@ -227,22 +227,43 @@ $comments_result = $comments_stmt->get_result();
 
 // Marathi category names mapping
 $marathi_categories = [
-    'today_special' => 'दिनविशेष',
-    'amrut_events' => 'अमृत घडामोडी',
-    'beneficiary_story' => 'लाभार्थी स्टोरी',
-    'successful_entrepreneur' => 'यशस्वी उद्योजक',
-    'words_amrut' => 'शब्दामृत',
-    'smart_farmer' => 'स्मार्ट शेतकरी',
-    'capable_student' => 'सक्षम दिद्यार्थी',
-    'spirituality' => 'अध्यात्म',
-    'social_situation' => 'सामाजिक परिस्थिती',
-    'women_power' => 'स्त्रीशक्ती',
-    'tourism' => 'पर्यटन',
-    'amrut_service' => 'अमृत सेवा कार्य',
-    'about_us' => 'आमच्या दिशयी',
-    'home' => 'मुख्य पृष्ठ',
-    'news' => 'वार्ता',
-    'articles' => 'लेख'
+    // old
+    // 'today_special' => 'दिनविशेष',
+    // 'amrut_events' => 'अमृत घडामोडी',
+    // 'beneficiary_story' => 'लाभार्थी स्टोरी',
+    // 'successful_entrepreneur' => 'यशस्वी उद्योजक',
+    // 'words_amrut' => 'शब्दामृत',
+    // 'smart_farmer' => 'स्मार्ट शेतकरी',
+    // 'capable_student' => 'सक्षम दिद्यार्थी',
+    // 'spirituality' => 'अध्यात्म',
+    // 'social_situation' => 'सामाजिक परिस्थिती',
+    // 'women_power' => 'स्त्रीशक्ती',
+    // 'tourism' => 'पर्यटन',
+    // 'amrut_service' => 'अमृत सेवा कार्य',
+    // 'about_us' => 'आमच्या दिशयी',
+    // 'home' => 'मुख्य पृष्ठ',
+    // 'news' => 'वार्ता',
+    // 'articles' => 'लेख'
+
+    // New
+    'Today special' => 'दिनविशेष',
+    'Amrut events' => 'अमृत घडामोडी',
+    'Beneficiary Story' => 'लाभार्थी स्टोरी',
+    'Blog' => 'ब्लॉग',
+    'Successful Entrepreneur' => 'यशस्वी उद्योजक',
+    'Words Amrut' => 'शब्दामृत',
+    'Smart Farmer' => 'स्मार्ट शेतकरी',
+    'Capable Student' => 'सक्षम दिद्यार्थी',
+    'Spirituality' => 'अध्यात्म',
+    'Social Situation' => 'सामाजिक परिस्थिती',
+    'Women Power' => 'स्त्रीशक्ती',
+    'Tourism' => 'पर्यटन',
+    'Amrut Service' => 'अमृत सेवा कार्य',
+    'About Us' => 'आमच्या दिशयी',
+    'Home' => 'मुख्य पृष्ठ',
+    'News' => 'वार्ता',
+    'Articles' => 'लेख'
+
 ];
 
 // Get Marathi category name

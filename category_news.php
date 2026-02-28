@@ -7,23 +7,41 @@ include 'components/db_config.php';
 
 // Category mapping array
 $category_map = [
-    'home' => 'मुख्य पृष्ठ',
-    'amrut_events' => 'अमृत घडामोडी',
-    'beneficiary_story' => 'लाभार्थी स्टोरी',
-    'today_special' => 'दिनविशेष',
-    'successful_entrepreneur' => 'यशस्वी उद्योजक',
-    'words_amrut' => 'शब्दांमृत',
-    'smart_farmer' => 'स्मार्ट शेतकरी',
-    'capable_student' => 'सक्षम विद्यार्थी',
-    'spirituality' => 'अध्यात्म',
-    'social_situation' => 'सामाजिक परिवर्तक',
-    'women_power' => 'स्त्रीशक्ती',
-    'tourism' => 'पर्यटन',
-    'amrut_service' => 'अमृत सेवा कार्य'
+    // Old
+    // 'Home' => 'मुख्य पृष्ठ',
+    // 'amrut_events' => 'अमृत घडामोडी',
+    // 'beneficiary_story' => 'लाभार्थी स्टोरी',
+    // 'today_special' => 'दिनविशेष',
+    // 'successful_entrepreneur' => 'यशस्वी उद्योजक',
+    // 'words_amrut' => 'शब्दांमृत',
+    // 'smart_farmer' => 'स्मार्ट शेतकरी',
+    // 'capable_student' => 'सक्षम विद्यार्थी',
+    // 'spirituality' => 'अध्यात्म',
+    // 'social_situation' => 'सामाजिक परिवर्तक',
+    // 'women_power' => 'स्त्रीशक्ती',
+    // 'tourism' => 'पर्यटन',
+    // 'amrut_service' => 'अमृत सेवा कार्य'
+    // New
+    'Home' => 'मुख्य पृष्ठ',
+    'Amrut Events' => 'अमृत घडामोडी',
+    'Beneficiary Story' => 'लाभार्थी स्टोरी',
+    'Blog' => 'ब्लॉग',
+    'Today Special' => 'दिनविशेष',
+    'Successful Entrepreneur' => 'यशस्वी उद्योजक',
+    'Words Amrut' => 'शब्दांमृत',
+    'Smart Farmer' => 'स्मार्ट शेतकरी',
+    'Capable Student' => 'सक्षम विद्यार्थी',
+    'Spirituality' => 'अध्यात्म',
+    'Social Situation' => 'सामाजिक परिवर्तक',
+    'Women Power' => 'स्त्रीशक्ती',
+    'Tourism' => 'पर्यटन',
+    'Amrut Service' => 'अमृत सेवा कार्य',
+    'News' => 'वार्ता',
+    'Articles' => 'लेख'
 ];
 
 // Fetch category from query parameter
-$category = isset($_GET['category']) ? $_GET['category'] : 'home';
+$category = isset($_GET['category']) ? $_GET['category'] : 'Home';
 
 // Get Marathi label for the category
 $category_label = isset($category_map[$category]) ? $category_map[$category] : $category;
@@ -165,7 +183,7 @@ if ($news_result && $news_result->num_rows > 0) {
         <!-- Home Button on Left -->
         <div>
             <a href="index.php" class="btn btn-outline-primary btn-sm">
-                <i class="fas fa-home"></i> मुख्य पृष्ठ
+                <i class="fas fa-Home"></i> मुख्य पृष्ठ
             </a>
         </div>
         

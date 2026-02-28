@@ -349,21 +349,21 @@ $currentDateTime = date('Y-m-d\TH:i');
                     </label>
                     <select class="form-select shadow-sm" name="category" id="categorySelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                         <option value="">-- वर्ग निवडा --</option>
-                        <option value="amrut_events">अमृत घडामोडी</option>
-                        <option value="beneficiary_story">लाभार्थी स्टोरी</option>
-                        <option value="blog">ब्लॉग</option>
-                        <option value="amrut_service">अमृत सेवाकार्य</option>
-                        <option value="today_special">दिनविशेष</option>
-                        <option value="successful_entrepreneur">यशस्वी उद्योजक</option>
-                        <option value="words_amrut">शब्दांमृत</option>
-                        <option value="smart_farmer">स्मार्ट शेतकरी</option>
-                        <option value="capable_student">सक्षम विद्यार्थी</option>
-                        <option value="spirituality">अध्यात्म</option>
-                        <option value="social_situation">सामाजिक परिवर्तक</option>
-                        <option value="women_power">स्त्रीशक्ती</option>
-                        <option value="tourism">पर्यटन</option>
-                        <option value="news">वार्ता</option>
-                        <option value="articles">लेख</option>
+                        <option value="Amrut Events">अमृत घडामोडी</option>
+                        <option value="Beneficiary Story">लाभार्थी स्टोरी</option>
+                        <option value="Blog">ब्लॉग</option>
+                        <option value="Amrut Service">अमृत सेवाकार्य</option>
+                        <option value="Today Special">दिनविशेष</option>
+                        <option value="Successful Entrepreneur">यशस्वी उद्योजक</option>
+                        <option value="Words Amrut">शब्दांमृत</option>
+                        <option value="Smart Farmer">स्मार्ट शेतकरी</option>
+                        <option value="Capable Student">सक्षम विद्यार्थी</option>
+                        <option value="Spirituality">अध्यात्म</option>
+                        <option value="Social Situation">सामाजिक परिवर्तक</option>
+                        <option value="Women Power">स्त्रीशक्ती</option>
+                        <option value="Tourism">पर्यटन</option>
+                        <option value="News">वार्ता</option>
+                        <option value="Articles">लेख</option>
                     </select>
                 </div>
                 
