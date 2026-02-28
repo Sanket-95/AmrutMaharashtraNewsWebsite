@@ -247,7 +247,7 @@ $marathi_categories = [
 
     // New
     'Today special' => 'दिनविशेष',
-    'Amrut events' => 'अमृत घडामोडी',
+    'Amrut Events' => 'अमृत घडामोडी',
     'Beneficiary Story' => 'लाभार्थी स्टोरी',
     'Blog' => 'ब्लॉग',
     'Successful Entrepreneur' => 'यशस्वी उद्योजक',
