@@ -398,33 +398,80 @@ function generateNewsCard($news) {
         </div>
         
         <!-- ADVERTISEMENT SECTION - ONLY AFTER FIRST 2 CATEGORIES -->
-        <?php if ($category_counter == 2): ?>
-            <div class="ad-section py-5">
-                <div class="container">
-                    <div class="row g-4 justify-content-center">
-                        <?php foreach ($advertisements as $index => $ad): ?>
-                            <div class="col-md-6">
-                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
-                                   class="ad-card d-block ad-hover" 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   title="Click to visit amrutpeth.com">
-                                    <div class="card border-0 shadow-sm ad-image-card" style="height: 220px; overflow: hidden; background-color: #f8f9fa;">
-                                        <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
-                                            <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
-                                                 class="img-fluid" 
-                                                 alt="<?php echo htmlspecialchars($ad['alt']); ?>"
-                                                 style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                                 onerror="this.onerror=null; this.src='<?php echo $index == 0 ? 'photos/noimg.jpeg' : 'photos/noimg.jpeg'; ?>'">
-                                        </div>
-                                    </div>
-                                </a>
+       <?php if ($category_counter == 1): ?>
+
+    <!-- After 1st Category (Show 2 Ads - Same As Current) -->
+    <div class="ad-section py-5">
+        <div class="container">
+            <div class="row g-4 justify-content-center">
+                <?php foreach (array_slice($advertisements, 0, 2) as $index => $ad): ?>
+                    <div class="col-md-6">
+                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                           class="ad-card d-block ad-hover" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           title="Click to visit">
+                            <div class="card border-0 shadow-sm" style="height: 220px; overflow: hidden; background-color: #f8f9fa;">
+                                <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
+                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                                         class="img-fluid" 
+                                         alt="<?php echo htmlspecialchars($ad['alt']); ?>"
+                                         style="max-height: 100%; max-width: 100%; object-fit: contain;"
+                                         onerror="this.onerror=null; this.src='photos/noimg.jpeg';">
+                                </div>
                             </div>
-                        <?php endforeach; ?>
+                        </a>
                     </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <?php elseif ($category_counter == 2): ?>
+
+    <!-- After 2nd Category (Force 3 Ads) -->
+        <div class="ad-section py-5">
+            <div class="container">
+                <div class="row g-4 justify-content-center">
+
+                    <?php
+                    $ads_to_show = $advertisements;
+
+                    // If only 2 ads exist, duplicate the first ad
+                    if (count($ads_to_show) == 2) {
+                        $ads_to_show[] = $ads_to_show[0];
+                    }
+
+                    // If only 1 ad exists, duplicate twice
+                    if (count($ads_to_show) == 1) {
+                        $ads_to_show[] = $ads_to_show[0];
+                        $ads_to_show[] = $ads_to_show[0];
+                    }
+
+                    // Take only first 3 ads
+                    foreach (array_slice($ads_to_show, 0, 3) as $index => $ad):
+                    ?>
+                        <div class="col-md-4">
+                            <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                            target="_blank" rel="noopener noreferrer">
+                                <div class="card border-0 shadow-sm" style="height:220px;overflow:hidden;background:#f8f9fa;">
+                                    <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
+                                        <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                                            class="img-fluid"
+                                            alt="<?php echo htmlspecialchars($ad['alt']); ?>"
+                                            style="max-height:100%;max-width:100%;object-fit:contain;"
+                                            onerror="this.onerror=null;this.src='photos/noimg.jpeg';">
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+
                 </div>
             </div>
-        <?php endif; ?>
+        </div>
+
+    <?php endif; ?>
         
     <?php endforeach; ?>
 </div>
