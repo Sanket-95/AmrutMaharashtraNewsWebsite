@@ -85,18 +85,75 @@ $professional_colors = [
 ];
 
 // Advertisement images - UPDATED WITH YOUR IMAGES
-$advertisements = [
-    [
-        'image' => 'components/assets/add1.jpeg', // Your first ad image
-        'link' => 'https://amrutpeth.com/', // Redirect to your website
-        'alt' => 'Advertisement 1'
-    ],
-    [
-        'image' => 'components/assets/add2.png', // Your second ad image
-        'link' => 'https://amrutpeth.com/', // Redirect to your website
-        'alt' => 'Advertisement 2'
-    ]
-];
+// $advertisements = [
+//     [
+//         'image' => 'components/assets/add1.jpeg', // Your first ad image
+//         'link' => 'https://amrutpeth.com/', // Redirect to your website
+//         'alt' => 'Advertisement 1'
+//     ],
+//     [
+//         'image' => 'components/assets/add2.png', // Your second ad image
+//         'link' => 'https://amrutpeth.com/', // Redirect to your website
+//         'alt' => 'Advertisement 2'
+//     ]
+// ];
+
+    $current_date = date("Y-m-d");
+
+    $base_primary   = "components/primary_advertised/";
+    $base_secondary = "components/secondary_advertised/";
+
+    /* =====================================================
+    🔵 FETCH BIG ADS (Section 1 - ad_type = 1)
+    ===================================================== */
+
+    $query_big = "SELECT * FROM ads_management 
+                WHERE ad_type = 1
+                AND is_active = 1
+                AND '$current_date' BETWEEN start_date AND end_date
+                ORDER BY RAND()
+                LIMIT 2";
+
+    $result_big = mysqli_query($conn, $query_big);
+
+    $big_ads = [];
+
+    while ($row = mysqli_fetch_assoc($result_big)) {
+
+        $big_ads[] = [
+            'image' => $base_primary . $row['image_name'],
+            'link'  => $row['ad_link'],
+            'alt'   => $row['ad_title']
+        ];
+    }
+
+
+    /* =====================================================
+    🟢 FETCH SMALL ADS (Section 2 - ad_type = 2)
+    ===================================================== */
+
+    $query_small = "SELECT * FROM ads_management 
+                    WHERE ad_type = 2
+                    AND is_active = 1
+                    AND '$current_date' BETWEEN start_date AND end_date
+                    ORDER BY RAND()
+                    LIMIT 3";
+
+    $result_small = mysqli_query($conn, $query_small);
+
+    $small_ads = [];
+
+    while ($row = mysqli_fetch_assoc($result_small)) {
+
+        $small_ads[] = [
+            'image' => $base_secondary . $row['image_name'],
+            'link'  => $row['ad_link'],
+            'alt'   => $row['ad_title']
+        ];
+    }
+// ============================
+// ============================
+// =============================
 
 // Function to get latest news for each category (max 3 per category)
 function getLatestNewsByCategory($conn) {
@@ -369,7 +426,7 @@ function generateNewsCard($news) {
                     <?php endif; ?>
                 </div>
                 
-                <!-- ALL NEWS Button at Bottom for EVERY Category (if has any news) -->
+                <!-- ALL NEWS Button at Bottom for EVERY Category. (if has any news) -->
                 <?php if ($category_has_news): ?>
                     <div class="text-center">
                         <a href="category_news.php?category=<?php echo urlencode($category['value']); ?>" 
@@ -404,7 +461,7 @@ function generateNewsCard($news) {
     <div class="ad-section py-5">
         <div class="container">
             <div class="row g-4 justify-content-center">
-                <?php foreach (array_slice($advertisements, 0, 2) as $index => $ad): ?>
+                <?php foreach (array_slice($big_ads, 0, 2) as $index => $ad): ?>
                     <div class="col-md-6">
                         <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
                            class="ad-card d-block ad-hover" 
@@ -429,47 +486,41 @@ function generateNewsCard($news) {
 
     <?php elseif ($category_counter == 2): ?>
 
-    <!-- After 2nd Category (Force 3 Ads) -->
-        <div class="ad-section py-5">
-            <div class="container">
-                <div class="row g-4 justify-content-center">
+<!-- After 2nd Category (Show Actual Small Ads Only) -->
+    <div class="ad-section py-5">
+        <div class="container">
+            <div class="row g-4 justify-content-center">
 
-                    <?php
-                    $ads_to_show = $advertisements;
+                <?php foreach ($small_ads as $index => $ad): ?>
 
-                    // If only 2 ads exist, duplicate the first ad
-                    if (count($ads_to_show) == 2) {
-                        $ads_to_show[] = $ads_to_show[0];
-                    }
+                    <div class="col-md-4">
+                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                        target="_blank" 
+                        rel="noopener noreferrer">
 
-                    // If only 1 ad exists, duplicate twice
-                    if (count($ads_to_show) == 1) {
-                        $ads_to_show[] = $ads_to_show[0];
-                        $ads_to_show[] = $ads_to_show[0];
-                    }
+                            <div class="card border-0 shadow-sm"
+                                style="overflow:hidden; background:#f8f9fa;">
 
-                    // Take only first 3 ads
-                    foreach (array_slice($ads_to_show, 0, 3) as $index => $ad):
-                    ?>
-                        <div class="col-md-4">
-                            <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
-                            target="_blank" rel="noopener noreferrer">
-                                <div class="card border-0 shadow-sm" style="height:220px;overflow:hidden;background:#f8f9fa;">
-                                    <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
-                                        <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
-                                            class="img-fluid"
-                                            alt="<?php echo htmlspecialchars($ad['alt']); ?>"
-                                            style="max-height:100%;max-width:100%;object-fit:contain;"
-                                            onerror="this.onerror=null;this.src='photos/noimg.jpeg';">
-                                    </div>
+                                <div class="d-flex justify-content-center align-items-center w-100 p-3">
+
+                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                                        alt="<?php echo htmlspecialchars($ad['alt']); ?>"
+                                        width="1080"
+                                        height="1080"
+                                        style="width:100%; height:auto; aspect-ratio:1/1; object-fit:cover;"
+                                        onerror="this.onerror=null;this.src='photos/noimg.jpeg';">
+
                                 </div>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
 
-                </div>
+                            </div>
+                        </a>
+                    </div>
+
+                <?php endforeach; ?>
+
             </div>
         </div>
+    </div>
 
     <?php endif; ?>
         
