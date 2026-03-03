@@ -5,6 +5,7 @@ session_start();
 // Database connection
 include 'components/db_config.php';
 include 'components/increment_views.php';
+include 'components/popup_ad.php';
 
 // Get news ID from URL
 $news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
