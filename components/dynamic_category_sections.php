@@ -111,8 +111,7 @@ $professional_colors = [
                 WHERE ad_type = 1
                 AND is_active = 1
                 AND '$current_date' BETWEEN start_date AND end_date
-                ORDER BY RAND()
-                LIMIT 2";
+                ORDER BY RAND()";
 
     $result_big = mysqli_query($conn, $query_big);
 
@@ -455,72 +454,120 @@ function generateNewsCard($news) {
         </div>
         
         <!-- ADVERTISEMENT SECTION - ONLY AFTER FIRST 2 CATEGORIES -->
-       <?php if ($category_counter == 1): ?>
+    <?php if ($category_counter == 1 && !empty($big_ads)): ?>
+        <div class="ad-section py-3">
+            <div class="container">
 
-    <!-- After 1st Category (Show 2 Ads - Same As Current) -->
-    <div class="ad-section py-5">
-        <div class="container">
-            <div class="row g-4 justify-content-center">
-                <?php foreach (array_slice($big_ads, 0, 2) as $index => $ad): ?>
-                    <div class="col-md-6">
-                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
-                           class="ad-card d-block ad-hover" 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           title="Click to visit">
-                            <div class="card border-0 shadow-sm" style="height: 220px; overflow: hidden; background-color: #f8f9fa;">
-                                <div class="d-flex justify-content-center align-items-center w-100 h-100 p-3">
-                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
-                                         class="img-fluid" 
-                                         alt="<?php echo htmlspecialchars($ad['alt']); ?>"
-                                         style="max-height: 100%; max-width: 100%; object-fit: contain;"
-                                         onerror="this.onerror=null; this.src='photos/noimg.jpeg';">
+                <!-- DESKTOP VIEW (2 Ads Per Slide) -->
+                <div class="d-none d-md-block">
+                    <div id="bigAdsCarouselDesktop"
+                        class="carousel slide"
+                        data-bs-ride="carousel"
+                        data-bs-interval="3000">
+
+                        <div class="carousel-inner">
+                            <?php 
+                            $chunks = array_chunk($big_ads, 2);
+                            foreach ($chunks as $chunk_index => $chunk): 
+                            ?>
+                                <div class="carousel-item <?php echo $chunk_index === 0 ? 'active' : ''; ?>">
+                                    <div class="row g-4 justify-content-center">
+                                        <?php foreach ($chunk as $ad): ?>
+                                            <div class="col-md-6">
+                                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
+                                                    <div class="card border-0 shadow-sm" style="height:220px;">
+                                                        <div class="d-flex justify-content-center align-items-center h-100 p-3">
+                                                            <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                                                class="img-fluid"
+                                                                style="max-height:100%; object-fit:contain;">
+                                                        </div>
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                <?php endforeach; ?>
+                </div>
+
+                <!-- MOBILE VIEW (1 Ad Per Slide) -->
+                <div class="d-block d-md-none">
+                    <div id="bigAdsCarouselMobile"
+                        class="carousel slide"
+                        data-bs-ride="carousel"
+                        data-bs-interval="3000">
+
+                        <div class="carousel-inner">
+                            <?php foreach ($big_ads as $index => $ad): ?>
+                                <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                                    <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
+                                        <div class="card border-0 shadow-sm" style="height:220px;">
+                                            <div class="d-flex justify-content-center align-items-center h-100 p-3">
+                                                <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                                    class="img-fluid"
+                                                    style="max-height:100%; object-fit:contain;">
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-    </div>
 
-    <?php elseif ($category_counter == 2): ?>
+    <?php elseif ($category_counter == 2 && !empty($small_ads)): ?>
 
-<!-- After 2nd Category (Show Actual Small Ads Only) -->
-    <div class="ad-section py-5">
-        <div class="container">
+        <!-- After 2nd Category (Small Ads Grid) -->
+        <div class="ad-section py-3">
+    <div class="container">
+
+        <!-- DESKTOP GRID (3 Per Row) -->
+        <div class="d-none d-md-block">
             <div class="row g-4 justify-content-center">
-
-                <?php foreach ($small_ads as $index => $ad): ?>
-
+                <?php foreach ($small_ads as $ad): ?>
                     <div class="col-md-4">
-                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
-                        target="_blank" 
-                        rel="noopener noreferrer">
-
-                            <div class="card border-0 shadow-sm"
-                                style="overflow:hidden; background:#f8f9fa;">
-
-                                <div class="d-flex justify-content-center align-items-center w-100 p-3">
-
-                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
-                                        alt="<?php echo htmlspecialchars($ad['alt']); ?>"
-                                        width="1080"
-                                        height="1080"
-                                        style="width:100%; height:auto; aspect-ratio:1/1; object-fit:cover;"
-                                        onerror="this.onerror=null;this.src='photos/noimg.jpeg';">
-
-                                </div>
-
+                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
+                            <div class="card border-0 shadow-sm">
+                                <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                     class="img-fluid"
+                                     style="aspect-ratio:1/1; object-fit:cover;">
                             </div>
                         </a>
                     </div>
-
                 <?php endforeach; ?>
-
             </div>
         </div>
+
+        <!-- MOBILE CAROUSEL (1 Per Slide) -->
+        <div class="d-block d-md-none">
+            <div id="smallAdsCarouselMobile"
+                 class="carousel slide"
+                 data-bs-ride="carousel"
+                 data-bs-interval="3000">
+
+                <div class="carousel-inner">
+                    <?php foreach ($small_ads as $index => $ad): ?>
+                        <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                            <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
+                                <div class="card border-0 shadow-sm">
+                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                         class="img-fluid"
+                                         style="aspect-ratio:1/1; object-fit:cover;">
+                                </div>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
     </div>
+</div>
 
     <?php endif; ?>
         
@@ -671,6 +718,46 @@ function generateNewsCard($news) {
 }
 
 /* ADVERTISEMENT SECTION - SHOW FULL IMAGE */
+/* Remove extra bottom space from carousel */
+.carousel {
+    margin-bottom: 0 !important;
+}
+
+.carousel-inner {
+    margin-bottom: 0 !important;
+}
+
+.ad-section {
+    margin-bottom: 0 !important;
+}
+/* Fix mobile carousel extra space */
+@media (max-width: 767.98px) {
+
+    .carousel,
+    .carousel-inner,
+    .carousel-item {
+        height: auto !important;
+        min-height: unset !important;
+    }
+
+    .carousel-item {
+        padding-bottom: 0 !important;
+    }
+
+    .ad-section {
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+}
+
+
+
+
+
+
+
+
 .ad-section {
     padding: 40px 0;
     background: #fff;
