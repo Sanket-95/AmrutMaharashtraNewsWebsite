@@ -254,6 +254,11 @@ if (isset($_SESSION['user_id'])) {
             ?>
             
             <div class="nav-buttons-container">
+                <?php if ($user_roll === 'admin'): ?>
+                <a href="advertisement_post.php" class="dashboard-btn">
+                    <i class="bi bi-megaphone"></i> जाहिरात
+                </a>
+                <?php endif; ?>
                 <?php 
                 // Show dashboard button only for username "Vijay Joshi" and not on dashboard page
                 // if (!$is_dashboard_page && $username === 'Vijay Joshi'):
