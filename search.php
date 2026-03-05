@@ -87,13 +87,6 @@ $stmt->execute();
 $news_result = $stmt->get_result();
 $news_items = $news_result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
-
-// Static categories array (only for the navbar display – values match index.php)
-// (Not used here because we rely on the external categories navbar from index.php,
-// but we keep the structure for consistency. The actual navbar HTML is not included
-// in this file; it comes from header_fixed.php and navbar.php.
-// If you want the orange categories bar, you need to include it separately.
-// Since the user hasn't included it, I'll add a note – but for now we keep as is.)
 ?>
 
 <style>
@@ -133,7 +126,7 @@ $stmt->close();
     background-color: #d35400;
     color: white;
 }
-/* New search bar styles */
+/* Search bar styles */
 .search-form {
     display: flex;
     gap: 5px;
@@ -172,6 +165,8 @@ $stmt->close();
         min-width: 150px;
     }
 }
+
+/* News Card Styles - Fixed size with full image display */
 .news-card {
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -179,18 +174,41 @@ $stmt->close();
     transition: transform 0.2s, box-shadow 0.2s;
     height: 100%;
     background: white;
+    display: flex;
+    flex-direction: column;
 }
 .news-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
-.news-card img {
+
+/* Image container for consistent sizing */
+.news-card-image-container {
     width: 100%;
     height: 200px;
-    object-fit: cover;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
+
+.news-card-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Changed from 'cover' to 'contain' to show full image */
+    transition: transform 0.3s ease;
+}
+
+.news-card-image-container img:hover {
+    transform: scale(1.05);
+}
+
 .news-card-body {
     padding: 15px;
+    flex: 1;
 }
 .news-card-title {
     font-size: 1.1rem;
@@ -245,7 +263,7 @@ $stmt->close();
                 <p class="text-muted mb-0">एकूण <?php echo $total_rows; ?> बातम्या सापडल्या.</p>
             </div>
             <div class="search-header-actions">
-                <!-- New search form -->
+                <!-- Search form -->
                 <form class="search-form" method="get" action="search.php">
                     <input type="text" name="q" placeholder="पुन्हा शोधा..." value="<?php echo htmlspecialchars($q); ?>" aria-label="Search">
                     <button type="submit"><i class="bi bi-search"></i> शोधा</button>
@@ -261,9 +279,11 @@ $stmt->close();
                 <?php foreach ($news_items as $news): ?>
                     <div class="col-md-4">
                         <div class="news-card">
-                            <img src="<?php echo htmlspecialchars($news['cover_photo_url'] ?: 'components/assets/default-news.jpeg'); ?>" 
-                                 alt="<?php echo htmlspecialchars($news['title']); ?>"
-                                 onerror="this.onerror=null; this.src='components/assets/default-news.jpeg';">
+                            <div class="news-card-image-container">
+                                <img src="<?php echo htmlspecialchars($news['cover_photo_url'] ?: 'components/assets/default-news.jpeg'); ?>" 
+                                     alt="<?php echo htmlspecialchars($news['title']); ?>"
+                                     onerror="this.onerror=null; this.src='components/assets/default-news.jpeg';">
+                            </div>
                             <div class="news-card-body">
                                 <h3 class="news-card-title"><?php echo htmlspecialchars($news['title']); ?></h3>
                                 <p class="news-card-summary"><?php echo htmlspecialchars($news['summary']); ?></p>
