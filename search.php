@@ -19,13 +19,41 @@ $offset = ($page - 1) * $limit;
 
 // Search with prepared statement
 $search_term = "%$q%";
+// $sql_count = "SELECT COUNT(*) as total 
+//               FROM news_articles 
+//               WHERE is_approved = 1 
+//                 AND published_date <= CURDATE()
+//                 AND (title LIKE ? OR summary LIKE ?)";
+// $stmt_count = $conn->prepare($sql_count);
+// $stmt_count->bind_param("ss", $search_term, $search_term);
+// $stmt_count->execute();
 $sql_count = "SELECT COUNT(*) as total 
               FROM news_articles 
               WHERE is_approved = 1 
-                AND published_date <= CURDATE()
-                AND (title LIKE ? OR summary LIKE ?)";
+              AND published_date <= CURDATE()
+              AND (
+                    Region LIKE ?
+                    OR district_name LIKE ?
+                    OR category_name LIKE ?
+                    OR title LIKE ?
+                    OR summary LIKE ?
+                    OR content LIKE ?
+                    OR published_by LIKE ?
+                  )";
+
 $stmt_count = $conn->prepare($sql_count);
-$stmt_count->bind_param("ss", $search_term, $search_term);
+
+$stmt_count->bind_param(
+    "sssssss",
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term
+);
+
 $stmt_count->execute();
 $count_result = $stmt_count->get_result();
 $total_rows = $count_result->fetch_assoc()['total'];
@@ -33,15 +61,45 @@ $stmt_count->close();
 
 $total_pages = ceil($total_rows / $limit);
 
+// $sql_news = "SELECT news_id, title, cover_photo_url, summary 
+//              FROM news_articles 
+//              WHERE is_approved = 1 
+//                AND published_date <= CURDATE()
+//                AND (title LIKE ? OR summary LIKE ?)
+//              ORDER BY published_date DESC
+//              LIMIT ? OFFSET ?";
+// $stmt = $conn->prepare($sql_news);
+// $stmt->bind_param("ssii", $search_term, $search_term, $limit, $offset);
 $sql_news = "SELECT news_id, title, cover_photo_url, summary 
              FROM news_articles 
              WHERE is_approved = 1 
-               AND published_date <= CURDATE()
-               AND (title LIKE ? OR summary LIKE ?)
+             AND published_date <= CURDATE()
+             AND (
+                    Region LIKE ?
+                    OR district_name LIKE ?
+                    OR category_name LIKE ?
+                    OR title LIKE ?
+                    OR summary LIKE ?
+                    OR content LIKE ?
+                    OR published_by LIKE ?
+                  )
              ORDER BY published_date DESC
              LIMIT ? OFFSET ?";
+
 $stmt = $conn->prepare($sql_news);
-$stmt->bind_param("ssii", $search_term, $search_term, $limit, $offset);
+
+$stmt->bind_param(
+    "sssssssii",
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $search_term,
+    $limit,
+    $offset
+);
 $stmt->execute();
 $news_result = $stmt->get_result();
 $news_items = $news_result->fetch_all(MYSQLI_ASSOC);
