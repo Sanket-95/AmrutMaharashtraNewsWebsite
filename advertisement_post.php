@@ -177,8 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-md-6">
                             <label class="form-label">पेमेंट पद्धत *</label>
                             <select name="payment_method" class="form-select" required>
-                                <option value="">-- निवडा --</option>
-                                <option value="Cash" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Cash') ? 'selected' : ''; ?>>रोख</option>
+                                <option value="">-- निवडा --</option>                            
                                 <option value="Cheque" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Cheque') ? 'selected' : ''; ?>>धनादेश</option>
                                 <option value="Online Transfer" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Online Transfer') ? 'selected' : ''; ?>>ऑनलाईन ट्रान्सफर</option>
                                 <option value="UPI" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'UPI') ? 'selected' : ''; ?>>UPI</option>
