@@ -1,3 +1,12 @@
+<?php
+// components/navbar.php
+// Navbar with search magnifier on desktop (homepage only) – no changes to mobile view
+
+// Detect if current page is index.php (homepage)
+$current_script = basename($_SERVER['SCRIPT_NAME']);
+$show_search = ($current_script === 'index.php');
+?>
+
 <!-- Navbar Component -->
 <style>
     /* Custom styles for navbar */
@@ -84,7 +93,7 @@
     
     .amrut-orange {
         /* color: var(--orange-color); */
-        color:black
+        color:black;
         font-weight: 700;
     }
     
@@ -253,6 +262,16 @@
         background: linear-gradient(135deg, #0A66C2, #004182);
     }
     
+    /* Search icon – attractive orange gradient (matches size) */
+    .social-search {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(243, 156, 18, 0.4);
+    }
+    .social-search:hover {
+        background: linear-gradient(135deg, #e67e22, #d35400);
+    }
+    
     /* Hover color changes */
     .social-fb:hover {
         background: linear-gradient(135deg, #0d5cb6, #1877F2);
@@ -286,11 +305,12 @@
         height: 100%;
     }
     
-    /* Right Logo */
+    /* Right Logo – add small right margin to prevent cropping */
     .right-logo {
         padding-left: 0 !important;
         padding-right: 0 !important;
         margin: 0 !important;
+        margin-right: 5px !important; /* added to give space on the right */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -413,6 +433,7 @@
             flex: 1;
             justify-content: flex-end;
             height: 45px; /* Reduced for mobile */
+            margin-right: 5px !important; /* keep same margin on mobile */
         }
         
         .right-logo img {
@@ -437,26 +458,9 @@
             color: #c2410c;
         }
         
-        /* Social Media - MOBILE: BELOW LOGOS */
+        /* Hide the entire right-content (social icons + magnifier) on mobile */
         .right-content {
-            order: 4;
-            width: 100%;
-            justify-content: center;
-            margin-top: 8px !important;
-            gap: 8px;
-        }
-        
-        .social-container {
-            gap: 5px;
-            padding-right: 0;
-            justify-content: center;
-        }
-        
-        .social-circle {
-            width: 32px;
-            height: 32px;
-            font-size: 0.9rem;
-            border: 2px solid white;
+            display: none !important;
         }
         
         /* Logo container for mobile */
@@ -521,22 +525,6 @@
             max-height: 40px;
         }
         
-        .social-circle {
-            width: 30px;
-            height: 30px;
-            font-size: 0.85rem;
-            border: 2px solid white;
-        }
-        
-        .right-content {
-            gap: 6px;
-            margin-top: 6px !important;
-        }
-        
-        .social-container {
-            gap: 4px;
-        }
-        
         .logo-container {
             height: 40px;
         }
@@ -592,22 +580,6 @@
             max-height: 35px;
         }
         
-        .social-circle {
-            width: 28px;
-            height: 28px;
-            font-size: 0.8rem;
-            border: 2px solid white;
-        }
-        
-        .right-content {
-            gap: 4px;
-            margin-top: 5px !important;
-        }
-        
-        .social-container {
-            gap: 3px;
-        }
-        
         .logo-container {
             height: 35px;
         }
@@ -658,20 +630,77 @@
             max-height: 30px;
         }
         
-        .social-circle {
-            width: 26px;
-            height: 26px;
-            font-size: 0.75rem;
-            border: 2px solid white;
-        }
-        
-        .social-container {
-            gap: 2px;
-        }
-        
         .logo-container {
             height: 30px;
         }
+    }
+
+    /* Search Overlay – responsive modal */
+    .search-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+    }
+    .search-overlay.active {
+        display: flex;
+    }
+    .search-overlay-content {
+        background: white;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .search-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    .search-header h5 {
+        margin: 0;
+        font-weight: 600;
+        color: #333;
+    }
+    .close-overlay {
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        color: #666;
+        line-height: 1;
+    }
+    .close-overlay:hover {
+        color: #000;
+    }
+    .search-body input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 1rem;
+    }
+    .search-body button {
+        width: 100%;
+        padding: 10px;
+        background: #f97316;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .search-body button:hover {
+        background: #d35400;
     }
 </style>
 
@@ -736,9 +765,16 @@
                         <!-- <p class="subtitle">श्रमेव जयते</p> -->
                     </div>
                     
-                    <!-- 3rd: Right Content -->
+                    <!-- 3rd: Right Content (social icons + magnifier on homepage) -->
                     <div class="col-md-3 right-content">
                         <div class="social-container">
+                            <?php if ($show_search): ?>
+                            <!-- Magnifier circle – first in row, only on homepage -->
+                            <a href="javascript:void(0);" class="social-circle social-search" id="searchMagnifier" title="शोधा">
+                                <i class="bi bi-search"></i>
+                            </a>
+                            <?php endif; ?>
+                            
                             <a href="#" class="social-circle social-fb" title="Facebook">
                                 <i class="bi bi-facebook"></i>
                             </a>
@@ -756,7 +792,7 @@
                             </a>
                         </div>
                         
-                        <!-- Right Logo - Your custom Amrut logo -->
+                        <!-- Right Logo - Your custom Amrut logo (size unchanged, with right margin) -->
                         <div class="right-logo">
                             <div class="logo-container right-logo-container">
                                 <img src="components/assets/Amrut.jpeg" 
@@ -768,9 +804,9 @@
                 </div>
             </div>
             
-            <!-- Mobile View (below 768px) -->
+            <!-- Mobile View (below 768px) – no social icons, no magnifier -->
             <div class="d-md-none">
-                <!-- Top Row: Left Logo + Center Text + Right Logo -->
+                <!-- Top Row: Left Logo + Center Text + Right Logo only -->
                 <div class="mobile-top-row">
                     <div class="left-logo">
                         <div class="logo-container left-logo-container">
@@ -793,7 +829,84 @@
                         </div>
                     </div>
                 </div>
+                <!-- No right-content here – it's hidden by CSS on mobile -->
             </div>
         </div>
     </div>
 </nav>
+
+<?php if ($show_search): ?>
+<!-- Search Overlay (hidden by default) – triggered only by desktop magnifier -->
+<div id="searchOverlay" class="search-overlay">
+    <div class="search-overlay-content">
+        <div class="search-header">
+            <h5>शोधा</h5>
+            <span class="close-overlay">&times;</span>
+        </div>
+        <div class="search-body">
+            <input type="text" id="searchInput" class="form-control" placeholder="कीवर्ड टाइप करा...">
+            <button id="searchButton" class="btn btn-primary mt-2">शोधा</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const magnifier = document.getElementById('searchMagnifier');
+    const overlay = document.getElementById('searchOverlay');
+    const closeBtn = document.querySelector('.close-overlay');
+    const searchInput = document.getElementById('searchInput');
+    const searchButton = document.getElementById('searchButton');
+
+    // Functions
+    function openSearch() {
+        overlay.classList.add('active');
+        if (searchInput) searchInput.focus();
+    }
+
+    function closeSearch() {
+        overlay.classList.remove('active');
+    }
+
+    function performSearch() {
+        const query = searchInput.value.trim();
+        if (query !== '') {
+            window.location.href = 'search.php?q=' + encodeURIComponent(query);
+        }
+    }
+
+    // Make functions globally accessible so they can be called from index.php
+    window.openSearch = openSearch;
+    window.closeSearch = closeSearch;
+    window.performSearch = performSearch;
+
+    // Event listeners
+    if (magnifier) {
+        magnifier.addEventListener('click', openSearch);
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeSearch);
+    }
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeSearch();
+        }
+    });
+
+    if (searchButton) {
+        searchButton.addEventListener('click', performSearch);
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+});
+</script>
+<?php endif; ?>
