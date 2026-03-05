@@ -4,6 +4,7 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 include 'components/header_fixed.php';
 include 'components/navbar.php';
+// include 'components/navbar copy.php';    
 include 'components/db_config.php';
 
 // Fetch top news for carousel
@@ -107,38 +108,6 @@ echo "</script>";
 
 //////////////////////////////////////////////
 /////////  New Static Array Code  End  ///////
-
-/////////////////  Old Static Array Code start Here ////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-// Define categories array with groups - FIXED STRUCTURE
-// $categories = [
-//     ['label' => 'मुख्य पृष्ठ', 'value' => 'home', 'group' => 'main'],
-//     // Group header - NOT a real category, just for dropdown
-//     ['label' => 'अमृत विषयी', 'value' => 'amrut_about_group', 'group' => 'main', 'is_group' => true, 'children' => [
-//         ['label' => 'आमच्याविषयी', 'value' => 'About Us', 'type' => 'link', 'url' => 'about_us.php'],
-//         ['label' => 'अमृत घडामोडी', 'value' => 'Amrut Events'],
-//         ['label' => 'लाभार्थी स्टोरी', 'value' => 'Beneficiary Story'],
-//         ['label' => 'ब्लॉग', 'value' => 'Blog'],
-//         ['label' => 'अमृत सेवाकार्य', 'value' => 'Amrut Service']
-//     ]],
-//     // Regular categories
-//     ['label' => 'दिनविशेष', 'value' => 'Today Special', 'group' => 'content'],
-//     ['label' => 'यशस्वी उद्योजक', 'value' => 'Successful Entrepreneur', 'group' => 'content'],
-//     ['label' => 'शब्दामृत', 'value' => 'Words Amrut', 'group' => 'content'],
-//     ['label' => 'स्मार्ट शेतकरी', 'value' => 'Smart Farmer', 'group' => 'content'],
-//     ['label' => 'सक्षम विद्यार्थी', 'value' => 'Capable Student', 'group' => 'content'],
-//     ['label' => 'अध्यात्म', 'value' => 'Spirituality', 'group' => 'content'],
-//     ['label' => 'सामाजिक परिवर्तक', 'value' => 'Social Situation', 'group' => 'content'],
-//     ['label' => 'स्त्रीशक्ती', 'value' => 'Women Power', 'group' => 'content'],
-//     ['label' => 'पर्यटन', 'value' => 'Tourism', 'group' => 'content'],
-//     ['label' => 'वार्ता', 'value' => 'News', 'group' => 'content'],
-//     ['label' => 'लेख', 'value' => 'Articles', 'group' => 'content']
-// ];
-
-
-/////////////////   Old static Array code End Here ///////////////
-///////////////////////////////////////////////////////////////////
 
 // Create a flattened version of ALL REAL categories (including group children)
 $all_real_categories = [];
@@ -465,7 +434,7 @@ error_log("All real categories: " . print_r($all_real_categories, true));
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     align-items: center;
     justify-content: center;
-    margin: 5px auto;
+    margin: 5px auto; /* Centered */
 }
 
 .hamburger-icon {
@@ -642,6 +611,43 @@ error_log("All real categories: " . print_r($all_real_categories, true));
     border-top-color: #ffffff;
 }
 
+/* Mobile search icon – absolutely positioned on right */
+.mobile-search-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    z-index: 10; /* ensure it's above other elements */
+}
+
+.mobile-search-icon:hover {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.mobile-search-icon i {
+    pointer-events: none;
+}
+
+/* Ensure the container has relative positioning for absolute child */
+.categories-navbar .container-fluid {
+    position: relative;
+}
+
 /* Responsive adjustments for top value */
 @media (max-width: 768px) {
     .categories-navbar {
@@ -756,7 +762,7 @@ error_log("All real categories: " . print_r($all_real_categories, true));
             </a>
         </div>
         
-        <!-- HAMBURGER BUTTON - NO TEXT, ONLY ICON -->
+        <!-- Hamburger button (unchanged, centered) -->
         <button class="mobile-categories-toggle d-md-none" id="mobileCategoriesToggle" title="श्रेण्या दाखवा/लपवा" aria-label="श्रेण्या मेनू">
             <div class="hamburger-icon">
                 <span></span>
@@ -764,7 +770,15 @@ error_log("All real categories: " . print_r($all_real_categories, true));
                 <span></span>
             </div>
         </button>
+
+        <!-- Search icon – only on homepage, absolutely positioned -->
+        <?php if (basename($_SERVER['SCRIPT_NAME']) === 'index.php'): ?>
+        <a href="javascript:void(0);" class="mobile-search-icon d-md-none" id="mobileSearchMagnifier" title="शोधा">
+            <i class="bi bi-search"></i>
+        </a>
+        <?php endif; ?>
         
+        <!-- Mobile categories menu (unchanged) -->
         <div class="mobile-categories-menu" id="mobileCategoriesMenu">
             <?php foreach ($categories as $index => $category): ?>
                 <?php if (isset($category['is_group']) && $category['is_group']): ?>
@@ -1234,6 +1248,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set default active category to home
     updateActiveCategory('home');
+
+    // Mobile search magnifier click handler (only if element exists)
+    const mobileSearch = document.getElementById('mobileSearchMagnifier');
+    if (mobileSearch) {
+        mobileSearch.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (typeof window.openSearch === 'function') {
+                window.openSearch();
+            } else {
+                console.warn('Search functions not available – make sure navbar.php is included on homepage.');
+            }
+        });
+    }
 });
 
 // Handle hash changes in URL
