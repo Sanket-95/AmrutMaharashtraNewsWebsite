@@ -19,14 +19,6 @@ $offset = ($page - 1) * $limit;
 
 // Search with prepared statement
 $search_term = "%$q%";
-// $sql_count = "SELECT COUNT(*) as total 
-//               FROM news_articles 
-//               WHERE is_approved = 1 
-//                 AND published_date <= CURDATE()
-//                 AND (title LIKE ? OR summary LIKE ?)";
-// $stmt_count = $conn->prepare($sql_count);
-// $stmt_count->bind_param("ss", $search_term, $search_term);
-// $stmt_count->execute();
 $sql_count = "SELECT COUNT(*) as total 
               FROM news_articles 
               WHERE is_approved = 1 
@@ -61,15 +53,6 @@ $stmt_count->close();
 
 $total_pages = ceil($total_rows / $limit);
 
-// $sql_news = "SELECT news_id, title, cover_photo_url, summary 
-//              FROM news_articles 
-//              WHERE is_approved = 1 
-//                AND published_date <= CURDATE()
-//                AND (title LIKE ? OR summary LIKE ?)
-//              ORDER BY published_date DESC
-//              LIMIT ? OFFSET ?";
-// $stmt = $conn->prepare($sql_news);
-// $stmt->bind_param("ssii", $search_term, $search_term, $limit, $offset);
 $sql_news = "SELECT news_id, title, cover_photo_url, summary 
              FROM news_articles 
              WHERE is_approved = 1 
@@ -106,12 +89,12 @@ $news_items = $news_result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 // Static categories array (only for the navbar display – values match index.php)
-
+// (Not used here because we rely on the external categories navbar from index.php,
+// but we keep the structure for consistency. The actual navbar HTML is not included
+// in this file; it comes from header_fixed.php and navbar.php.
+// If you want the orange categories bar, you need to include it separately.
+// Since the user hasn't included it, I'll add a note – but for now we keep as is.)
 ?>
-
-<!-- Categories Navigation (exactly as in index.php) -->
-
-
 
 <style>
 /* Search page specific styles */
@@ -125,6 +108,16 @@ $stmt->close();
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+    gap: 15px;
+}
+.search-header-left {
+    flex: 1 1 auto;
+}
+.search-header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 .home-link {
     background-color: #f97316;
@@ -134,10 +127,50 @@ $stmt->close();
     text-decoration: none;
     font-weight: 600;
     transition: background-color 0.2s;
+    white-space: nowrap;
 }
 .home-link:hover {
     background-color: #d35400;
     color: white;
+}
+/* New search bar styles */
+.search-form {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.search-form input {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: 200px;
+}
+.search-form button {
+    background-color: #f97316;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+.search-form button:hover {
+    background-color: #d35400;
+}
+@media (max-width: 576px) {
+    .search-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-header-actions {
+        justify-content: space-between;
+    }
+    .search-form input {
+        min-width: 150px;
+    }
 }
 .news-card {
     border: 1px solid #e0e0e0;
@@ -207,13 +240,20 @@ $stmt->close();
 <main class="container mt-4">
     <?php if (!empty($q)): ?>
         <div class="search-header">
-            <div>
+            <div class="search-header-left">
                 <h2>शोध परिणाम: "<?php echo htmlspecialchars($q); ?>"</h2>
                 <p class="text-muted mb-0">एकूण <?php echo $total_rows; ?> बातम्या सापडल्या.</p>
             </div>
-            <a href="index.php" class="home-link">
-                <i class="bi bi-house-door me-1"></i> मुख्य पृष्ठ
-            </a>
+            <div class="search-header-actions">
+                <!-- New search form -->
+                <form class="search-form" method="get" action="search.php">
+                    <input type="text" name="q" placeholder="पुन्हा शोधा..." value="<?php echo htmlspecialchars($q); ?>" aria-label="Search">
+                    <button type="submit"><i class="bi bi-search"></i> शोधा</button>
+                </form>
+                <a href="index.php" class="home-link">
+                    <i class="bi bi-house-door me-1"></i> मुख्य पृष्ठ
+                </a>
+            </div>
         </div>
 
         <?php if ($total_rows > 0): ?>
@@ -221,9 +261,9 @@ $stmt->close();
                 <?php foreach ($news_items as $news): ?>
                     <div class="col-md-4">
                         <div class="news-card">
-                            <img src="<?php echo htmlspecialchars($news['cover_photo_url'] ?: 'assets/default-news.jpg'); ?>" 
+                            <img src="<?php echo htmlspecialchars($news['cover_photo_url'] ?: 'components/assets/default-news.jpeg'); ?>" 
                                  alt="<?php echo htmlspecialchars($news['title']); ?>"
-                                 onerror="this.src='assets/default-news.jpg'">
+                                 onerror="this.onerror=null; this.src='components/assets/default-news.jpeg';">
                             <div class="news-card-body">
                                 <h3 class="news-card-title"><?php echo htmlspecialchars($news['title']); ?></h3>
                                 <p class="news-card-summary"><?php echo htmlspecialchars($news['summary']); ?></p>
