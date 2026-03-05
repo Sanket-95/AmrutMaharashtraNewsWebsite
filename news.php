@@ -228,25 +228,6 @@ $comments_result = $comments_stmt->get_result();
 
 // Marathi category names mapping
 $marathi_categories = [
-    // old
-    // 'today_special' => 'दिनविशेष',
-    // 'amrut_events' => 'अमृत घडामोडी',
-    // 'beneficiary_story' => 'लाभार्थी स्टोरी',
-    // 'successful_entrepreneur' => 'यशस्वी उद्योजक',
-    // 'words_amrut' => 'शब्दामृत',
-    // 'smart_farmer' => 'स्मार्ट शेतकरी',
-    // 'capable_student' => 'सक्षम दिद्यार्थी',
-    // 'spirituality' => 'अध्यात्म',
-    // 'social_situation' => 'सामाजिक परिस्थिती',
-    // 'women_power' => 'स्त्रीशक्ती',
-    // 'tourism' => 'पर्यटन',
-    // 'amrut_service' => 'अमृत सेवा कार्य',
-    // 'about_us' => 'आमच्या दिशयी',
-    // 'home' => 'मुख्य पृष्ठ',
-    // 'news' => 'वार्ता',
-    // 'articles' => 'लेख'
-
-    // New
     'Today special' => 'दिनविशेष',
     'Amrut Events' => 'अमृत घडामोडी',
     'Beneficiary Story' => 'लाभार्थी स्टोरी',
@@ -264,7 +245,6 @@ $marathi_categories = [
     'Home' => 'मुख्य पृष्ठ',
     'News' => 'वार्ता',
     'Articles' => 'लेख'
-
 ];
 
 // Get Marathi category name
@@ -1348,6 +1328,52 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 display: none; /* Initially hidden, shown via JS */
             }
         }
+        
+        /* ========== NEW: Mobile Sticky Ad Styles ========== */
+        .mobile-ad-sticky {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999;
+            background-color: rgba(0, 0, 0, 0.8);
+            text-align: center;
+            padding: 8px 0;
+            display: none; /* hidden by default, shown only on mobile */
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+        .mobile-ad-sticky a {
+            display: inline-block;
+            max-width: 100%;
+            height: auto;
+        }
+        .mobile-ad-sticky img {
+            max-width: 100%;
+            height: auto;
+            max-height: 70px; /* adjust as needed */
+            border-radius: 5px;
+        }
+        @media (max-width: 768px) {
+            .mobile-ad-sticky {
+                display: block;
+            }
+            /* Add padding to body bottom to prevent content from being hidden behind ad */
+            body {
+                padding-bottom: 86px; /* height of ad + some margin */
+            }
+        }
+        .ad-fallback {
+            background-color: #f0f0f0;
+            color: #666;
+            padding: 10px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-width: 100%;
+            display: inline-block;
+        }
+        /* ========== End of Mobile Ad Styles ========== */
     </style>
 </head>
 <body>
@@ -1372,8 +1398,8 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         <!-- News Header -->
         <div class="news-header">
             <h1 class="news-title"><?php echo htmlspecialchars($news['title']); ?></h1>     
-            
            
+        </div>
         <!-- Summary -->
         <?php if (!empty($news['summary'])): ?>
         <div class="news-summary">
@@ -1812,26 +1838,20 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         </div>
     </div>
 
-    <!-- Floating Mobile Meta Bar -->
-    <!-- <div class="floating-meta-bar d-lg-none">
-        <div class="container">
-            <div class="floating-meta-content">
-                <span class="floating-meta-item">
-                    <i class="bi bi-eye-fill"></i> <?php echo number_format($news['view']); ?>
-                </span>
-                <span class="floating-meta-divider">•</span>
-                <span class="floating-meta-item">
-                    <i class="bi bi-calendar-event"></i> <?php echo $published_date; ?>
-                </span>
-                <?php if (!empty($news['district_name'])): ?>
-                <span class="floating-meta-divider">•</span>
-                <span class="floating-meta-item">
-                    <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($news['district_name']); ?>
-                </span>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div> -->
+    <!-- ========== MOBILE STICKY ADVERTISEMENT ========== -->
+    <div class="mobile-ad-sticky d-md-none">
+        <a href="https://example.com/ad-destination" target="_blank" rel="noopener">
+            <!-- <img src="assets/ad-banner.jpg"  -->
+            <img src="photos/footer_add.png"
+                 alt="Advertisement" 
+                 id="mobileAdImage"
+                 onerror="this.onerror=null; this.src='assets/ad-fallback.jpg'; this.classList.add('ad-fallback'); this.alt='Advertisement Unavailable';">
+        </a>
+    </div>
+    <!-- ========== END MOBILE AD ========== -->
+
+    <!-- Floating Mobile Meta Bar (commented out as in original) -->
+    <!-- <div class="floating-meta-bar d-lg-none"> ... </div> -->
 
     <script>
     function scrollToName() {
