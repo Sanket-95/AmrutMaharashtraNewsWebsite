@@ -254,8 +254,11 @@ if (isset($_SESSION['user_id'])) {
             ?>
             
             <div class="nav-buttons-container">
-                <?php if ($user_roll === 'admin'): ?>
-                <a href="advertisement_post.php" class="dashboard-btn">
+                <?php if ($user_roll === 'Super Admin'): ?>
+                <a href="ads_analytics.php" class="dashboard-btn">
+                    <i class="bi bi-speedometer2"></i> जाहिरात विश्लेषण 
+                </a>
+                 <a href="advertisement_post.php" class="dashboard-btn">
                     <i class="bi bi-megaphone"></i> जाहिरात
                 </a>
                 <?php endif; ?>
