@@ -84,9 +84,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch all divisions
+// Pagination settings
+$records_per_page = 8;
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $records_per_page;
+
+// Get total divisions count for pagination
+$total_divisions_sql = "SELECT COUNT(*) as total FROM mdivision";
+$total_divisions_result = mysqli_query($conn, $total_divisions_sql);
+$total_divisions = mysqli_fetch_assoc($total_divisions_result)['total'];
+$total_pages = ceil($total_divisions / $records_per_page);
+
+// Fetch divisions with pagination
 $divisions = [];
-$sql = "SELECT * FROM mdivision ORDER BY id DESC";
+$sql = "SELECT * FROM mdivision ORDER BY id ASC LIMIT $offset, $records_per_page";
 $result = mysqli_query($conn, $sql);
 if ($result) {
     while ($row = mysqli_fetch_assoc($result)) {
@@ -269,6 +280,44 @@ if ($result) {
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        
+        .pagination {
+            gap: 5px;
+        }
+        
+        .page-link {
+            color: #FF6600;
+            border: 2px solid #FFD8B0;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-family: 'Mukta', sans-serif;
+            transition: all 0.3s ease;
+        }
+        
+        .page-link:hover {
+            background: #FF6600;
+            color: white;
+            border-color: #FF6600;
+            transform: translateY(-2px);
+        }
+        
+        .page-item.active .page-link {
+            background: #FF6600;
+            border-color: #FF6600;
+            color: white;
+        }
+        
+        .page-item.disabled .page-link {
+            color: #ccc;
+            border-color: #FFD8B0;
+            background: #f8f9fa;
+        }
+        
         .toastify {
             font-family: 'Mukta', sans-serif !important;
             font-size: 16px !important;
@@ -296,6 +345,16 @@ if ($result) {
             cursor: default;
         }
         
+        .info-badge {
+            background: #fff0e0;
+            color: #FF6600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
         @media (max-width: 768px) {
             .division-container {
                 margin: 20px auto;
@@ -307,6 +366,31 @@ if ($result) {
             
             .submit-btn {
                 width: 100%;
+            }
+            
+            .table thead {
+                display: none;
+            }
+            
+            .table tbody td {
+                display: block;
+                text-align: left;
+                padding: 10px;
+                border-bottom: 1px solid #FFD8B0;
+            }
+            
+            .table tbody td:before {
+                content: attr(data-label);
+                float: left;
+                font-weight: bold;
+                color: #FF6600;
+                margin-right: 10px;
+                min-width: 100px;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
             }
         }
     </style>
@@ -382,10 +466,15 @@ if ($result) {
             
             <!-- Divisions List Section -->
             <div class="table-section">
-                <h4 class="mb-4" style="color: #FF6600; font-family: 'Khand', sans-serif;">
-                    <i class="bi bi-list-ul me-2"></i>
-                    विभागांची यादी (एकूण: <?php echo count($divisions); ?>)
-                </h4>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 style="color: #FF6600; font-family: 'Khand', sans-serif; margin: 0;">
+                        <i class="bi bi-list-ul me-2"></i>
+                        विभागांची यादी
+                    </h4>
+                    <span class="info-badge">
+                        <i class="bi bi-diagram-3"></i> एकूण: <?php echo $total_divisions; ?> | पान <?php echo $page; ?>/<?php echo $total_pages; ?>
+                    </span>
+                </div>
                 
                 <?php if (empty($divisions)): ?>
                     <div class="text-center py-5">
@@ -409,23 +498,23 @@ if ($result) {
                             <tbody>
                                 <?php foreach ($divisions as $div): ?>
                                 <tr>
-                                    <td><strong>#<?php echo $div['id']; ?></strong></td>
-                                    <td><?php echo htmlspecialchars($div['division']); ?></td>
-                                    <td><?php echo htmlspecialchars($div['marathiname']); ?></td>
-                                    <td>
+                                    <td data-label="ID"><strong>#<?php echo $div['id']; ?></strong></td>
+                                    <td data-label="विभाग (इंग्रजी)"><?php echo htmlspecialchars($div['division']); ?></td>
+                                    <td data-label="विभाग (मराठी)"><?php echo htmlspecialchars($div['marathiname']); ?></td>
+                                    <td data-label="द्वारे अपडेट">
                                         <i class="bi bi-person-circle text-warning"></i>
-                                        <?php echo htmlspecialchars($div['updated_by']); ?>
+                                        <?php echo htmlspecialchars($div['updated_by'] ?? 'N/A'); ?>
                                     </td>
-                                    <td>
+                                    <td data-label="अपडेट तारीख">
                                         <i class="bi bi-clock text-warning"></i>
-                                        <?php echo date('d-m-Y H:i', strtotime($div['updated_at'])); ?>
+                                        <?php echo $div['updated_at'] ? date('d-m-Y H:i', strtotime($div['updated_at'])) : 'N/A'; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="कृती">
                                         <button class="edit-btn" onclick="editDivision(<?php echo $div['id']; ?>, '<?php echo htmlspecialchars($div['division']); ?>', '<?php echo htmlspecialchars($div['marathiname']); ?>')">
-                                            <i class="bi bi-pencil"></i> संपादन
+                                            <i class="bi bi-pencil"></i>
                                         </button>
                                         <button class="delete-btn" onclick="deleteDivision(<?php echo $div['id']; ?>)">
-                                            <i class="bi bi-trash"></i> हटवा
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -433,6 +522,36 @@ if ($result) {
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Pagination -->
+                    <?php if ($total_pages > 1): ?>
+                    <div class="pagination-container">
+                        <nav aria-label="विभाग नेव्हिगेशन">
+                            <ul class="pagination">
+                                <!-- Previous button -->
+                                <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $page - 1; ?>" <?php echo $page <= 1 ? 'tabindex="-1" aria-disabled="true"' : ''; ?>>
+                                        <i class="bi bi-chevron-left"></i> मागील
+                                    </a>
+                                </li>
+                                
+                                <!-- Page numbers -->
+                                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
+                                        <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    </li>
+                                <?php endfor; ?>
+                                
+                                <!-- Next button -->
+                                <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $page + 1; ?>" <?php echo $page >= $total_pages ? 'tabindex="-1" aria-disabled="true"' : ''; ?>>
+                                        पुढील <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
