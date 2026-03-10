@@ -16,11 +16,15 @@ include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
 
-// Configuration – adjust paths as needed
+// Configuration
 define('PRIMARY_ADS_PATH', 'components/primary_advertised/');
 define('SECONDARY_ADS_PATH', 'components/secondary_advertised/');
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
+
+// Price configuration
+define('BIG_AD_PRICE', 3000);
+define('SMALL_AD_PRICE', 2000);
 
 // Ensure upload directories exist
 if (!is_dir(PRIMARY_ADS_PATH)) mkdir(PRIMARY_ADS_PATH, 0755, true);
@@ -28,92 +32,208 @@ if (!is_dir(SECONDARY_ADS_PATH)) mkdir(SECONDARY_ADS_PATH, 0755, true);
 
 $errors = [];
 $success = false;
+$payment_redirect = false;
+$encrypted_data = '';
+
+$clientCode='DJ020';   // Please use the credentials shared by your Account Manager
+$username='DJL754@sp';     // Please use the credentials shared by your Account Manager
+$password='4q3qhgmJNM4m';     // Please use the credentials shared by your Account Manager
+$authKey='ISTrmmDC2bTvkxzlDRrVguVwetGS8xC/UFPsp6w+Itg=';      // Please use the credentials shared by your Account Manager
+$authIV='M+aUFgRMPq7ci+Cmoytp3KJ2GPBOwO72Z2Cjbr55zY7++pT9mLES2M5cIblnBtaX';       // Please use the credentials shared by your Account Manager
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve and sanitize inputs
-    $client_name    = trim($_POST['client_name'] ?? '');
-    $client_email   = trim($_POST['client_email'] ?? '');
-    $ad_title       = trim($_POST['ad_title'] ?? '');
-    $ad_link        = trim($_POST['ad_link'] ?? '');
-    $ad_type        = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
+    // Check if payment gateway is selected
     $payment_method = trim($_POST['payment_method'] ?? '');
-    $transaction_id = trim($_POST['transaction_id'] ?? '');
-    $price          = isset($_POST['price']) ? (float)$_POST['price'] : 0;
-    $start_date     = $_POST['start_date'] ?? '';
-    $end_date       = $_POST['end_date'] ?? '';
-    $created_by     = $_SESSION['name'] ?? 'Admin'; // from login session
-
-    // Validation
-    if (empty($client_name)) $errors[] = 'ग्राहकाचे नाव आवश्यक आहे.';
-    if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
-    if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
-    if (empty($payment_method)) $errors[] = 'पेमेंट पद्धत निवडा.';
-    if (empty($transaction_id)) $errors[] = 'ट्रांझॅक्शन ID आवश्यक आहे.';
-    if ($price <= 0) $errors[] = 'किंमत योग्य प्रविष्ट करा.';
-    if (empty($start_date) || empty($end_date)) $errors[] = 'सुरु आणि शेवटची तारीख आवश्यक आहे.';
-    if (!empty($start_date) && !empty($end_date) && strtotime($end_date) < strtotime($start_date)) {
-        $errors[] = 'शेवटची तारीख सुरु तारखेपेक्षा नंतरची असावी.';
-    }
-
-    // File upload handling
-    $image_name = '';
-    if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
-        $file_tmp  = $_FILES['ad_image']['tmp_name'];
-        $file_size = $_FILES['ad_image']['size'];
-        $file_ext  = strtolower(pathinfo($_FILES['ad_image']['name'], PATHINFO_EXTENSION));
-
-        if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
-            $errors[] = 'फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
-        } elseif ($file_size > MAX_FILE_SIZE) {
-            $errors[] = 'फाइल साइज 2MB पेक्षा कमी असावी.';
-        } else {
-            // Generate unique filename
-            $image_name = time() . '_' . uniqid() . '.' . $file_ext;
-            $upload_dir = ($ad_type == 1) ? PRIMARY_ADS_PATH : SECONDARY_ADS_PATH;
-            $upload_path = $upload_dir . $image_name;
-
-            if (!move_uploaded_file($file_tmp, $upload_path)) {
-                $errors[] = 'फाइल अपलोड करताना त्रुटी.';
-                $image_name = '';
+    
+    if ($payment_method === 'Payment Gateway') {
+        // For payment gateway, validate and prepare for redirect
+        $client_name = trim($_POST['client_name'] ?? '');
+        $mobile_number = trim($_POST['mobile_number'] ?? '');
+        $client_email = trim($_POST['client_email'] ?? '');
+        $full_address = trim($_POST['full_address'] ?? '');
+        $state = trim($_POST['state'] ?? '');
+        $district = trim($_POST['district'] ?? '');
+        $business_type = trim($_POST['business_type'] ?? '');
+        $ad_title = trim($_POST['ad_title'] ?? '');
+        $ad_type = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
+        $amount = ($ad_type == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
+        
+        // Basic validation for payment gateway
+        if (empty($client_name)) $errors[] = 'ग्राहकाचे नाव आवश्यक आहे.';
+        if (empty($mobile_number)) $errors[] = 'मोबाईल नंबर आवश्यक आहे.';
+        if (!preg_match('/^[0-9]{10}$/', $mobile_number)) $errors[] = 'वैध 10-अंकी मोबाईल नंबर प्रविष्ट करा.';
+        if (empty($business_type)) $errors[] = 'व्यवसाय प्रकार आवश्यक आहे.';
+        if (empty($full_address)) $errors[] = 'संपूर्ण पत्ता आवश्यक आहे.';
+        if (empty($state)) $errors[] = 'राज्य आवश्यक आहे.';
+        if (empty($district)) $errors[] = 'जिल्हा आवश्यक आहे.';
+        if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
+        if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
+        
+        // Validate file upload for payment gateway
+        if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
+            $file_ext = strtolower(pathinfo($_FILES['ad_image']['name'], PATHINFO_EXTENSION));
+            $file_size = $_FILES['ad_image']['size'];
+            
+            if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                $errors[] = 'फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+            } elseif ($file_size > MAX_FILE_SIZE) {
+                $errors[] = 'फाइल साइज 2MB पेक्षा कमी असावी.';
             }
+        } else {
+            $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
+        }
+        
+        if (empty($errors)) {
+            // Store form data in session for after payment
+            $_SESSION['pending_ad_data'] = $_POST;
+            $_SESSION['pending_ad_image'] = $_FILES['ad_image'];
+            
+            // Prepare payment gateway data
+            $payerName = $client_name;
+            $payerEmail = !empty($client_email) ? $client_email : 'customer@email.com';
+            $payerMobile = $mobile_number;
+            $payerAddress = $full_address . ', ' . $district . ', ' . $state;
+            
+            $clientTxnId = time() . rand(1000, 9999);
+            $amountType = 'INR';
+            $mcc = 5137;
+            $channelId = 'W';
+            $callbackUrl = 'payment_gatway/SabPaisaPostPgResponse.php';
+            
+            $encData = "?clientCode=" . $clientCode . 
+                      "&transUserName=" . $username . 
+                      "&transUserPassword=" . $password . 
+                      "&payerName=" . urlencode($payerName) . 
+                      "&payerMobile=" . $payerMobile . 
+                      "&payerEmail=" . urlencode($payerEmail) . 
+                      "&payerAddress=" . urlencode($payerAddress) . 
+                      "&clientTxnId=" . $clientTxnId . 
+                      "&amount=" . $amount . 
+                      "&amountType=" . $amountType . 
+                      "&mcc=" . $mcc . 
+                      "&channelId=" . $channelId . 
+                      "&callbackUrl=" . urlencode($callbackUrl);
+            
+            // Include the encryption class
+            include 'payment_gatway/Authentication.php';
+            $AES256HMACSHA384HEX = new AES256HMACSHA384HEX();
+            $encrypted_data = $AES256HMACSHA384HEX->encrypt($authKey, $authIV, $encData);
+            $payment_redirect = true;
         }
     } else {
-        $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
-    }
+        // Regular form processing (Cheque, Online Transfer, UPI)
+        // Retrieve and sanitize inputs
+        $client_name    = trim($_POST['client_name'] ?? '');
+        $client_email   = trim($_POST['client_email'] ?? '');
+        $mobile_number  = trim($_POST['mobile_number'] ?? '');
+        $business_type  = trim($_POST['business_type'] ?? '');
+        $full_address   = trim($_POST['full_address'] ?? '');
+        $state          = trim($_POST['state'] ?? '');
+        $district       = trim($_POST['district'] ?? '');
+        $ad_title       = trim($_POST['ad_title'] ?? '');
+        $ad_link        = trim($_POST['ad_link'] ?? '');
+        $ad_type        = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
+        $payment_method = trim($_POST['payment_method'] ?? '');
+        $transaction_id = trim($_POST['transaction_id'] ?? '');
+        $price          = ($ad_type == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
+        $start_date     = $_POST['start_date'] ?? '';
+        $end_date       = $_POST['end_date'] ?? '';
+        $created_by     = $_SESSION['name'] ?? 'Admin';
 
-    // If no errors, insert into database
-    if (empty($errors)) {
-        $sql = "INSERT INTO ads_management 
-                (client_name, client_email, ad_title, image_name, ad_link, ad_type, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param(
-            'sssssisssdss',
-            $client_name,
-            $client_email,
-            $ad_title,
-            $image_name,
-            $ad_link,
-            $ad_type,
-            $payment_method,
-            $transaction_id,
-            $price,
-            $start_date,
-            $end_date,
-            $created_by
-        );
+        // Validation
+        if (empty($client_name)) $errors[] = 'ग्राहकाचे नाव आवश्यक आहे.';
+        if (empty($mobile_number)) $errors[] = 'मोबाईल नंबर आवश्यक आहे.';
+        if (!preg_match('/^[0-9]{10}$/', $mobile_number)) $errors[] = 'वैध 10-अंकी मोबाईल नंबर प्रविष्ट करा.';
+        if (empty($business_type)) $errors[] = 'व्यवसाय प्रकार आवश्यक आहे.';
+        if (empty($full_address)) $errors[] = 'संपूर्ण पत्ता आवश्यक आहे.';
+        if (empty($state)) $errors[] = 'राज्य आवश्यक आहे.';
+        if (empty($district)) $errors[] = 'जिल्हा आवश्यक आहे.';
+        if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
+        if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
+        if (empty($payment_method)) $errors[] = 'पेमेंट पद्धत निवडा.';
+        if (empty($transaction_id)) $errors[] = 'ट्रांझॅक्शन ID आवश्यक आहे.';
+        if (empty($start_date) || empty($end_date)) $errors[] = 'सुरु आणि शेवटची तारीख आवश्यक आहे.';
+        if (!empty($start_date) && !empty($end_date) && strtotime($end_date) < strtotime($start_date)) {
+            $errors[] = 'शेवटची तारीख सुरु तारखेपेक्षा नंतरची असावी.';
+        }
 
-        if ($stmt->execute()) {
-            $success = true;
+        // File upload handling
+        $image_name = '';
+        if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
+            $file_tmp  = $_FILES['ad_image']['tmp_name'];
+            $file_size = $_FILES['ad_image']['size'];
+            $file_ext  = strtolower(pathinfo($_FILES['ad_image']['name'], PATHINFO_EXTENSION));
+
+            if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                $errors[] = 'फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+            } elseif ($file_size > MAX_FILE_SIZE) {
+                $errors[] = 'फाइल साइज 2MB पेक्षा कमी असावी.';
+            } else {
+                $image_name = time() . '_' . uniqid() . '.' . $file_ext;
+                $upload_dir = ($ad_type == 1) ? PRIMARY_ADS_PATH : SECONDARY_ADS_PATH;
+                $upload_path = $upload_dir . $image_name;
+
+                if (!move_uploaded_file($file_tmp, $upload_path)) {
+                    $errors[] = 'फाइल अपलोड करताना त्रुटी.';
+                    $image_name = '';
+                }
+            }
         } else {
-            $errors[] = 'डेटाबेसमध्ये त्रुटी: ' . $conn->error;
-            // If insert fails, delete the uploaded image
-            if (!empty($image_name) && file_exists($upload_path)) {
-                unlink($upload_path);
+            $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
+        }
+
+        // If no errors, insert into database - FIXED: Now includes payment_status
+        if (empty($errors)) {
+            $payment_status = 1; // 1 for paid, 0 for pending
+            
+            $sql = "INSERT INTO ads_management 
+                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, ad_link, ad_type, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+            
+            $stmt = $conn->prepare($sql);
+            
+            // FIXED: Added payment_status parameter (18th parameter)
+            $stmt->bind_param(
+                'ssssssssssisssdssi', // Changed: Added 'i' at the end for payment_status
+                $client_name,
+                $client_email,
+                $mobile_number,
+                $business_type,
+                $full_address,
+                $state,
+                $district,
+                $ad_title,
+                $image_name,
+                $ad_link,
+                $ad_type,
+                $payment_method,
+                $transaction_id,
+                $price,
+                $start_date,
+                $end_date,
+                $created_by,
+                $payment_status // Added this missing parameter
+            );
+
+            if ($stmt->execute()) {
+                $success = true;
+            } else {
+                $errors[] = 'डेटाबेसमध्ये त्रुटी: ' . $conn->error;
+                if (!empty($image_name) && file_exists($upload_path)) {
+                    unlink($upload_path);
+                }
             }
         }
     }
 }
+
+// Handle payment gateway return (you need to implement this based on your callback)
+if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && isset($_SESSION['pending_ad_data'])) {
+    // Process the pending ad data after successful payment
+    // This should be implemented based on your payment gateway callback
+    // Similar to the above insertion but with payment_status = 1
+}
+
 ?>
 
 <div class="container mt-4">
@@ -124,13 +244,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="card-body">
             <?php if ($success): ?>
                 <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill me-2"></i>
                     जाहिरात यशस्वीरित्या जोडली गेली. 
                     <a href="advertisement_add.php" class="alert-link">आणखी एक जोडा</a> किंवा 
                     <a href="advertisement_management.php" class="alert-link">व्यवस्थापनाकडे जा</a>.
                 </div>
+            <?php elseif ($payment_redirect): ?>
+                <div class="text-center py-4">
+                    <div class="spinner-border text-orange mb-3" style="color: #FF6600;" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>पेमेंट गेटवे वर पुनर्निर्देशित होत आहे...</h5>
+                    <p>कृपया प्रतीक्षा करा</p>
+                    <form action="https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm">
+                        <input type="hidden" name="encData" value="<?php echo $encrypted_data; ?>">
+                        <input type="hidden" name="clientCode" value="<?php echo $clientCode; ?>">
+                        <noscript>
+                            <button type="submit" class="btn btn-orange">पेमेंट पेज वर जा</button>
+                        </noscript>
+                    </form>
+                    <script>document.getElementById('paymentForm').submit();</script>
+                </div>
             <?php else: ?>
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <ul class="mb-0">
                             <?php foreach ($errors as $error): ?>
                                 <li><?php echo htmlspecialchars($error); ?></li>
@@ -139,73 +277,194 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" enctype="multipart/form-data">
-                    <div class="row g-3">
-                        <div class="col-md-6">
+                <form method="POST" enctype="multipart/form-data" id="adForm">
+                    <!-- Client Information Section -->
+                    <h6 class="text-muted border-bottom pb-2 mb-3">
+                        <i class="bi bi-person-badge me-2"></i>ग्राहक माहिती / Client Information
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">ग्राहकाचे नाव *</label>
                             <input type="text" name="client_name" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['client_name'] ?? ''); ?>" required>
+                                   value="<?php echo htmlspecialchars($_POST['client_name'] ?? ''); ?>" 
+                                   placeholder="ग्राहकाचे पूर्ण नाव" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">ईमेल (optional)</label>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ईमेल</label>
                             <input type="email" name="client_email" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['client_email'] ?? ''); ?>">
+                                   value="<?php echo htmlspecialchars($_POST['client_email'] ?? ''); ?>" 
+                                   placeholder="email@example.com">
                         </div>
-                        <div class="col-md-6">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">मोबाईल नंबर *</label>
+                            <input type="tel" name="mobile_number" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_POST['mobile_number'] ?? ''); ?>" 
+                                   pattern="[0-9]{10}" maxlength="10" 
+                                   placeholder="9876543210" required>
+                            <small class="text-muted">10 अंकी मोबाईल नंबर टाका</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">व्यवसाय प्रकार *</label>
+                            <select name="business_type" class="form-select" required>
+                                <option value="">-- व्यवसाय निवडा --</option>
+                                <option value="Retail" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Retail') ? 'selected' : ''; ?>>रिटेल / Retail</option>
+                                <option value="Education" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Education') ? 'selected' : ''; ?>>शिक्षण / Education</option>
+                                <option value="Healthcare" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Healthcare') ? 'selected' : ''; ?>>आरोग्य / Healthcare</option>
+                                <option value="Real Estate" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Real Estate') ? 'selected' : ''; ?>>रिअल इस्टेट / Real Estate</option>
+                                <option value="Automobile" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Automobile') ? 'selected' : ''; ?>>ऑटोमोबाईल / Automobile</option>
+                                <option value="Food" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Food') ? 'selected' : ''; ?>>खाद्यपदार्थ / Food</option>
+                                <option value="Other" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Other') ? 'selected' : ''; ?>>इतर / Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">संपूर्ण पत्ता *</label>
+                            <textarea name="full_address" class="form-control" rows="3" 
+                                      placeholder="घर क्रमांक, रस्ता, शहर, पिनकोड" 
+                                      required><?php echo htmlspecialchars($_POST['full_address'] ?? ''); ?></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">राज्य *</label>
+                            <input type="text" name="state" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_POST['state'] ?? ''); ?>" 
+                                   placeholder="उदा. महाराष्ट्र" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">जिल्हा *</label>
+                            <input type="text" name="district" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_POST['district'] ?? ''); ?>" 
+                                   placeholder="उदा. पुणे" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Advertisement Details Section -->
+                    <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-megaphone me-2"></i>जाहिरात माहिती / Advertisement Details
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">जाहिरात शीर्षक *</label>
                             <input type="text" name="ad_title" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['ad_title'] ?? ''); ?>" required>
+                                   value="<?php echo htmlspecialchars($_POST['ad_title'] ?? ''); ?>" 
+                                   placeholder="जाहिरात शीर्षक" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">लिंक (optional)</label>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">लिंक</label>
                             <input type="url" name="ad_link" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['ad_link'] ?? ''); ?>">
+                                   value="<?php echo htmlspecialchars($_POST['ad_link'] ?? ''); ?>" 
+                                   placeholder="https://example.com">
                         </div>
-                        <div class="col-md-6">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">प्रकार *</label>
-                            <select name="ad_type" class="form-select" required>
-                                <option value="">-- निवडा --</option>
-                                <option value="1" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 1) ? 'selected' : ''; ?>>मोठी जाहिरात</option>
-                                <option value="2" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 2) ? 'selected' : ''; ?>>छोटी जाहिरात</option>
+                            <select name="ad_type" id="ad_type" class="form-select" required onchange="updatePrice()">
+                                <option value="">-- प्रकार निवडा --</option>
+                                <option value="1" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 1) ? 'selected' : ''; ?> data-price="<?php echo BIG_AD_PRICE; ?>">मोठी जाहिरात (₹<?php echo BIG_AD_PRICE; ?>)</option>
+                                <option value="2" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 2) ? 'selected' : ''; ?> data-price="<?php echo SMALL_AD_PRICE; ?>">छोटी जाहिरात (₹<?php echo SMALL_AD_PRICE; ?>)</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">प्रतिमा * (जास्तीत जास्त 2MB, फक्त jpg/png/webp)</label>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">किंमत (₹) *</label>
+                            <input type="number" name="price" id="price" class="form-control bg-light" 
+                                   value="<?php 
+                                       if (isset($_POST['ad_type'])) {
+                                           echo ($_POST['ad_type'] == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
+                                       } else {
+                                           echo '';
+                                       }
+                                   ?>" 
+                                   readonly placeholder="प्रकार निवडा" style="background-color:#f8f9fa; font-weight:600; color:#28a745;">
+                            <small class="text-muted">प्रकारानुसार किंमत स्वयं-निर्धारित</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">प्रतिमा *</label>
                             <input type="file" name="ad_image" class="form-control" 
                                    accept=".jpg,.jpeg,.png,.webp" required>
+                            <small class="text-muted">जास्तीत जास्त 2MB, फक्त jpg/png/webp</small>
                         </div>
-                        <div class="col-md-6">
+                    </div>
+                    
+                    <!-- Payment Section -->
+                    <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-credit-card me-2"></i>पेमेंट माहिती / Payment Details
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">पेमेंट पद्धत *</label>
-                            <select name="payment_method" class="form-select" required>
-                                <option value="">-- निवडा --</option>                            
-                                <option value="Cheque" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Cheque') ? 'selected' : ''; ?>>धनादेश</option>
-                                <option value="Online Transfer" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Online Transfer') ? 'selected' : ''; ?>>ऑनलाईन ट्रान्सफर</option>
+                            <select name="payment_method" id="payment_method" class="form-select" required onchange="toggleTransactionId()">
+                                <option value="">-- पद्धत निवडा --</option>                            
+                                <option value="Cheque" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Cheque') ? 'selected' : ''; ?>>धनादेश / Cheque</option>
+                                <option value="Online Transfer" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Online Transfer') ? 'selected' : ''; ?>>ऑनलाईन ट्रान्सफर / Online Transfer</option>
                                 <option value="UPI" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'UPI') ? 'selected' : ''; ?>>UPI</option>
+                                <option value="Payment Gateway" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Payment Gateway') ? 'selected' : ''; ?>>💳 पेमेंट गेटवे / Payment Gateway</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        
+                        <div class="col-md-6 mb-3" id="transaction_id_container">
                             <label class="form-label">ट्रांझॅक्शन ID *</label>
                             <input type="text" name="transaction_id" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['transaction_id'] ?? ''); ?>" required>
+                                   value="<?php echo htmlspecialchars($_POST['transaction_id'] ?? ''); ?>" 
+                                   placeholder="TX123456789" required>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">किंमत (₹) *</label>
-                            <input type="number" step="0.01" name="price" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['price'] ?? ''); ?>" required>
-                        </div>
-                        <div class="col-md-6">
+                    </div>
+                    
+                    <!-- Date Section -->
+                    <h6 class="text-muted border-bottom pb-2 mb-3 mt-4">
+                        <i class="bi bi-calendar me-2"></i>तारखा / Dates
+                    </h6>
+                    
+                    <div class="alert alert-info py-2 mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>जाहिरात कालावधी:</strong> 1 महिना (३० दिवस) - शेवटची तारीख आपोआप मोजली जाईल
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">सुरु तारीख *</label>
-                            <input type="date" name="start_date" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>" required>
+                            <input type="date" name="start_date" id="start_date" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>" 
+                                   onchange="calculateEndDate()" required>
                         </div>
-                        <div class="col-md-6">
+                        
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">शेवट तारीख *</label>
-                            <input type="date" name="end_date" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['end_date'] ?? ''); ?>" required>
+                            <input type="date" name="end_date" id="end_date" class="form-control bg-light" 
+                                   value="<?php echo htmlspecialchars($_POST['end_date'] ?? ''); ?>" 
+                                   readonly required style="background-color:#f8f9fa;">
+                            <small class="text-muted">सुरु तारखेनंतर ३० दिवस</small>
                         </div>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="row mt-4">
                         <div class="col-12 text-end">
-                            <a href="advertisement_management.php" class="btn btn-secondary">रद्द करा</a>
-                            <button type="submit" class="btn btn-orange">जाहिरात जोडा</button>
+                            <a href="advertisement_management.php" class="btn btn-secondary me-2">
+                                <i class="bi bi-x-circle"></i> रद्द करा
+                            </a>
+                            <button type="submit" class="btn btn-orange">
+                                <i class="bi bi-check-circle"></i> जाहिरात जोडा
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -224,9 +483,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         background-color: #e65c00;
         color: white;
     }
+    .text-muted.border-bottom {
+        color: #FF6600 !important;
+        border-bottom-color: #FF6600 !important;
+        font-weight: 600;
+    }
+    .form-control[readonly] {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+    .alert-info {
+        background-color: #e7f1ff;
+        border-color: #b8daff;
+        color: #004085;
+    }
 </style>
+
+<script>
+// Update price based on ad type
+function updatePrice() {
+    const adType = document.getElementById('ad_type');
+    const priceField = document.getElementById('price');
+    const selectedOption = adType.options[adType.selectedIndex];
+    
+    if (selectedOption.value) {
+        const price = selectedOption.getAttribute('data-price');
+        priceField.value = price;
+    } else {
+        priceField.value = '';
+    }
+}
+
+// Calculate end date (30 days from start date)
+function calculateEndDate() {
+    const startDate = document.getElementById('start_date').value;
+    const endDateField = document.getElementById('end_date');
+    
+    if (startDate) {
+        const date = new Date(startDate);
+        date.setDate(date.getDate() + 30);
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        endDateField.value = `${year}-${month}-${day}`;
+    } else {
+        endDateField.value = '';
+    }
+}
+
+// Toggle transaction ID field based on payment method
+function toggleTransactionId() {
+    const paymentMethod = document.getElementById('payment_method').value;
+    const transactionContainer = document.getElementById('transaction_id_container');
+    const transactionInput = document.querySelector('input[name="transaction_id"]');
+    
+    if (paymentMethod === 'Payment Gateway') {
+        transactionContainer.style.display = 'none';
+        transactionInput.removeAttribute('required');
+    } else {
+        transactionContainer.style.display = 'block';
+        transactionInput.setAttribute('required', 'required');
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updatePrice();
+    calculateEndDate();
+    toggleTransactionId();
+});
+</script>
 
 <?php
 include 'components/footer.php';
-$conn->close();
+if (isset($conn)) {
+    $conn->close();
+}
 ?>
