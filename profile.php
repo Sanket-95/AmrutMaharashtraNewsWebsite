@@ -28,6 +28,7 @@ $password_changed = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_profile'])) {
         $new_username = mysqli_real_escape_string($conn, $_POST['username']);
+        // No validation for email - accept anything
         $new_email = mysqli_real_escape_string($conn, $_POST['email']);
         
         // Check if password update is requested
@@ -562,8 +563,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <label class="form-label">
                                     <i class="bi bi-envelope me-1"></i> ईमेल *
                                 </label>
-                                <input type="email" class="form-control" name="email" 
-                                       value="<?php echo htmlspecialchars($user_email); ?>" required>
+                                <!-- Changed from type="email" to type="text" to accept any input -->
+                                <input type="text" class="form-control" name="email" 
+                                       value="<?php echo htmlspecialchars($user_email); ?>" 
+                                       pattern=".*" 
+                                       title="कोणतेही मूल्य स्वीकारले जाईल"
+                                       required>
+                                <div class="small-note">
+                                    <i class="bi bi-info-circle"></i> कोणतेही मूल्य प्रविष्ट करा (ईमेल आवश्यक नाही)
+                                </div>
                             </div>
                         </div>
                         

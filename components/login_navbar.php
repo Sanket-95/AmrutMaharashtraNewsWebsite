@@ -93,7 +93,7 @@
         background: white;
         border-radius: 8px;
         box-shadow: 0 3px 15px rgba(0,0,0,0.2);
-        width: 250px;
+        width: 280px;
         z-index: 1000;
         border: 1px solid #ffa500;
     }
@@ -105,14 +105,32 @@
     .modal-header {
         background: #ff6600;
         color: white;
-        padding: 12px;
+        padding: 12px 15px;
         border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
     .modal-header h5 {
         margin: 0;
         font-size: 16px;
         font-weight: 600;
+    }
+    
+    .settings-link {
+        color: white;
+        font-size: 18px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .settings-link:hover {
+        transform: rotate(90deg);
+        color: white;
     }
     
     .modal-body {
@@ -185,7 +203,7 @@
         }
         
         .profile-modal {
-            width: 220px;
+            width: 260px;
             right: -10px;
         }
     }
@@ -280,6 +298,9 @@ if (isset($_SESSION['user_id'])) {
                     <div class="profile-modal" id="profileModal">
                         <div class="modal-header">
                             <h5>Profile Info</h5>
+                            <a href="profile.php" class="settings-link" title="Profile Settings">
+                                <i class="bi bi-gear"></i>
+                            </a>
                         </div>
                         <div class="modal-body">
                             <div class="user-info-item">
@@ -330,11 +351,20 @@ if (isset($_SESSION['user_id'])) {
         document.addEventListener('DOMContentLoaded', function() {
             const profileButton = document.getElementById('profileButton');
             const profileModal = document.getElementById('profileModal');
+            const settingsLink = document.querySelector('.settings-link');
             
             profileButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 profileModal.classList.toggle('show');
             });
+            
+            // Prevent modal from closing when clicking on settings link
+            if (settingsLink) {
+                settingsLink.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Allow the link to work normally (navigate to profile.php)
+                });
+            }
             
             document.addEventListener('click', function(e) {
                 if (!profileButton.contains(e.target) && !profileModal.contains(e.target)) {
