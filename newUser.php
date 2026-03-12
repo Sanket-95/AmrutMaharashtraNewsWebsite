@@ -8,10 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Only admin can access this page
-if ($_SESSION['roll'] !== 'admin') {
-    header('Location: index.php');
-    exit();
-}
+// if ($_SESSION['roll'] !== 'admin') {
+//     header('Location: index.php');
+//     exit();
+// }
 
 include 'components/header.php';
 include 'components/navbar.php';

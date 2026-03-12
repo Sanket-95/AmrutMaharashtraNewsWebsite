@@ -29,6 +29,7 @@
         gap: 5px;
         transition: all 0.3s ease;
         font-size: 14px;
+        white-space: nowrap;
     }
     
     .news-btn:hover {
@@ -40,6 +41,8 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
     }
     
     .dashboard-btn {
@@ -55,6 +58,7 @@
         gap: 5px;
         transition: all 0.3s ease;
         font-size: 14px;
+        white-space: nowrap;
     }
     
     .dashboard-btn:hover {
@@ -79,6 +83,7 @@
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 18px;
+        flex-shrink: 0;
     }
     
     .profile-btn:hover {
@@ -152,6 +157,7 @@
     .user-info-value {
         color: #333;
         font-weight: 600;
+        word-break: break-word;
     }
     
     .modal-footer {
@@ -159,6 +165,7 @@
         border-top: 1px solid #eee;
         display: flex;
         justify-content: flex-end;
+        gap: 10px;
     }
     
     .logout-btn {
@@ -182,18 +189,118 @@
         color: white;
     }
     
-    @media (max-width: 768px) {
+    .user-mgmt-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    
+    .user-mgmt-btn:hover {
+        background: #218838;
+        transform: translateY(-1px);
+        color: white;
+    }
+    
+    .mobile-menu-toggle {
+        display: none;
+        background: white;
+        color: #ff6600;
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+    
+    .mobile-menu-toggle:hover {
+        background: #fff5e6;
+    }
+    
+    .mobile-menu {
+        display: none;
+        position: absolute;
+        top: 52px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #ff8c00, #ff6600);
+        padding: 10px;
+        border-top: 1px solid #d35400;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        z-index: 998;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .mobile-menu.show {
+        display: flex;
+    }
+    
+    .mobile-menu-item {
+        background: white;
+        color: #ff6600;
+        padding: 12px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-menu-item:hover {
+        background: #fff5e6;
+        transform: translateX(5px);
+    }
+    
+    .mobile-menu-item i {
+        font-size: 18px;
+    }
+    
+    @media (max-width: 992px) {
         .login-navbar-content {
-            padding: 0 10px;
+            padding: 0 12px;
         }
         
-        .news-btn, .dashboard-btn {
+        .news-btn, .dashboard-btn, .user-mgmt-btn {
             padding: 5px 12px;
             font-size: 13px;
         }
         
         .nav-buttons-container {
-            gap: 8px;
+            gap: 6px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .login-navbar-content {
+            padding: 0 10px;
+        }
+        
+        .desktop-buttons {
+            display: none;
+        }
+        
+        .mobile-menu-toggle {
+            display: flex;
+        }
+        
+        .nav-buttons-container {
+            gap: 5px;
         }
         
         .profile-btn {
@@ -204,7 +311,32 @@
         
         .profile-modal {
             width: 260px;
-            right: -10px;
+            right: -5px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .news-btn span, .dashboard-btn span, .user-mgmt-btn span {
+            display: none;
+        }
+        
+        .news-btn i, .dashboard-btn i, .user-mgmt-btn i {
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .news-btn, .dashboard-btn, .user-mgmt-btn {
+            padding: 6px 10px;
+        }
+        
+        .profile-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+        }
+        
+        .mobile-menu-item span {
+            font-size: 14px;
         }
     }
 </style>
@@ -229,67 +361,91 @@ if (isset($_SESSION['user_id'])) {
     
     <div class="login-navbar">
         <div class="login-navbar-content">
-            <?php 
-            // Check which button to show based on current page and user role
-            if ($user_roll === 'district_user') {
-                // For district_user, show "नवीन बातमी" button only on approval pages
-                if ($is_news_approval_page) {
-                    ?>
-                    <a href="post_news.php" class="news-btn">
-                        <i class="bi bi-plus-circle"></i> नवीन बातमी
-                    </a>
-                    <?php
-                } else {
-                    ?>
-                    <div></div>
-                    <?php
-                }
-            } else {
-                // For admin and division_head
-                if ($is_news_approval_page) {
-                    // On approval pages, show "नवीन बातमी" button
-                    ?>
-                    <a href="post_news.php" class="news-btn">
-                        <i class="bi bi-plus-circle"></i> नवीन बातमी
-                    </a>
-                    <?php
-                } elseif ($current_page === 'post_news.php') {
-                    // On post_news.php page, show "News" button (to go to approval page)
-                    ?>
-                    <a href="newsapproval.php" class="news-btn">
-                        <i class="bi bi-newspaper"></i> बातमी
-                    </a>
-                    <?php
-                } else {
-                    // On other pages, show "News" button
-                    ?>
-                    <a href="newsapproval.php" class="news-btn">
-                        <i class="bi bi-newspaper"></i> बातमी
-                    </a>
-                    <?php
-                }
-            }
-            ?>
-            
-            <div class="nav-buttons-container">
-                <?php if ($user_roll === 'Super Admin'): ?>
-                <a href="ads_analytics.php" class="dashboard-btn">
-                    <i class="bi bi-speedometer2"></i> जाहिरात विश्लेषण 
-                </a>
-                 <a href="advertisement_post.php" class="dashboard-btn">
-                    <i class="bi bi-megaphone"></i> जाहिरात
-                </a>
-                <?php endif; ?>
+            <!-- Left side - News button (desktop) -->
+            <div class="desktop-buttons" style="display: flex; align-items: center;">
                 <?php 
-                // Show dashboard button only for username "Vijay Joshi" and not on dashboard page
-                // if (!$is_dashboard_page && $username === 'Vijay Joshi'):
-                if (!$is_dashboard_page && $user_roll !== 'district_user'):
+                // Check which button to show based on current page and user role
+                if ($user_roll === 'district_user') {
+                    // For district_user, show "नवीन बातमी" button only on approval pages
+                    if ($is_news_approval_page) {
+                        ?>
+                        <a href="post_news.php" class="news-btn">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>नवीन बातमी</span>
+                        </a>
+                        <?php
+                    }
+                } else {
+                    // For admin and division_head
+                    if ($is_news_approval_page) {
+                        // On approval pages, show "नवीन बातमी" button
+                        ?>
+                        <a href="post_news.php" class="news-btn">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>नवीन बातमी</span>
+                        </a>
+                        <?php
+                    } elseif ($current_page === 'post_news.php') {
+                        // On post_news.php page, show "News" button (to go to approval page)
+                        ?>
+                        <a href="newsapproval.php" class="news-btn">
+                            <i class="bi bi-newspaper"></i>
+                            <span>बातमी</span>
+                        </a>
+                        <?php
+                    } else {
+                        // On other pages, show "News" button
+                        ?>
+                        <a href="newsapproval.php" class="news-btn">
+                            <i class="bi bi-newspaper"></i>
+                            <span>बातमी</span>
+                        </a>
+                        <?php
+                    }
+                }
                 ?>
-                <a href="dashboard.php" class="dashboard-btn">
-                    <i class="bi bi-speedometer2"></i> डॅशबोर्ड
-                </a>
-                <?php endif; ?>
+            </div>
+            
+            <!-- Right side buttons -->
+            <div class="nav-buttons-container">
+                <!-- Desktop buttons -->
+                <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
+                    <?php if ($user_roll === 'Super Admin'): ?>
+                    <a href="ads_analytics.php" class="dashboard-btn">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>जाहिरात विश्लेषण</span>
+                    </a>
+                    <a href="advertisement_post.php" class="dashboard-btn">
+                        <i class="bi bi-megaphone"></i>
+                        <span>जाहिरात</span>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php 
+                    // Show dashboard button only for non-district users and not on dashboard page
+                    if (!$is_dashboard_page && $user_roll !== 'district_user'):
+                    ?>
+                    <a href="dashboard.php" class="dashboard-btn">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>डॅशबोर्ड</span>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <!-- User Management Button (for Super Admin) -->
+                    <?php if ($user_roll === 'Super Admin'): ?>
+                    <a href="newUser.php" class="user-mgmt-btn">
+                        <i class="bi bi-people"></i>
+                        <span>यूजर व्यवस्थापन</span>
+                    </a>
+                    <?php endif; ?>
+                </div>
                 
+                <!-- Mobile Menu Toggle Button -->
+                <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                
+                <!-- Profile Button -->
                 <div class="profile-container">
                     <button class="profile-btn" id="profileButton">
                         <i class="bi bi-person-circle"></i>
@@ -307,11 +463,6 @@ if (isset($_SESSION['user_id'])) {
                                 <div class="user-info-label">Name</div>
                                 <div class="user-info-value"><?php echo htmlspecialchars($user_name); ?></div>
                             </div>
-                            
-                            <!-- <div class="user-info-item">
-                                <div class="user-info-label">Username</div>
-                                <div class="user-info-value"><?php echo htmlspecialchars($username); ?></div>
-                            </div> -->
                             
                             <div class="user-info-item">
                                 <div class="user-info-label">Role</div>
@@ -345,6 +496,76 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
         </div>
+        
+        <!-- Mobile Menu -->
+        <div class="mobile-menu" id="mobileMenu">
+            <?php 
+            // Mobile menu items based on user role and current page
+            if ($user_roll === 'district_user') {
+                if ($is_news_approval_page) {
+                    ?>
+                    <a href="post_news.php" class="mobile-menu-item">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>नवीन बातमी</span>
+                    </a>
+                    <?php
+                }
+            } else {
+                if ($is_news_approval_page) {
+                    ?>
+                    <a href="post_news.php" class="mobile-menu-item">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>नवीन बातमी</span>
+                    </a>
+                    <?php
+                } elseif ($current_page === 'post_news.php') {
+                    ?>
+                    <a href="newsapproval.php" class="mobile-menu-item">
+                        <i class="bi bi-newspaper"></i>
+                        <span>बातमी</span>
+                    </a>
+                    <?php
+                } else {
+                    ?>
+                    <a href="newsapproval.php" class="mobile-menu-item">
+                        <i class="bi bi-newspaper"></i>
+                        <span>बातमी</span>
+                    </a>
+                    <?php
+                }
+            }
+            ?>
+            
+            <?php if ($user_roll === 'Super Admin'): ?>
+            <a href="ads_analytics.php" class="mobile-menu-item">
+                <i class="bi bi-speedometer2"></i>
+                <span>जाहिरात विश्लेषण</span>
+            </a>
+            <a href="advertisement_post.php" class="mobile-menu-item">
+                <i class="bi bi-megaphone"></i>
+                <span>जाहिरात</span>
+            </a>
+            <?php endif; ?>
+            
+            <?php if (!$is_dashboard_page && $user_roll !== 'district_user'): ?>
+            <a href="dashboard.php" class="mobile-menu-item">
+                <i class="bi bi-speedometer2"></i>
+                <span>डॅशबोर्ड</span>
+            </a>
+            <?php endif; ?>
+            
+            <?php if ($user_roll === 'Super Admin'): ?>
+            <a href="newUser.php" class="mobile-menu-item">
+                <i class="bi bi-people"></i>
+                <span>यूजर व्यवस्थापन</span>
+            </a>
+            <?php endif; ?>
+            
+            <a href="profile.php" class="mobile-menu-item">
+                <i class="bi bi-gear"></i>
+                <span>प्रोफाइल सेटिंग्ज</span>
+            </a>
+        </div>
     </div>
     
     <script>
@@ -352,23 +573,50 @@ if (isset($_SESSION['user_id'])) {
             const profileButton = document.getElementById('profileButton');
             const profileModal = document.getElementById('profileModal');
             const settingsLink = document.querySelector('.settings-link');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const mobileMenu = document.getElementById('mobileMenu');
             
+            // Profile button click handler
             profileButton.addEventListener('click', function(e) {
                 e.stopPropagation();
                 profileModal.classList.toggle('show');
+                // Close mobile menu if open
+                if (mobileMenu.classList.contains('show')) {
+                    mobileMenu.classList.remove('show');
+                }
+            });
+            
+            // Mobile menu toggle click handler
+            mobileMenuToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                mobileMenu.classList.toggle('show');
+                // Close profile modal if open
+                if (profileModal.classList.contains('show')) {
+                    profileModal.classList.remove('show');
+                }
             });
             
             // Prevent modal from closing when clicking on settings link
             if (settingsLink) {
                 settingsLink.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    // Allow the link to work normally (navigate to profile.php)
                 });
             }
             
+            // Close menus when clicking outside
             document.addEventListener('click', function(e) {
                 if (!profileButton.contains(e.target) && !profileModal.contains(e.target)) {
                     profileModal.classList.remove('show');
+                }
+                if (!mobileMenuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+                    mobileMenu.classList.remove('show');
+                }
+            });
+            
+            // Close menus on window resize if above mobile breakpoint
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    mobileMenu.classList.remove('show');
                 }
             });
         });
