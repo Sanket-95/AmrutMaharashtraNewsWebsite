@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
         }
 
-        // If no errors, insert into database - FIXED: Now includes payment_status
+        // If no errors, insert into database
         if (empty($errors)) {
             $payment_status = 1; // 1 for paid, 0 for pending
             
@@ -192,9 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $stmt = $conn->prepare($sql);
             
-            // FIXED: Added payment_status parameter (18th parameter)
             $stmt->bind_param(
-                'ssssssssssisssdssi', // Changed: Added 'i' at the end for payment_status
+                'ssssssssssisssdssi',
                 $client_name,
                 $client_email,
                 $mobile_number,
@@ -212,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $start_date,
                 $end_date,
                 $created_by,
-                $payment_status // Added this missing parameter
+                $payment_status
             );
 
             if ($stmt->execute()) {
@@ -246,8 +245,9 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                 <div class="alert alert-success">
                     <i class="bi bi-check-circle-fill me-2"></i>
                     जाहिरात यशस्वीरित्या जोडली गेली. 
-                    <a href="advertisement_add.php" class="alert-link">आणखी एक जोडा</a> किंवा 
-                    <a href="advertisement_management.php" class="alert-link">व्यवस्थापनाकडे जा</a>.
+                    <a href="advertisement_post.php" class="alert-link">आणखी एक जोडा</a> 
+                    <!-- किंवा  -->
+                    <!-- <a href="advertisement_management.php" class="alert-link">व्यवस्थापनाकडे जा</a>. -->
                 </div>
             <?php elseif ($payment_redirect): ?>
                 <div class="text-center py-4">
@@ -333,19 +333,32 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                         </div>
                     </div>
                     
+                    <!-- State and District Section with Dropdowns -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">राज्य *</label>
-                            <input type="text" name="state" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['state'] ?? ''); ?>" 
-                                   placeholder="उदा. महाराष्ट्र" required>
+                            <select name="state" id="state" class="form-select" required onchange="loadDistricts()">
+                                <option value="">-- राज्य निवडा / Select State --</option>
+                                <?php if (isset($_POST['state']) && !empty($_POST['state'])): ?>
+                                    <option value="<?php echo htmlspecialchars($_POST['state']); ?>" selected>
+                                        <?php echo htmlspecialchars($_POST['state']); ?>
+                                    </option>
+                                <?php endif; ?>
+                            </select>
+                            <small class="text-muted">भारतातील राज्ये / Indian States</small>
                         </div>
                         
                         <div class="col-md-6 mb-3">
                             <label class="form-label">जिल्हा *</label>
-                            <input type="text" name="district" class="form-control" 
-                                   value="<?php echo htmlspecialchars($_POST['district'] ?? ''); ?>" 
-                                   placeholder="उदा. पुणे" required>
+                            <select name="district" id="district" class="form-select" required>
+                                <option value="">-- जिल्हा निवडा / Select District --</option>
+                                <?php if (isset($_POST['district']) && !empty($_POST['district'])): ?>
+                                    <option value="<?php echo htmlspecialchars($_POST['district']); ?>" selected>
+                                        <?php echo htmlspecialchars($_POST['district']); ?>
+                                    </option>
+                                <?php endif; ?>
+                            </select>
+                            <small class="text-muted">निवडलेल्या राज्यातील जिल्हे / Districts of selected state</small>
                         </div>
                     </div>
                     
@@ -548,12 +561,149 @@ function toggleTransactionId() {
     }
 }
 
-// Initialize on page load
+// Load Indian states on page load
 document.addEventListener('DOMContentLoaded', function() {
+    loadIndianStates();
     updatePrice();
     calculateEndDate();
     toggleTransactionId();
+    
+    // If state was previously selected (e.g., form validation failed), load its districts
+    const selectedState = document.getElementById('state').value;
+    if (selectedState && selectedState !== '') {
+        // Small delay to ensure states are loaded
+        setTimeout(function() {
+            loadDistricts();
+        }, 500);
+    }
 });
+
+// Function to load Indian states
+function loadIndianStates() {
+    fetch("https://countriesnow.space/api/v0.1/countries/states", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country: "India" })
+    })
+    .then(res => res.json())
+    .then(data => {
+        const stateSelect = document.getElementById("state");
+        
+        // Clear existing options except the first one
+        while (stateSelect.options.length > 1) {
+            stateSelect.remove(1);
+        }
+        
+        // Get previously selected state from PHP
+        const previousState = "<?php echo isset($_POST['state']) ? addslashes($_POST['state']) : ''; ?>";
+        
+        // Sort states alphabetically
+        const states = data.data.states.sort((a, b) => a.name.localeCompare(b.name));
+        
+        states.forEach(state => {
+            const option = document.createElement("option");
+            option.value = state.name;
+            option.text = state.name;
+            
+            // Preserve previously selected state after form submission
+            if (previousState && state.name === previousState) {
+                option.selected = true;
+            }
+            
+            stateSelect.appendChild(option);
+        });
+    })
+    .catch(error => {
+        console.error('Error loading states:', error);
+        // Fallback options in case API fails
+        const stateSelect = document.getElementById("state");
+        const fallbackStates = [
+            "Maharashtra", "Delhi", "Karnataka", "Tamil Nadu", 
+            "Gujarat", "Uttar Pradesh", "Rajasthan", "West Bengal",
+            "Madhya Pradesh", "Bihar", "Andhra Pradesh", "Telangana",
+            "Kerala", "Punjab", "Haryana", "Odisha"
+        ];
+        
+        // Get previously selected state
+        const previousState = "<?php echo isset($_POST['state']) ? addslashes($_POST['state']) : ''; ?>";
+        
+        fallbackStates.sort().forEach(state => {
+            const option = document.createElement("option");
+            option.value = state;
+            option.text = state;
+            
+            if (previousState && state === previousState) {
+                option.selected = true;
+            }
+            
+            stateSelect.appendChild(option);
+        });
+    });
+}
+
+// Function to load districts based on selected state
+function loadDistricts() {
+    const stateName = document.getElementById("state").value;
+    const districtSelect = document.getElementById("district");
+    
+    // Clear district dropdown
+    districtSelect.innerHTML = "<option value=''>-- जिल्हा निवडा / Select District --</option>";
+    
+    if (!stateName) {
+        return;
+    }
+    
+    // Show loading state
+    const loadingOption = document.createElement("option");
+    loadingOption.value = "";
+    loadingOption.text = "लोड करत आहे... / Loading...";
+    loadingOption.disabled = true;
+    districtSelect.appendChild(loadingOption);
+    
+    fetch("https://countriesnow.space/api/v0.1/countries/state/cities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            country: "India",
+            state: stateName
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        // Clear loading option
+        districtSelect.innerHTML = "<option value=''>-- जिल्हा निवडा / Select District --</option>";
+        
+        // Get previously selected district
+        const previousDistrict = "<?php echo isset($_POST['district']) ? addslashes($_POST['district']) : ''; ?>";
+        
+        // Sort districts alphabetically
+        const districts = data.data.sort((a, b) => a.localeCompare(b));
+        
+        districts.forEach(city => {
+            const option = document.createElement("option");
+            option.value = city;
+            option.text = city;
+            
+            // Preserve previously selected district
+            if (previousDistrict && city === previousDistrict) {
+                option.selected = true;
+            }
+            
+            districtSelect.appendChild(option);
+        });
+    })
+    .catch(error => {
+        console.error('Error loading districts:', error);
+        districtSelect.innerHTML = "<option value=''>-- जिल्हा निवडा / Select District --</option>";
+        
+        // Add a fallback message
+        const errorOption = document.createElement("option");
+        errorOption.value = "";
+        errorOption.text = "जिल्हे लोड करण्यात त्रुटी / Error loading districts";
+        errorOption.disabled = true;
+        districtSelect.appendChild(errorOption);
+    });
+}
 </script>
 
 <?php
