@@ -22,9 +22,19 @@ define('SECONDARY_ADS_PATH', 'components/secondary_advertised/');
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
-// Price configuration
-define('BIG_AD_PRICE', 3000);
-define('SMALL_AD_PRICE', 2000);
+// Price configuration for different durations
+define('BIG_AD_PRICE_10', 1500);
+define('BIG_AD_PRICE_20', 2500);
+define('BIG_AD_PRICE_30', 3000);
+
+define('SMALL_AD_PRICE_10', 1000);
+define('SMALL_AD_PRICE_20', 1500);
+define('SMALL_AD_PRICE_30', 2000);
+
+// Duration in days
+define('DURATION_10', 10);
+define('DURATION_20', 20);
+define('DURATION_30', 30);
 
 // Ensure upload directories exist
 if (!is_dir(PRIMARY_ADS_PATH)) mkdir(PRIMARY_ADS_PATH, 0755, true);
@@ -56,7 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $business_type = trim($_POST['business_type'] ?? '');
         $ad_title = trim($_POST['ad_title'] ?? '');
         $ad_type = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
-        $amount = ($ad_type == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
+        $duration = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;
+        
+        // Calculate amount based on ad type and duration
+        if ($ad_type == 1) {
+            $amount = ($duration == DURATION_10) ? BIG_AD_PRICE_10 : 
+                     (($duration == DURATION_20) ? BIG_AD_PRICE_20 : 
+                     (($duration == DURATION_30) ? BIG_AD_PRICE_30 : 0));
+        } else {
+            $amount = ($duration == DURATION_10) ? SMALL_AD_PRICE_10 : 
+                     (($duration == DURATION_20) ? SMALL_AD_PRICE_20 : 
+                     (($duration == DURATION_30) ? SMALL_AD_PRICE_30 : 0));
+        }
         
         // Basic validation for payment gateway
         if (empty($client_name)) $errors[] = 'ग्राहकाचे नाव आवश्यक आहे.';
@@ -68,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($district)) $errors[] = 'जिल्हा आवश्यक आहे.';
         if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
         if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
+        if (!in_array($duration, [DURATION_10, DURATION_20, DURATION_30])) $errors[] = 'वैध कालावधी निवडा.';
         
         // Validate file upload for payment gateway
         if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
@@ -133,9 +155,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ad_title       = trim($_POST['ad_title'] ?? '');
         $ad_link        = trim($_POST['ad_link'] ?? '');
         $ad_type        = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
+        $duration       = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;
         $payment_method = trim($_POST['payment_method'] ?? '');
         $transaction_id = trim($_POST['transaction_id'] ?? '');
-        $price          = ($ad_type == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
+        
+        // Calculate price based on ad type and duration
+        if ($ad_type == 1) {
+            $price = ($duration == DURATION_10) ? BIG_AD_PRICE_10 : 
+                    (($duration == DURATION_20) ? BIG_AD_PRICE_20 : 
+                    (($duration == DURATION_30) ? BIG_AD_PRICE_30 : 0));
+        } else {
+            $price = ($duration == DURATION_10) ? SMALL_AD_PRICE_10 : 
+                    (($duration == DURATION_20) ? SMALL_AD_PRICE_20 : 
+                    (($duration == DURATION_30) ? SMALL_AD_PRICE_30 : 0));
+        }
+        
         $start_date     = $_POST['start_date'] ?? '';
         $end_date       = $_POST['end_date'] ?? '';
         $created_by     = $_SESSION['name'] ?? 'Admin';
@@ -150,11 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($district)) $errors[] = 'जिल्हा आवश्यक आहे.';
         if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
         if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
+        if (!in_array($duration, [DURATION_10, DURATION_20, DURATION_30])) $errors[] = 'वैध कालावधी निवडा.';
         if (empty($payment_method)) $errors[] = 'पेमेंट पद्धत निवडा.';
         if (empty($transaction_id)) $errors[] = 'ट्रांझॅक्शन ID आवश्यक आहे.';
-        if (empty($start_date) || empty($end_date)) $errors[] = 'सुरु आणि शेवटची तारीख आवश्यक आहे.';
-        if (!empty($start_date) && !empty($end_date) && strtotime($end_date) < strtotime($start_date)) {
-            $errors[] = 'शेवटची तारीख सुरु तारखेपेक्षा नंतरची असावी.';
+        if (empty($start_date)) $errors[] = 'सुरु तारीख आवश्यक आहे.';
+        
+        // Auto-calculate end date based on duration
+        if (!empty($start_date) && $duration > 0) {
+            $date = new DateTime($start_date);
+            $date->modify('+' . $duration . ' days');
+            $end_date = $date->format('Y-m-d');
         }
 
         // File upload handling
@@ -187,13 +226,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $payment_status = 1; // 1 for paid, 0 for pending
             
             $sql = "INSERT INTO ads_management 
-                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, ad_link, ad_type, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, ad_link, ad_type, duration, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
             
             $stmt = $conn->prepare($sql);
             
             $stmt->bind_param(
-                'ssssssssssisssdssi',
+                'ssssssssssiisssdssi',
                 $client_name,
                 $client_email,
                 $mobile_number,
@@ -205,6 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $image_name,
                 $ad_link,
                 $ad_type,
+                $duration,
                 $payment_method,
                 $transaction_id,
                 $price,
@@ -386,29 +426,30 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">प्रकार *</label>
-                            <select name="ad_type" id="ad_type" class="form-select" required onchange="updatePrice()">
+                            <select name="ad_type" id="ad_type" class="form-select" required onchange="updateDurationOptions()">
                                 <option value="">-- प्रकार निवडा --</option>
-                                <option value="1" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 1) ? 'selected' : ''; ?> data-price="<?php echo BIG_AD_PRICE; ?>">मोठी जाहिरात (₹<?php echo BIG_AD_PRICE; ?>)</option>
-                                <option value="2" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 2) ? 'selected' : ''; ?> data-price="<?php echo SMALL_AD_PRICE; ?>">छोटी जाहिरात (₹<?php echo SMALL_AD_PRICE; ?>)</option>
+                                <option value="1" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 1) ? 'selected' : ''; ?>>मोठी जाहिरात / Big Ad</option>
+                                <option value="2" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 2) ? 'selected' : ''; ?>>छोटी जाहिरात / Small Ad</option>
                             </select>
                         </div>
                         
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">किंमत (₹) *</label>
-                            <input type="number" name="price" id="price" class="form-control bg-light" 
-                                   value="<?php 
-                                       if (isset($_POST['ad_type'])) {
-                                           echo ($_POST['ad_type'] == 1) ? BIG_AD_PRICE : SMALL_AD_PRICE;
-                                       } else {
-                                           echo '';
-                                       }
-                                   ?>" 
-                                   readonly placeholder="प्रकार निवडा" style="background-color:#f8f9fa; font-weight:600; color:#28a745;">
-                            <small class="text-muted">प्रकारानुसार किंमत स्वयं-निर्धारित</small>
+                            <label class="form-label">कालावधी *</label>
+                            <select name="duration" id="duration" class="form-select" required onchange="updatePriceAndEndDate()">
+                                <option value="">-- कालावधी निवडा --</option>
+                            </select>
                         </div>
                     </div>
                     
                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">किंमत (₹) *</label>
+                            <input type="number" name="price" id="price" class="form-control bg-light" 
+                                   value="<?php echo htmlspecialchars($_POST['price'] ?? ''); ?>" 
+                                   readonly placeholder="प्रकार व कालावधी निवडा" style="background-color:#f8f9fa; font-weight:600; color:#28a745;">
+                            <small class="text-muted">प्रकार व कालावधीनुसार किंमत स्वयं-निर्धारित</small>
+                        </div>
+                        
                         <div class="col-md-6 mb-3">
                             <label class="form-label">प्रतिमा *</label>
                             <input type="file" name="ad_image" class="form-control" 
@@ -449,7 +490,7 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     
                     <div class="alert alert-info py-2 mb-3">
                         <i class="bi bi-info-circle me-2"></i>
-                        <strong>जाहिरात कालावधी:</strong> 1 महिना (३० दिवस) - शेवटची तारीख आपोआप मोजली जाईल
+                        <strong>जाहिरात कालावधी:</strong> निवडलेल्या कालावधीनुसार शेवटची तारीख आपोआप मोजली जाईल
                     </div>
                     
                     <div class="row">
@@ -457,7 +498,7 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                             <label class="form-label">सुरु तारीख *</label>
                             <input type="date" name="start_date" id="start_date" class="form-control" 
                                    value="<?php echo htmlspecialchars($_POST['start_date'] ?? ''); ?>" 
-                                   onchange="calculateEndDate()" required>
+                                   onchange="updateEndDate()" required>
                         </div>
                         
                         <div class="col-md-6 mb-3">
@@ -465,7 +506,7 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                             <input type="date" name="end_date" id="end_date" class="form-control bg-light" 
                                    value="<?php echo htmlspecialchars($_POST['end_date'] ?? ''); ?>" 
                                    readonly required style="background-color:#f8f9fa;">
-                            <small class="text-muted">सुरु तारखेनंतर ३० दिवस</small>
+                            <small class="text-muted">सुरु तारखेनंतर निवडलेल्या कालावधीनुसार</small>
                         </div>
                     </div>
                     
@@ -513,35 +554,96 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
 </style>
 
 <script>
-// Update price based on ad type
-function updatePrice() {
-    const adType = document.getElementById('ad_type');
+// Duration and price mapping
+const durationPrices = {
+    1: { // Big Ad
+        10: <?php echo BIG_AD_PRICE_10; ?>,
+        20: <?php echo BIG_AD_PRICE_20; ?>,
+        30: <?php echo BIG_AD_PRICE_30; ?>
+    },
+    2: { // Small Ad
+        10: <?php echo SMALL_AD_PRICE_10; ?>,
+        20: <?php echo SMALL_AD_PRICE_20; ?>,
+        30: <?php echo SMALL_AD_PRICE_30; ?>
+    }
+};
+
+// Update duration options based on ad type
+function updateDurationOptions() {
+    const adType = document.getElementById('ad_type').value;
+    const durationSelect = document.getElementById('duration');
     const priceField = document.getElementById('price');
-    const selectedOption = adType.options[adType.selectedIndex];
     
-    if (selectedOption.value) {
-        const price = selectedOption.getAttribute('data-price');
+    // Clear current options
+    durationSelect.innerHTML = '<option value="">-- कालावधी निवडा --</option>';
+    
+    if (adType) {
+        // Add duration options based on ad type
+        const durations = [10, 20, 30];
+        
+        durations.forEach(days => {
+            const option = document.createElement('option');
+            option.value = days;
+            
+            if (adType == 1) {
+                option.text = days + ' दिवस (₹' + durationPrices[1][days] + ')';
+            } else {
+                option.text = days + ' दिवस (₹' + durationPrices[2][days] + ')';
+            }
+            
+            // Preserve previously selected duration if any
+            const previousDuration = "<?php echo isset($_POST['duration']) ? $_POST['duration'] : ''; ?>";
+            if (previousDuration && days == previousDuration) {
+                option.selected = true;
+            }
+            
+            durationSelect.appendChild(option);
+        });
+    }
+    
+    // Clear price when ad type changes
+    priceField.value = '';
+    
+    // Update price and end date if duration is selected
+    if (durationSelect.value) {
+        updatePriceAndEndDate();
+    }
+}
+
+// Update price based on ad type and duration
+function updatePriceAndEndDate() {
+    const adType = document.getElementById('ad_type').value;
+    const duration = document.getElementById('duration').value;
+    const priceField = document.getElementById('price');
+    
+    if (adType && duration) {
+        const price = durationPrices[adType][duration];
         priceField.value = price;
     } else {
         priceField.value = '';
     }
+    
+    // Update end date if start date is selected
+    updateEndDate();
 }
 
-// Calculate end date (30 days from start date)
-function calculateEndDate() {
+// Update end date based on start date and duration
+function updateEndDate() {
     const startDate = document.getElementById('start_date').value;
+    const duration = document.getElementById('duration').value;
     const endDateField = document.getElementById('end_date');
     
-    if (startDate) {
+    if (startDate && duration) {
         const date = new Date(startDate);
-        date.setDate(date.getDate() + 30);
+        date.setDate(date.getDate() + parseInt(duration));
         
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         
         endDateField.value = `${year}-${month}-${day}`;
-    } else {
+    } else if (startDate) {
+        // Clear end date if no duration selected
         endDateField.value = '';
     }
 }
@@ -564,8 +666,8 @@ function toggleTransactionId() {
 // Load Indian states on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadIndianStates();
-    updatePrice();
-    calculateEndDate();
+    updateDurationOptions();
+    updateEndDate();
     toggleTransactionId();
     
     // If state was previously selected (e.g., form validation failed), load its districts
