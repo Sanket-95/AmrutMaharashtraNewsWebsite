@@ -10,6 +10,28 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Handle payment gateway return
+if (isset($_GET['payment_status'])) {
+    if ($_GET['payment_status'] == 'success') {
+        if (isset($_GET['txn_id'])) {
+            $_SESSION['payment_success_txn'] = $_GET['txn_id'];
+        }
+        $success = true;
+        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>';
+    } else if ($_GET['payment_status'] == 'failed') {
+        $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'पेमेंट अयशस्वी';
+        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>पेमेंट अयशस्वी!</strong> ' . $message . '
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>';
+    }
+}
+
 // Include database connection and header
 include 'components/db_config.php';
 include 'components/header.php';
@@ -27,7 +49,7 @@ define('BIG_AD_PRICE_10', 1500);
 define('BIG_AD_PRICE_20', 2500);
 define('BIG_AD_PRICE_30', 3000);
 
-define('SMALL_AD_PRICE_10', 1000);
+define('SMALL_AD_PRICE_10', 1);
 define('SMALL_AD_PRICE_20', 1500);
 define('SMALL_AD_PRICE_30', 2000);
 
@@ -45,11 +67,11 @@ $success = false;
 $payment_redirect = false;
 $encrypted_data = '';
 
-$clientCode='DJ020';   // Please use the credentials shared by your Account Manager
-$username='DJL754@sp';     // Please use the credentials shared by your Account Manager
-$password='4q3qhgmJNM4m';     // Please use the credentials shared by your Account Manager
-$authKey='ISTrmmDC2bTvkxzlDRrVguVwetGS8xC/UFPsp6w+Itg=';      // Please use the credentials shared by your Account Manager
-$authIV='M+aUFgRMPq7ci+Cmoytp3KJ2GPBOwO72Z2Cjbr55zY7++pT9mLES2M5cIblnBtaX';       // Please use the credentials shared by your Account Manager
+$clientCode='ACAD914';   // Please use the credentials shared by your Account Manager
+$username='amrut.gom-4@gmail.com';     // Please use the credentials shared by your Account Manager
+$password='ACAD914_SP25756';     // Please use the credentials shared by your Account Manager
+$authKey='VkylGulAs8ysjQcwDU7vHCbSDz+05lxxh43s13/+P1A=';      // Please use the credentials shared by your Account Manager
+$authIV='5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';       // Please use the credentials shared by your Account Manager
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if payment gateway is selected
@@ -120,7 +142,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $amountType = 'INR';
             $mcc = 5137;
             $channelId = 'W';
-            $callbackUrl = 'payment_gatway/SabPaisaPostPgResponse.php';
+
+            // $callbackUrl = 'payment_gatway/SabPaisaPostPgResponse.php';
+            // FULL absolute URL
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+            $host = $_SERVER['HTTP_HOST'];
+            $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+            $callbackUrl = $protocol . $host . $basePath . '/payment_gatway/SabPaisaPostPgResponse.php';
+
             
             $encData = "?clientCode=" . $clientCode . 
                       "&transUserName=" . $username . 
@@ -296,7 +325,8 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     </div>
                     <h5>पेमेंट गेटवे वर पुनर्निर्देशित होत आहे...</h5>
                     <p>कृपया प्रतीक्षा करा</p>
-                    <form action="https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm">
+                    <!-- <form action="https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm"> -->
+                    <form action="https://securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm">                        
                         <input type="hidden" name="encData" value="<?php echo $encrypted_data; ?>">
                         <input type="hidden" name="clientCode" value="<?php echo $clientCode; ?>">
                         <noscript>

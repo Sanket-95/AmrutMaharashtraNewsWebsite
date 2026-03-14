@@ -9,9 +9,9 @@ $decText = '';
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $clientTxnId = $_POST["clientTxnId"];
     $encData = null;
-    $clientCode = 'DJ020';  // Your client code
-    $authKey = 'ISTrmmDC2bTvkxzlDRrVguVwetGS8xC/UFPsp6w+Itg=';  // Your AES key in base64 format
-    $authIV = 'M+aUFgRMPq7ci+Cmoytp3KJ2GPBOwO72Z2Cjbr55zY7++pT9mLES2M5cIblnBtaX';  // Your HMAC key in base64 format
+    $clientCode = 'ACAD914';  // Your client code
+    $authKey = 'VkylGulAs8ysjQcwDU7vHCbSDz+05lxxh43s13/+P1A=';  // Your AES key in base64 format
+    $authIV = '5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';  // Your HMAC key in base64 format
     
     // Prepare the data to be encrypted
     $encData = "clientCode=" . $clientCode . "&clientTxnId=" . $clientTxnId;
