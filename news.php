@@ -48,6 +48,43 @@ $news = $result->fetch_assoc();
 $published_date = date('d-m-Y', strtotime($news['published_date']));
 $published_time = date('h:i A', strtotime($news['published_date']));
 
+// ============ FETCH MOBILE FOOTER ADS ============
+$current_date = date('Y-m-d');
+$mobile_footer_ads = [];
+
+$footer_ads_query = "SELECT footer_image, ad_link, ad_title 
+                     FROM ads_management 
+                     WHERE footer_image IS NOT NULL 
+                     AND footer_image != '' 
+                     AND is_active = 1 
+                     AND '$current_date' BETWEEN start_date AND end_date
+                     ORDER BY RAND()
+                     LIMIT 8";
+
+$footer_ads_result = mysqli_query($conn, $footer_ads_query);
+
+if ($footer_ads_result && mysqli_num_rows($footer_ads_result) > 0) {
+    while ($row = mysqli_fetch_assoc($footer_ads_result)) {
+        $mobile_footer_ads[] = [
+            'image' => 'components/secondary_advertised_footer/' . $row['footer_image'],
+            'link' => $row['ad_link'],
+            'title' => $row['ad_title']
+        ];
+    }
+}
+
+// If no ads found, add a default fallback
+if (empty($mobile_footer_ads)) {
+    $mobile_footer_ads[] = [
+        'image' => 'photos/footer_add.png',
+        'link' => '#',
+        'title' => 'Advertisement'
+    ];
+}
+
+// Convert PHP array to JSON for JavaScript
+$mobile_footer_ads_json = json_encode($mobile_footer_ads);
+
 // ============ DYNAMIC OG TAGS CONFIGURATION ============
 // Determine which image to use for sharing
 $share_image_url = '';
@@ -1030,6 +1067,113 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             color: #212529;
         }
         
+        /* ========== Mobile Sticky Ad Styles ========== */
+        .mobile-ad-sticky {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999;
+            background-color: rgba(0, 0, 0, 0.9);
+            text-align: center;
+            padding: 8px 0;
+            display: none;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+            transition: opacity 0.3s ease;
+        }
+        
+        .mobile-ad-sticky a {
+            display: inline-block;
+            max-width: 100%;
+            height: auto;
+            text-decoration: none;
+        }
+        
+        .mobile-ad-sticky img {
+            max-width: 100%;
+            height: auto;
+            max-height: 70px;
+            border-radius: 5px;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Navigation buttons */
+        .ad-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 102, 0, 0.8);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .ad-nav-btn:hover {
+            background: #ff6600;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .ad-prev {
+            left: 5px;
+        }
+        
+        .ad-next {
+            right: 5px;
+        }
+        
+        /* Ad counter indicator */
+        .ad-indicator {
+            position: absolute;
+            bottom: 2px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            z-index: 10000;
+        }
+        
+        /* Fallback styling */
+        .ad-fallback {
+            background-color: #f0f0f0;
+            color: #666;
+            padding: 10px;
+            font-size: 14px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            max-width: 100%;
+            display: inline-block;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-ad-sticky {
+                display: block;
+            }
+            
+            body {
+                padding-bottom: 86px;
+            }
+            
+            .ad-nav-btn {
+                width: 25px;
+                height: 25px;
+                font-size: 16px;
+            }
+        }
+        
         /* MOBILE RESPONSIVE ADJUSTMENTS */
         @media (max-width: 768px) {
             .news-title {
@@ -1206,6 +1350,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 gap: 6px;
                 row-gap: 8px;
             }
+            
+            body {
+                padding-bottom: 80px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -1220,6 +1368,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 justify-content: center;
                 padding: 8px 5px;
             }
+            
+            body {
+                padding-bottom: 75px;
+            }
         }
         
         @media (max-width: 360px) {
@@ -1231,6 +1383,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             .mobile-news-meta .meta-item {
                 justify-content: flex-start;
                 padding: 6px 10px;
+            }
+            
+            body {
+                padding-bottom: 70px;
             }
         }
         
@@ -1329,51 +1485,30 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             }
         }
         
-        /* ========== NEW: Mobile Sticky Ad Styles ========== */
-        .mobile-ad-sticky {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            z-index: 9999;
-            background-color: rgba(0, 0, 0, 0.8);
-            text-align: center;
-            padding: 8px 0;
-            display: none; /* hidden by default, shown only on mobile */
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        /* Optional: Add loading spinner */
+        .ad-loading {
+            position: relative;
+            min-height: 60px;
         }
-        .mobile-ad-sticky a {
-            display: inline-block;
-            max-width: 100%;
-            height: auto;
+        
+        .ad-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6600;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
-        .mobile-ad-sticky img {
-            max-width: 100%;
-            height: auto;
-            max-height: 70px; /* adjust as needed */
-            border-radius: 5px;
+        
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
-        @media (max-width: 768px) {
-            .mobile-ad-sticky {
-                display: block;
-            }
-            /* Add padding to body bottom to prevent content from being hidden behind ad */
-            body {
-                padding-bottom: 86px; /* height of ad + some margin */
-            }
-        }
-        .ad-fallback {
-            background-color: #f0f0f0;
-            color: #666;
-            padding: 10px;
-            font-size: 14px;
-            text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            max-width: 100%;
-            display: inline-block;
-        }
-        /* ========== End of Mobile Ad Styles ========== */
     </style>
 </head>
 <body>
@@ -1839,13 +1974,12 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     </div>
 
     <!-- ========== MOBILE STICKY ADVERTISEMENT ========== -->
-    <div class="mobile-ad-sticky d-md-none">
-        <a href="https://example.com/ad-destination" target="_blank" rel="noopener">
-            <!-- <img src="assets/ad-banner.jpg"  -->
+    <div class="mobile-ad-sticky d-md-none" id="mobileAdSticky">
+        <a href="#" id="mobileAdLink" target="_blank" rel="noopener">
             <img src="photos/footer_add.png"
                  alt="Advertisement" 
                  id="mobileAdImage"
-                 onerror="this.onerror=null; this.src='assets/ad-fallback.jpg'; this.classList.add('ad-fallback'); this.alt='Advertisement Unavailable';">
+                 onerror="this.onerror=null; this.src='photos/footer_add.png'; this.classList.add('ad-fallback');">
         </a>
     </div>
     <!-- ========== END MOBILE AD ========== -->
@@ -1874,6 +2008,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+    // Mobile Footer Advertisement Data (loaded at page load)
+    const mobileFooterAds = <?php echo $mobile_footer_ads_json; ?>;
+    
     // Toastify notification function - SET TO 3 SECONDS ONLY
     function showToast(message, type = 'info') {
         const toastClass = `toast-${type}`;
@@ -2271,6 +2408,9 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
         
         // Initialize rich text content links
         initializeContentLinks();
+        
+        // Initialize mobile footer ad rotation
+        initMobileFooterAd();
     });
     
     // Function to update meta tags for social sharing
@@ -2300,16 +2440,74 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             }
         });
     }
-    </script>
-
-    <!-- Back to Top Button -->
-    <!-- <button onclick="scrollToTop()" 
-            id="scrollToTop" 
-            class="btn btn-primary rounded-circle position-fixed"
-            style="bottom: 30px; right: 30px; width: 50px; height: 50px; display: none; z-index: 1000;">
-        <i class="bi bi-arrow-up"></i>
-    </button> -->
-    <script>
+    
+    // Initialize Mobile Footer Ad Rotation
+    function initMobileFooterAd() {
+        // Only initialize on mobile
+        if (window.innerWidth > 768) return;
+        
+        const adImage = document.getElementById('mobileAdImage');
+        const adLink = document.getElementById('mobileAdLink');
+        
+        if (!adImage || !adLink || !mobileFooterAds || mobileFooterAds.length === 0) return;
+        
+        let currentAdIndex = 0;
+        
+        // Function to show ad by index
+        function showAd(index) {
+            if (!mobileFooterAds[index]) return;
+            
+            const ad = mobileFooterAds[index];
+            
+            // Fade out
+            adImage.style.opacity = '0';
+            
+            setTimeout(() => {
+                adImage.src = ad.image;
+                adLink.href = ad.link || '#';
+                adImage.alt = ad.title || 'Advertisement';
+                
+                // Fade in
+                adImage.style.opacity = '1';
+            }, 300);
+        }
+        
+        // Show first ad
+        showAd(0);
+        
+        // Rotate ads every 5 seconds if there are multiple ads
+        if (mobileFooterAds.length > 1) {
+            setInterval(() => {
+                currentAdIndex = (currentAdIndex + 1) % mobileFooterAds.length;
+                showAd(currentAdIndex);
+            }, 5000);
+        }
+        
+        // Pause on hover
+        const adContainer = document.getElementById('mobileAdSticky');
+        if (adContainer) {
+            adContainer.addEventListener('mouseenter', () => {
+                // Optional: pause rotation if you want
+            });
+            
+            adContainer.addEventListener('mouseleave', () => {
+                // Optional: resume rotation
+            });
+        }
+    }
+    
+    // Also check on resize
+    window.addEventListener('resize', function() {
+        const mobileAdSticky = document.getElementById('mobileAdSticky');
+        if (mobileAdSticky) {
+            if (window.innerWidth <= 768) {
+                mobileAdSticky.style.display = 'block';
+            } else {
+                mobileAdSticky.style.display = 'none';
+            }
+        }
+    });
+    
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }

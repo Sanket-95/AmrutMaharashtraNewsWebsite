@@ -41,6 +41,8 @@ include 'components/login_navbar.php';
 // Configuration
 define('PRIMARY_ADS_PATH', 'components/primary_advertised/');
 define('SECONDARY_ADS_PATH', 'components/secondary_advertised/');
+define('SOCIAL_MEDIA_ADS_PATH', 'components/primary_advertised_social_media/');
+define('FOOTER_ADS_PATH', 'components/secondary_advertised_footer/');
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
@@ -61,6 +63,8 @@ define('DURATION_30', 30);
 // Ensure upload directories exist
 if (!is_dir(PRIMARY_ADS_PATH)) mkdir(PRIMARY_ADS_PATH, 0755, true);
 if (!is_dir(SECONDARY_ADS_PATH)) mkdir(SECONDARY_ADS_PATH, 0755, true);
+if (!is_dir(SOCIAL_MEDIA_ADS_PATH)) mkdir(SOCIAL_MEDIA_ADS_PATH, 0755, true);
+if (!is_dir(FOOTER_ADS_PATH)) mkdir(FOOTER_ADS_PATH, 0755, true);
 
 $errors = [];
 $success = false;
@@ -113,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
         if (!in_array($duration, [DURATION_10, DURATION_20, DURATION_30])) $errors[] = 'वैध कालावधी निवडा.';
         
-        // Validate file upload for payment gateway
+        // Validate main image upload for payment gateway
         if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
             $file_ext = strtolower(pathinfo($_FILES['ad_image']['name'], PATHINFO_EXTENSION));
             $file_size = $_FILES['ad_image']['size'];
@@ -124,13 +128,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'फाइल साइज 2MB पेक्षा कमी असावी.';
             }
         } else {
-            $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
+            $errors[] = 'मुख्य वेबसाईटवर प्रमुख बॅनर प्रतिमा आवश्यक आहे.';
+        }
+        
+        // Validate social media image for big ads
+        if ($ad_type == 1) {
+            if (isset($_FILES['social_media_image']) && $_FILES['social_media_image']['error'] === UPLOAD_ERR_OK) {
+                $file_ext = strtolower(pathinfo($_FILES['social_media_image']['name'], PATHINFO_EXTENSION));
+                $file_size = $_FILES['social_media_image']['size'];
+                
+                if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                    $errors[] = 'सोशल मीडिया प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+                } elseif ($file_size > MAX_FILE_SIZE) {
+                    $errors[] = 'सोशल मीडिया प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                }
+            } else {
+                $errors[] = 'सोशल मीडियावर प्रसारित होणारी बातमी प्रतिमा आवश्यक आहे.';
+            }
+        }
+        
+        // Validate footer image for small ads
+        if ($ad_type == 2) {
+            if (isset($_FILES['footer_image']) && $_FILES['footer_image']['error'] === UPLOAD_ERR_OK) {
+                $file_ext = strtolower(pathinfo($_FILES['footer_image']['name'], PATHINFO_EXTENSION));
+                $file_size = $_FILES['footer_image']['size'];
+                
+                if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                    $errors[] = 'फूटर प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+                } elseif ($file_size > MAX_FILE_SIZE) {
+                    $errors[] = 'फूटर प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                }
+            } else {
+                $errors[] = 'फूटर जाहिरात प्रतिमा आवश्यक आहे.';
+            }
         }
         
         if (empty($errors)) {
             // Store form data in session for after payment
             $_SESSION['pending_ad_data'] = $_POST;
             $_SESSION['pending_ad_image'] = $_FILES['ad_image'];
+            $_SESSION['pending_social_image'] = $_FILES['social_media_image'] ?? null;
+            $_SESSION['pending_footer_image'] = $_FILES['footer_image'] ?? null;
             
             // Prepare payment gateway data
             $payerName = $client_name;
@@ -143,7 +181,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mcc = 5137;
             $channelId = 'W';
 
-            // $callbackUrl = 'payment_gatway/SabPaisaPostPgResponse.php';
             // FULL absolute URL
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
             $host = $_SERVER['HTTP_HOST'];
@@ -225,8 +262,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $end_date = $date->format('Y-m-d');
         }
 
-        // File upload handling
+        // File upload handling for main image
         $image_name = '';
+        $social_media_image = '';
+        $footer_image = '';
+        
+        // Upload main image
         if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
             $file_tmp  = $_FILES['ad_image']['tmp_name'];
             $file_size = $_FILES['ad_image']['size'];
@@ -242,12 +283,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $upload_path = $upload_dir . $image_name;
 
                 if (!move_uploaded_file($file_tmp, $upload_path)) {
-                    $errors[] = 'फाइल अपलोड करताना त्रुटी.';
+                    $errors[] = 'मुख्य प्रतिमा अपलोड करताना त्रुटी.';
                     $image_name = '';
                 }
             }
         } else {
-            $errors[] = 'जाहिरात प्रतिमा आवश्यक आहे.';
+            $errors[] = 'मुख्य वेबसाईटवर प्रमुख बॅनर प्रतिमा आवश्यक आहे.';
+        }
+        
+        // Upload social media image for big ads
+        if ($ad_type == 1) {
+            if (isset($_FILES['social_media_image']) && $_FILES['social_media_image']['error'] === UPLOAD_ERR_OK) {
+                $file_tmp  = $_FILES['social_media_image']['tmp_name'];
+                $file_size = $_FILES['social_media_image']['size'];
+                $file_ext  = strtolower(pathinfo($_FILES['social_media_image']['name'], PATHINFO_EXTENSION));
+
+                if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                    $errors[] = 'सोशल मीडिया प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+                } elseif ($file_size > MAX_FILE_SIZE) {
+                    $errors[] = 'सोशल मीडिया प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                } else {
+                    $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
+                    $upload_path = SOCIAL_MEDIA_ADS_PATH . $social_media_image;
+
+                    if (!move_uploaded_file($file_tmp, $upload_path)) {
+                        $errors[] = 'सोशल मीडिया प्रतिमा अपलोड करताना त्रुटी.';
+                        $social_media_image = '';
+                    }
+                }
+            } else {
+                $errors[] = 'सोशल मीडियावर प्रसारित होणारी बातमी प्रतिमा आवश्यक आहे.';
+            }
+        }
+        
+        // Upload footer image for small ads
+        if ($ad_type == 2) {
+            if (isset($_FILES['footer_image']) && $_FILES['footer_image']['error'] === UPLOAD_ERR_OK) {
+                $file_tmp  = $_FILES['footer_image']['tmp_name'];
+                $file_size = $_FILES['footer_image']['size'];
+                $file_ext  = strtolower(pathinfo($_FILES['footer_image']['name'], PATHINFO_EXTENSION));
+
+                if (!in_array($file_ext, ALLOWED_EXTENSIONS)) {
+                    $errors[] = 'फूटर प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
+                } elseif ($file_size > MAX_FILE_SIZE) {
+                    $errors[] = 'फूटर प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                } else {
+                    $footer_image = time() . '_footer_' . uniqid() . '.' . $file_ext;
+                    $upload_path = FOOTER_ADS_PATH . $footer_image;
+
+                    if (!move_uploaded_file($file_tmp, $upload_path)) {
+                        $errors[] = 'फूटर प्रतिमा अपलोड करताना त्रुटी.';
+                        $footer_image = '';
+                    }
+                }
+            } else {
+                $errors[] = 'फूटर जाहिरात प्रतिमा आवश्यक आहे.';
+            }
         }
 
         // If no errors, insert into database
@@ -255,13 +346,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $payment_status = 1; // 1 for paid, 0 for pending
             
             $sql = "INSERT INTO ads_management 
-                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, ad_link, ad_type, duration, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, social_media_image, footer_image, ad_link, ad_type, duration, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
             
             $stmt = $conn->prepare($sql);
             
             $stmt->bind_param(
-                'ssssssssssiisssdssi',
+                'ssssssssssssiisssdssi',
                 $client_name,
                 $client_email,
                 $mobile_number,
@@ -271,6 +362,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $district,
                 $ad_title,
                 $image_name,
+                $social_media_image,
+                $footer_image,
                 $ad_link,
                 $ad_type,
                 $duration,
@@ -287,8 +380,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = true;
             } else {
                 $errors[] = 'डेटाबेसमध्ये त्रुटी: ' . $conn->error;
-                if (!empty($image_name) && file_exists($upload_path)) {
-                    unlink($upload_path);
+                // Delete uploaded files if database insert fails
+                if (!empty($image_name) && file_exists($upload_dir . $image_name)) {
+                    unlink($upload_dir . $image_name);
+                }
+                if (!empty($social_media_image) && file_exists(SOCIAL_MEDIA_ADS_PATH . $social_media_image)) {
+                    unlink(SOCIAL_MEDIA_ADS_PATH . $social_media_image);
+                }
+                if (!empty($footer_image) && file_exists(FOOTER_ADS_PATH . $footer_image)) {
+                    unlink(FOOTER_ADS_PATH . $footer_image);
                 }
             }
         }
@@ -315,8 +415,6 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     <i class="bi bi-check-circle-fill me-2"></i>
                     जाहिरात यशस्वीरित्या जोडली गेली. 
                     <a href="advertisement_post.php" class="alert-link">आणखी एक जोडा</a> 
-                    <!-- किंवा  -->
-                    <!-- <a href="advertisement_management.php" class="alert-link">व्यवस्थापनाकडे जा</a>. -->
                 </div>
             <?php elseif ($payment_redirect): ?>
                 <div class="text-center py-4">
@@ -325,7 +423,6 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     </div>
                     <h5>पेमेंट गेटवे वर पुनर्निर्देशित होत आहे...</h5>
                     <p>कृपया प्रतीक्षा करा</p>
-                    <!-- <form action="https://stage-securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm"> -->
                     <form action="https://securepay.sabpaisa.in/SabPaisa/sabPaisaInit?v=1" method="post" id="paymentForm">                        
                         <input type="hidden" name="encData" value="<?php echo $encrypted_data; ?>">
                         <input type="hidden" name="clientCode" value="<?php echo $clientCode; ?>">
@@ -456,7 +553,7 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">प्रकार *</label>
-                            <select name="ad_type" id="ad_type" class="form-select" required onchange="updateDurationOptions()">
+                            <select name="ad_type" id="ad_type" class="form-select" required onchange="updateDurationOptions(); toggleImageFields();">
                                 <option value="">-- प्रकार निवडा --</option>
                                 <option value="1" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 1) ? 'selected' : ''; ?>>मोठी जाहिरात / Big Ad</option>
                                 <option value="2" <?php echo (isset($_POST['ad_type']) && $_POST['ad_type'] == 2) ? 'selected' : ''; ?>>छोटी जाहिरात / Small Ad</option>
@@ -480,11 +577,34 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                             <small class="text-muted">प्रकार व कालावधीनुसार किंमत स्वयं-निर्धारित</small>
                         </div>
                         
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">प्रतिमा *</label>
+                        <div class="col-md-6 mb-3" id="main_image_container">
+                            <label class="form-label">मुख्य वेबसाईटवर प्रमुख बॅनर * <small class="text-muted">(Size : 1500 × 600)</small></label>
                             <input type="file" name="ad_image" class="form-control" 
                                    accept=".jpg,.jpeg,.png,.webp" required>
                             <small class="text-muted">जास्तीत जास्त 2MB, फक्त jpg/png/webp</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Image Fields based on Ad Type -->
+                    <div id="big_ad_fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">सोशल मीडियावर प्रसारित होणारी बातमी * <small class="text-muted">(Size : 1080 × 1080)</small></label>
+                                <input type="file" name="social_media_image" class="form-control" 
+                                       accept=".jpg,.jpeg,.png,.webp">
+                                <small class="text-muted">सोशल मीडिया पोस्टसाठी चौरस प्रतिमा, जास्तीत जास्त 2MB, फक्त jpg/png/webp</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="small_ad_fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">फूटर जाहिरात * <small class="text-muted">(Size : 360 × 80)</small></label>
+                                <input type="file" name="footer_image" class="form-control" 
+                                       accept=".jpg,.jpeg,.png,.webp">
+                                <small class="text-muted">फूटरमध्ये दाखवण्यासाठी आयताकृती बॅनर, जास्तीत जास्त 2MB, फक्त jpg/png/webp</small>
+                            </div>
                         </div>
                     </div>
                     
@@ -580,6 +700,11 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
         background-color: #e7f1ff;
         border-color: #b8daff;
         color: #004085;
+    }
+    .form-label small {
+        font-weight: normal;
+        color: #6c757d;
+        font-size: 0.875rem;
     }
 </style>
 
@@ -693,12 +818,39 @@ function toggleTransactionId() {
     }
 }
 
+// Toggle image fields based on ad type
+function toggleImageFields() {
+    const adType = document.getElementById('ad_type').value;
+    const bigAdFields = document.getElementById('big_ad_fields');
+    const smallAdFields = document.getElementById('small_ad_fields');
+    const mainImageContainer = document.getElementById('main_image_container');
+    const socialInput = document.querySelector('input[name="social_media_image"]');
+    const footerInput = document.querySelector('input[name="footer_image"]');
+    
+    // Hide both first
+    bigAdFields.style.display = 'none';
+    smallAdFields.style.display = 'none';
+    
+    // Remove required attributes
+    if (socialInput) socialInput.removeAttribute('required');
+    if (footerInput) footerInput.removeAttribute('required');
+    
+    if (adType == 1) {
+        bigAdFields.style.display = 'block';
+        if (socialInput) socialInput.setAttribute('required', 'required');
+    } else if (adType == 2) {
+        smallAdFields.style.display = 'block';
+        if (footerInput) footerInput.setAttribute('required', 'required');
+    }
+}
+
 // Load Indian states on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadIndianStates();
     updateDurationOptions();
     updateEndDate();
     toggleTransactionId();
+    toggleImageFields();
     
     // If state was previously selected (e.g., form validation failed), load its districts
     const selectedState = document.getElementById('state').value;
