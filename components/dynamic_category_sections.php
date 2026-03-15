@@ -84,58 +84,55 @@ $professional_colors = [
     '#34495e', // Charcoal Gray
 ];
 
-    $current_date = date("Y-m-d");
+$current_date = date("Y-m-d");
 
-    $base_primary   = "components/primary_advertised/";
-    $base_secondary = "components/secondary_advertised/";
+$base_primary   = "components/primary_advertised/";
+$base_secondary = "components/secondary_advertised/";
 
-    /* =====================================================
-    🔵 FETCH BIG ADS (Section 1 - ad_type = 1)
-    ===================================================== */
+/* =====================================================
+🔵 FETCH BIG ADS (Section 1 - ad_type = 1)
+===================================================== */
 
-    $query_big = "SELECT * FROM ads_management 
-                WHERE ad_type = 1
+$query_big = "SELECT * FROM ads_management 
+            WHERE ad_type = 1
+            AND is_active = 1
+            AND '$current_date' BETWEEN start_date AND end_date
+            ORDER BY RAND()";
+
+$result_big = mysqli_query($conn, $query_big);
+
+$big_ads = [];
+
+while ($row = mysqli_fetch_assoc($result_big)) {
+    $big_ads[] = [
+        'image' => $base_primary . $row['image_name'],
+        'link'  => $row['ad_link'],
+        'alt'   => $row['ad_title']
+    ];
+}
+
+/* =====================================================
+🟢 FETCH SMALL ADS (Section 2 - ad_type = 2)
+===================================================== */
+
+$query_small = "SELECT * FROM ads_management 
+                WHERE ad_type = 2
                 AND is_active = 1
                 AND '$current_date' BETWEEN start_date AND end_date
-                ORDER BY RAND()";
+                ORDER BY RAND()
+                LIMIT 3";
 
-    $result_big = mysqli_query($conn, $query_big);
+$result_small = mysqli_query($conn, $query_small);
 
-    $big_ads = [];
+$small_ads = [];
 
-    while ($row = mysqli_fetch_assoc($result_big)) {
-
-        $big_ads[] = [
-            'image' => $base_primary . $row['image_name'],
-            'link'  => $row['ad_link'],
-            'alt'   => $row['ad_title']
-        ];
-    }
-
-
-    /* =====================================================
-    🟢 FETCH SMALL ADS (Section 2 - ad_type = 2)
-    ===================================================== */
-
-    $query_small = "SELECT * FROM ads_management 
-                    WHERE ad_type = 2
-                    AND is_active = 1
-                    AND '$current_date' BETWEEN start_date AND end_date
-                    ORDER BY RAND()
-                    LIMIT 3";
-
-    $result_small = mysqli_query($conn, $query_small);
-
-    $small_ads = [];
-
-    while ($row = mysqli_fetch_assoc($result_small)) {
-
-        $small_ads[] = [
-            'image' => $base_secondary . $row['image_name'],
-            'link'  => $row['ad_link'],
-            'alt'   => $row['ad_title']
-        ];
-    }
+while ($row = mysqli_fetch_assoc($result_small)) {
+    $small_ads[] = [
+        'image' => $base_secondary . $row['image_name'],
+        'link'  => $row['ad_link'],
+        'alt'   => $row['ad_title']
+    ];
+}
 // ============================
 // ============================
 // =============================
@@ -414,7 +411,7 @@ function generateNewsCard($news) {
                 
                 <!-- ALL NEWS Button at Bottom for EVERY Category. (if has any news) -->
                 <?php if ($category_has_news): ?>
-                    <div class="text-center">
+                    <div class="text-center mt-4">
                         <a href="category_news.php?category=<?php echo urlencode($category['value']); ?>" 
                            class="btn btn-lg all-news-btn" 
                            style="background-color: <?php echo $header_color; ?>; 
@@ -442,8 +439,8 @@ function generateNewsCard($news) {
         
         <!-- ADVERTISEMENT SECTION - ONLY AFTER FIRST 2 CATEGORIES -->
     <?php if ($category_counter == 1 && !empty($big_ads)): ?>
-        <div class="ad-section py-3">
-            <div class="container">
+        <div class="ad-section ad-section-big">
+            <div class="container px-0 px-md-3">
 
                 <!-- DESKTOP VIEW (2 Ads Per Slide) -->
                 <div class="d-none d-md-block">
@@ -458,15 +455,15 @@ function generateNewsCard($news) {
                             foreach ($chunks as $chunk_index => $chunk): 
                             ?>
                                 <div class="carousel-item <?php echo $chunk_index === 0 ? 'active' : ''; ?>">
-                                    <div class="row g-4 justify-content-center">
+                                    <div class="row g-3 g-md-4 justify-content-center">
                                         <?php foreach ($chunk as $ad): ?>
                                             <div class="col-md-6">
-                                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
-                                                    <div class="card border-0 shadow-sm" style="height:220px;">
-                                                        <div class="d-flex justify-content-center align-items-center h-100 p-3">
+                                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank" class="ad-link">
+                                                    <div class="ad-card">
+                                                        <div class="ad-image-container">
                                                             <img src="<?php echo htmlspecialchars($ad['image']); ?>"
-                                                                class="img-fluid"
-                                                                style="max-height:100%; object-fit:contain;">
+                                                                class="ad-image img-fluid"
+                                                                alt="<?php echo htmlspecialchars($ad['alt']); ?>">
                                                         </div>
                                                     </div>
                                                 </a>
@@ -489,12 +486,12 @@ function generateNewsCard($news) {
                         <div class="carousel-inner">
                             <?php foreach ($big_ads as $index => $ad): ?>
                                 <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
-                                    <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
-                                        <div class="card border-0 shadow-sm" style="height:220px;">
-                                            <div class="d-flex justify-content-center align-items-center h-100 p-3">
+                                    <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank" class="ad-link">
+                                        <div class="ad-card">
+                                            <div class="ad-image-container">
                                                 <img src="<?php echo htmlspecialchars($ad['image']); ?>"
-                                                    class="img-fluid"
-                                                    style="max-height:100%; object-fit:contain;">
+                                                    class="ad-image img-fluid"
+                                                    alt="<?php echo htmlspecialchars($ad['alt']); ?>">
                                             </div>
                                         </div>
                                     </a>
@@ -510,51 +507,55 @@ function generateNewsCard($news) {
     <?php elseif ($category_counter == 2 && !empty($small_ads)): ?>
 
         <!-- After 2nd Category (Small Ads Grid) -->
-        <div class="ad-section py-3">
-    <div class="container">
+        <div class="ad-section ad-section-small">
+            <div class="container">
 
-        <!-- DESKTOP GRID (3 Per Row) -->
-        <div class="d-none d-md-block">
-            <div class="row g-4 justify-content-center">
-                <?php foreach ($small_ads as $ad): ?>
-                    <div class="col-md-4">
-                        <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
-                            <div class="card border-0 shadow-sm">
-                                <img src="<?php echo htmlspecialchars($ad['image']); ?>"
-                                     class="img-fluid"
-                                     style="aspect-ratio:1/1; object-fit:cover;">
+                <!-- DESKTOP GRID (3 Per Row) -->
+                <div class="d-none d-md-block">
+                    <div class="row g-4 justify-content-center">
+                        <?php foreach ($small_ads as $ad): ?>
+                            <div class="col-md-4">
+                                <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank" class="ad-link">
+                                    <div class="ad-card">
+                                        <div class="ad-image-container square">
+                                            <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                                 class="ad-image img-fluid"
+                                                 alt="<?php echo htmlspecialchars($ad['alt']); ?>">
+                                        </div>
+                                    </div>
+                                </a>
                             </div>
-                        </a>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- MOBILE CAROUSEL (1 Per Slide) -->
-        <div class="d-block d-md-none">
-            <div id="smallAdsCarouselMobile"
-                 class="carousel slide"
-                 data-bs-ride="carousel"
-                 data-bs-interval="3000">
-
-                <div class="carousel-inner">
-                    <?php foreach ($small_ads as $index => $ad): ?>
-                        <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
-                            <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank">
-                                <div class="card border-0 shadow-sm">
-                                    <img src="<?php echo htmlspecialchars($ad['image']); ?>"
-                                         class="img-fluid"
-                                         style="aspect-ratio:1/1; object-fit:cover;">
-                                </div>
-                            </a>
-                        </div>
-                    <?php endforeach; ?>
                 </div>
+
+                <!-- MOBILE CAROUSEL (1 Per Slide) -->
+                <div class="d-block d-md-none">
+                    <div id="smallAdsCarouselMobile"
+                         class="carousel slide"
+                         data-bs-ride="carousel"
+                         data-bs-interval="3000">
+
+                        <div class="carousel-inner">
+                            <?php foreach ($small_ads as $index => $ad): ?>
+                                <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                                    <a href="<?php echo htmlspecialchars($ad['link']); ?>" target="_blank" class="ad-link">
+                                        <div class="ad-card">
+                                            <div class="ad-image-container square">
+                                                <img src="<?php echo htmlspecialchars($ad['image']); ?>"
+                                                     class="ad-image img-fluid"
+                                                     alt="<?php echo htmlspecialchars($ad['alt']); ?>">
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-
-    </div>
-</div>
 
     <?php endif; ?>
         
@@ -599,12 +600,15 @@ function generateNewsCard($news) {
 }
 
 /* ALL NEWS Button at Bottom */
+.all-news-btn {
+    transition: all 0.3s ease;
+}
+
 .all-news-btn:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    color: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    color: white !important;
     text-decoration: none;
-    background-color: <?php echo adjustBrightness($header_color, -20); ?> !important;
 }
 
 .all-news-btn::after {
@@ -626,6 +630,7 @@ function generateNewsCard($news) {
 .category-section {
     scroll-margin-top: 80px;
     transition: all 0.3s ease;
+    padding: 20px 0;
 }
 
 /* Image Container and Image Styles - Show full photo without cropping */
@@ -704,7 +709,92 @@ function generateNewsCard($news) {
     margin-top: auto;
 }
 
-/* ADVERTISEMENT SECTION - SHOW FULL IMAGE */
+/* ==================== */
+/* ADVERTISEMENT SECTIONS - FIXED SPACING */
+/* ==================== */
+
+/* Base ad section styling */
+.ad-section {
+    padding: 15px 0;
+    background: #ffffff;
+    margin: 0;
+    border-top: 1px solid #eaeaea;
+    border-bottom: 1px solid #eaeaea;
+}
+
+/* Remove any default card padding/margins */
+.ad-section .container {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Ad link styling */
+.ad-link {
+    display: block;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.ad-link:hover {
+    opacity: 0.95;
+}
+
+/* Ad card - no padding, no border, no shadow */
+.ad-card {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+}
+
+.ad-link:hover .ad-card {
+    transform: translateY(-3px);
+}
+
+/* Image container for BIG ads (1500x600) */
+.ad-image-container {
+    width: 100%;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* BIG ad container - maintain exact 1500x600 ratio WITHOUT CROPPING */
+.ad-section-big .ad-image-container {
+    aspect-ratio: 1500 / 600; /* 2.5:1 ratio */
+    width: 100%;
+    max-width: 100%;
+    background-color: #f8f9fa;
+}
+
+/* BIG ad image - contain to show full image without cropping */
+.ad-section-big .ad-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Show full image, no cropping */
+    display: block;
+    background-color: #f8f9fa;
+}
+
+/* SMALL ad container for square images (1080x1080 = 1:1) */
+.ad-section-small .ad-image-container.square {
+    aspect-ratio: 1 / 1;
+    background-color: #f8f9fa;
+}
+
+/* SMALL ad image - cover for square format */
+.ad-section-small .ad-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover for square images */
+    display: block;
+}
+
 /* Remove extra bottom space from carousel */
 .carousel {
     margin-bottom: 0 !important;
@@ -714,57 +804,56 @@ function generateNewsCard($news) {
     margin-bottom: 0 !important;
 }
 
-.ad-section {
-    margin-bottom: 0 !important;
-}
 /* Fix mobile carousel extra space */
 @media (max-width: 767.98px) {
-
     .carousel,
     .carousel-inner,
     .carousel-item {
         height: auto !important;
         min-height: unset !important;
     }
-
+    
     .carousel-item {
         padding-bottom: 0 !important;
     }
-
+    
     .ad-section {
-        padding-bottom: 0 !important;
-        margin-bottom: 0 !important;
+        padding: 10px 0;
+        margin: 0;
     }
-
+    
+    /* Adjust container padding on mobile */
+    .ad-section .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Ensure proper spacing between ad sections and category sections */
+    .category-section + .ad-section {
+        margin-top: 0;
+    }
+    
+    .ad-section + .category-section {
+        margin-top: 0;
+    }
 }
 
-.ad-section {
-    padding: 40px 0;
-    background: #fff;
-    border-top: 2px solid #dee2e6;
-    border-bottom: 2px solid #dee2e6;
-    margin: 30px 0;
+/* Ensure no extra margins after ad sections */
+.category-section:last-child {
+    margin-bottom: 0;
 }
 
-.ad-card {
-    text-decoration: none;
-    transition: all 0.3s ease;
+.ad-section:last-child {
+    margin-bottom: 0;
 }
 
-.ad-hover:hover {
-    transform: translateY(-5px);
+/* Spacing between sections - minimal */
+.category-section {
+    padding: 20px 0;
 }
 
-.ad-image-card {
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    border: 1px solid #dee2e6;
-}
-
-.ad-hover:hover .ad-image-card {
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
-    border-color: #adb5bd;
+.category-section + .category-section {
+    margin-top: 0;
 }
 
 /* Spacing */
@@ -816,7 +905,7 @@ function generateNewsCard($news) {
 @media (max-width: 768px) {
     .category-section {
         scroll-margin-top: 60px;
-        padding: 2rem 0;
+        padding: 15px 0;
     }
     
     .section-header h2 {
@@ -849,15 +938,6 @@ function generateNewsCard($news) {
     
     .card-image-container {
         height: 160px !important;
-    }
-    
-    .ad-section {
-        padding: 30px 0;
-        margin: 20px 0;
-    }
-    
-    .ad-image-card {
-        height: 180px !important;
     }
 }
 
@@ -1015,18 +1095,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset to original color (will be set by inline style)
             h2.style.color = '';
             h2.style.transform = 'translateX(0)';
-        });
-    });
-    
-    // Advertisement hover effects
-    const adCards = document.querySelectorAll('.ad-card');
-    adCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-5px)';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
         });
     });
     
