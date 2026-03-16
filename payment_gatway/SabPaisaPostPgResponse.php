@@ -7,23 +7,34 @@ ini_set('session.use_only_cookies', 1);
 session_start();
 
 // Enable error logging
-error_log("SabPaisa Callback Started - Session ID: " . session_id());
+error_log("=== SabPaisa Callback Started ===");
+error_log("Session ID: " . session_id());
 error_log("Session Data: " . print_r($_SESSION, true));
+error_log("POST Data: " . print_r($_POST, true));
+error_log("GET Data: " . print_r($_GET, true));
 
 include('Authentication.php');
 
 // Get the encrypted response
 $query = $_REQUEST['encResponse'] ?? '';
+error_log("Encrypted Response: " . $query);
 
 $authKey = 'VkylGulAs8ysjQcwDU7vHCbSDz+05lxxh43s13/+P1A=';
 $authIV = '5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';
 
 $decText = null;
 $AES256HMACSHA384HEX = new AES256HMACSHA384HEX();
-$decText = $AES256HMACSHA384HEX->decrypt($authKey, $authIV, $query);
+
+try {
+    $decText = $AES256HMACSHA384HEX->decrypt($authKey, $authIV, $query);
+    error_log("Decrypted Text: " . $decText);
+} catch (Exception $e) {
+    error_log("Decryption Error: " . $e->getMessage());
+}
 
 // Parse the decrypted response
 parse_str($decText, $responseData);
+error_log("Parsed Response Data: " . print_r($responseData, true));
 
 // Extract all parameters
 $payerName = $responseData['payerName'] ?? '';
@@ -51,19 +62,17 @@ $transDate = $responseData['transDate'] ?? '';
 // Check if payment was successful
 $payment_success = ($status == 'SUCCESS' || $statusCode == '0300');
 
-// Log the payment status
-error_log("Payment Status: " . ($payment_success ? 'SUCCESS' : 'FAILED') . " - Transaction ID: " . $sabpaisaTxnId);
-
-// Check if we have pending data in session
-$pending_data_exists = isset($_SESSION['pending_ad_data']);
-error_log("Pending data in session: " . ($pending_data_exists ? 'YES' : 'NO'));
+error_log("Payment Status: " . ($payment_success ? 'SUCCESS' : 'FAILED'));
+error_log("SabPaisa Transaction ID: " . $sabpaisaTxnId);
 
 if ($payment_success) {
-    // Try to get data from POST first (if passed as parameters)
-    $ad_data = $_SESSION['pending_ad_data'] ?? $_POST ?? [];
+    // Get pending data from session
+    $ad_data = $_SESSION['pending_ad_data'] ?? null;
     $ad_image = $_SESSION['pending_ad_image'] ?? null;
+    $social_image = $_SESSION['pending_social_image'] ?? null;
+    $footer_image = $_SESSION['pending_footer_image'] ?? null;
     
-    error_log("Ad Data: " . print_r($ad_data, true));
+    error_log("Pending Ad Data: " . print_r($ad_data, true));
     
     if (!empty($ad_data)) {
         // Include database connection
@@ -72,11 +81,13 @@ if ($payment_success) {
             include $db_config_path;
             error_log("Database connection included successfully");
         } else {
-            error_log("Database config file not found at: " . $db_config_path);
+            error_log("ERROR: Database config file not found at: " . $db_config_path);
+            die("Database configuration error");
         }
         
-        // Process the ad data
+        // Extract data from session
         $client_name = $conn->real_escape_string($ad_data['client_name'] ?? '');
+        $gst_number = $conn->real_escape_string($ad_data['gst_number'] ?? '');
         $client_email = $conn->real_escape_string($ad_data['client_email'] ?? '');
         $mobile_number = $conn->real_escape_string($ad_data['mobile_number'] ?? '');
         $business_type = $conn->real_escape_string($ad_data['business_type'] ?? '');
@@ -87,81 +98,154 @@ if ($payment_success) {
         $ad_link = $conn->real_escape_string($ad_data['ad_link'] ?? '');
         $ad_type = (int)($ad_data['ad_type'] ?? 0);
         $duration = (int)($ad_data['duration'] ?? 30);
+        $amount = (float)($ad_data['amount'] ?? 0);
         $start_date = $ad_data['start_date'] ?? date('Y-m-d');
-        $created_by = $conn->real_escape_string($_SESSION['name'] ?? 'Admin');
-        
-        // Calculate price based on ad type and duration
-        if ($ad_type == 1) {
-            $price = ($duration == 10) ? 1500 : (($duration == 20) ? 2500 : 3000);
-        } else {
-            $price = ($duration == 10) ? 1000 : (($duration == 20) ? 1500 : 2000);
-        }
+        $created_by = $conn->real_escape_string($ad_data['created_by'] ?? 'Admin');
+        $payment_method = 'Payment Gateway';
+        $transaction_id = $conn->real_escape_string($sabpaisaTxnId);
+        $price = $amount;
         
         // Calculate end date based on duration
         $end_date = date('Y-m-d', strtotime($start_date . ' + ' . $duration . ' days'));
         
-        // Handle image upload if it exists in session
+        // Handle image uploads
         $image_name = '';
-        if ($ad_image && isset($ad_image['tmp_name']) && $ad_image['error'] === UPLOAD_ERR_OK) {
-            $file_tmp = $ad_image['tmp_name'];
-            $file_ext = strtolower(pathinfo($ad_image['name'], PATHINFO_EXTENSION));
-            $image_name = time() . '_' . uniqid() . '.' . $file_ext;
-            $upload_dir = ($ad_type == 1) ? dirname(__DIR__) . '/components/primary_advertised/' : dirname(__DIR__) . '/components/secondary_advertised/';
-            $upload_path = $upload_dir . $image_name;
-            
-            // Ensure directory exists
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0755, true);
-            }
-            
-            if (move_uploaded_file($file_tmp, $upload_path)) {
-                error_log("Image uploaded successfully: " . $image_name);
-            } else {
-                error_log("Failed to upload image");
+        $social_media_image = '';
+        $footer_image_name = '';
+        
+        // Define upload directories
+        $primary_upload_dir = dirname(__DIR__) . '/components/primary_advertised/';
+        $secondary_upload_dir = dirname(__DIR__) . '/components/secondary_advertised/';
+        $social_upload_dir = dirname(__DIR__) . '/components/primary_advertised_social_media/';
+        $footer_upload_dir = dirname(__DIR__) . '/components/secondary_advertised_footer/';
+        
+        // Ensure directories exist
+        foreach ([$primary_upload_dir, $secondary_upload_dir, $social_upload_dir, $footer_upload_dir] as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
             }
         }
         
-        // Insert into database
+        // Upload main image
+        if ($ad_image && isset($ad_image['tmp_name']) && file_exists($ad_image['tmp_name'])) {
+            $file_ext = $ad_image['ext'] ?? 'jpg';
+            $image_name = time() . '_' . uniqid() . '.' . $file_ext;
+            $upload_dir = ($ad_type == 1) ? $primary_upload_dir : $secondary_upload_dir;
+            $upload_path = $upload_dir . $image_name;
+            
+            if (copy($ad_image['tmp_name'], $upload_path)) {
+                error_log("Main image uploaded successfully: " . $image_name);
+            } else {
+                error_log("Failed to upload main image");
+                $image_name = '';
+            }
+        }
+        
+        // Upload social media image for big ads
+        if ($ad_type == 1 && $social_image && isset($social_image['tmp_name']) && file_exists($social_image['tmp_name'])) {
+            $file_ext = $social_image['ext'] ?? 'jpg';
+            $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
+            $upload_path = $social_upload_dir . $social_media_image;
+            
+            if (copy($social_image['tmp_name'], $upload_path)) {
+                error_log("Social image uploaded successfully: " . $social_media_image);
+            } else {
+                error_log("Failed to upload social image");
+                $social_media_image = '';
+            }
+        }
+        
+        // Upload footer image for small ads
+        if ($ad_type == 2 && $footer_image && isset($footer_image['tmp_name']) && file_exists($footer_image['tmp_name'])) {
+            $file_ext = $footer_image['ext'] ?? 'jpg';
+            $footer_image_name = time() . '_footer_' . uniqid() . '.' . $file_ext;
+            $upload_path = $footer_upload_dir . $footer_image_name;
+            
+            if (copy($footer_image['tmp_name'], $upload_path)) {
+                error_log("Footer image uploaded successfully: " . $footer_image_name);
+            } else {
+                error_log("Failed to upload footer image");
+                $footer_image_name = '';
+            }
+        }
+        
+        // Insert into database with correct values
         $sql = "INSERT INTO ads_management 
-                (client_name, client_email, mobile_number, business_type, full_address, state, district, 
-                 ad_title, image_name, ad_link, ad_type, duration, payment_method, transaction_id, 
-                 price, start_date, end_date, created_by, payment_status, is_active) 
-                VALUES (
-                    '$client_name', '$client_email', '$mobile_number', '$business_type', 
-                    '$full_address', '$state', '$district', '$ad_title', '$image_name', 
-                    '$ad_link', $ad_type, $duration, 'Payment Gateway', '$sabpaisaTxnId', 
-                    $price, '$start_date', '$end_date', '$created_by', 1, 1
-                )";
+                (client_name, gst_number, client_email, mobile_number, business_type, full_address, 
+                 state, district, ad_title, image_name, social_media_image, footer_image, ad_link, 
+                 ad_type, duration, payment_method, transaction_id, price, start_date, end_date, 
+                 created_by, payment_status, is_active) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)";
         
-        error_log("SQL Query: " . $sql);
+        $stmt = $conn->prepare($sql);
         
-        if ($conn->query($sql)) {
-            error_log("SUCCESS: Ad inserted successfully for transaction: " . $sabpaisaTxnId);
+        $stmt->bind_param(
+            'sssssssssssssiisssdss',
+            $client_name,
+            $gst_number,
+            $client_email,
+            $mobile_number,
+            $business_type,
+            $full_address,
+            $state,
+            $district,
+            $ad_title,
+            $image_name,
+            $social_media_image,
+            $footer_image_name,
+            $ad_link,
+            $ad_type,
+            $duration,
+            $payment_method,
+            $transaction_id,
+            $price,
+            $start_date,
+            $end_date,
+            $created_by
+        );
+        
+        error_log("Executing SQL with params: " . print_r([
+            'client_name' => $client_name,
+            'gst_number' => $gst_number,
+            'client_email' => $client_email,
+            'mobile_number' => $mobile_number,
+            'business_type' => $business_type,
+            'ad_title' => $ad_title,
+            'ad_type' => $ad_type,
+            'duration' => $duration,
+            'payment_method' => $payment_method,
+            'transaction_id' => $transaction_id,
+            'price' => $price,
+            'start_date' => $start_date,
+            'end_date' => $end_date,
+            'created_by' => $created_by
+        ], true));
+        
+        if ($stmt->execute()) {
+            $insert_id = $conn->insert_id;
+            error_log("SUCCESS: Ad inserted successfully with ID: " . $insert_id . " for transaction: " . $sabpaisaTxnId);
             
             // Clear session data
             unset($_SESSION['pending_ad_data']);
             unset($_SESSION['pending_ad_image']);
+            unset($_SESSION['pending_social_image']);
+            unset($_SESSION['pending_footer_image']);
             
-            // Also try to save clientTxnId for reference
+            // Store transaction ID for reference
             $_SESSION['last_successful_txn'] = $sabpaisaTxnId;
             
         } else {
-            error_log("ERROR: Failed to insert ad - " . $conn->error);
+            error_log("ERROR: Failed to insert ad - " . $stmt->error);
         }
         
+        $stmt->close();
         $conn->close();
     } else {
-        error_log("WARNING: No pending ad data found in session or POST");
-        
-        // Try to get data from the decrypted response
-        error_log("Checking if data is in the response...");
-        
-        // You might have passed additional data in udf fields
-        // If you're using udf1, udf2, etc., extract them here
+        error_log("ERROR: No pending ad data found in session");
     }
 }
 
-// Create HTML response page with JavaScript to redirect and show status
+// Create HTML response page with redirect
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -214,74 +298,53 @@ if ($payment_success) {
         .details p {
             margin: 5px 0;
         }
-        .debug-info {
-            text-align: left;
-            margin-top: 20px;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            font-size: 12px;
-            color: #666;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <?php if ($payment_success): ?>
-            <h1 class="success">✓ Payment Successful!</h1>
-            <p>Thank you for your payment. Your advertisement has been submitted successfully.</p>
+            <h1 class="success">✓ पेमेंट यशस्वी!</h1>
+            <p>तुमचे पेमेंट यशस्वीरित्या पूर्ण झाले आहे. तुमची जाहिरात लवकरच प्रसिदित केली जाईल.</p>
             
             <div class="details">
-                <h3>Transaction Details:</h3>
-                <p><strong>Transaction ID:</strong> <?php echo htmlspecialchars($sabpaisaTxnId); ?></p>
-                <p><strong>Amount:</strong> ₹<?php echo htmlspecialchars($amount); ?></p>
-                <p><strong>Payment Mode:</strong> <?php echo htmlspecialchars($paymentMode); ?></p>
-                <p><strong>Date:</strong> <?php echo htmlspecialchars($transDate); ?></p>
-                <p><strong>Status:</strong> <?php echo htmlspecialchars($status); ?></p>
+                <h3>व्यवहार तपशील:</h3>
+                <p><strong>व्यवहार ID:</strong> <?php echo htmlspecialchars($sabpaisaTxnId); ?></p>
+                <p><strong>रक्कम:</strong> ₹<?php echo htmlspecialchars($amount); ?></p>
+                <p><strong>पेमेंट पद्धत:</strong> <?php echo htmlspecialchars($paymentMode ?: 'Payment Gateway'); ?></p>
+                <p><strong>दिनांक:</strong> <?php echo htmlspecialchars($transDate); ?></p>
+                <p><strong>स्थिती:</strong> यशस्वी</p>
             </div>
             
             <form action="../advertisement_post.php" method="get" id="redirectForm">
                 <input type="hidden" name="payment_status" value="success">
                 <input type="hidden" name="txn_id" value="<?php echo htmlspecialchars($sabpaisaTxnId); ?>">
-                <button type="submit" class="btn btn-primary">Return to Advertisement Page</button>
+                <input type="hidden" name="amount" value="<?php echo htmlspecialchars($amount); ?>">
+                <input type="hidden" name="payment_mode" value="<?php echo htmlspecialchars($paymentMode); ?>">
+                <button type="submit" class="btn btn-primary">जाहिरात पेजवर परत जा</button>
             </form>
             
         <?php else: ?>
-            <h1 class="failed">✗ Payment Failed</h1>
-            <p>We couldn't process your payment. Please try again.</p>
+            <h1 class="failed">✗ पेमेंट अयशस्वी</h1>
+            <p>तुमचे पेमेंट प्रक्रिया करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.</p>
             
             <div class="details">
-                <h3>Error Details:</h3>
-                <p><strong>Message:</strong> <?php echo htmlspecialchars($sabpaisaMessage ?: $bankMessage ?: 'Payment failed'); ?></p>
-                <?php if ($sabpaisaErrorCode): ?>
-                    <p><strong>Error Code:</strong> <?php echo htmlspecialchars($sabpaisaErrorCode); ?></p>
-                <?php endif; ?>
+                <h3>त्रुटी तपशील:</h3>
+                <p><strong>संदेश:</strong> <?php echo htmlspecialchars($sabpaisaMessage ?: $bankMessage ?: 'पेमेंट अयशस्वी'); ?></p>
             </div>
             
             <form action="../advertisement_post.php" method="get">
                 <input type="hidden" name="payment_status" value="failed">
-                <input type="hidden" name="message" value="<?php echo htmlspecialchars($sabpaisaMessage ?: 'Payment failed'); ?>">
-                <button type="submit" class="btn btn-primary">Try Again</button>
+                <input type="hidden" name="message" value="<?php echo htmlspecialchars($sabpaisaMessage ?: 'पेमेंट अयशस्वी'); ?>">
+                <button type="submit" class="btn btn-primary">पुन्हा प्रयत्न करा</button>
             </form>
         <?php endif; ?>
         
-        <p><small>Click the button above to return, or you will be automatically redirected in <span id="countdown">10</span> seconds...</small></p>
-        
-        <!-- Debug info (remove in production) -->
-        <?php if (isset($_GET['debug']) || true): ?>
-        <div class="debug-info">
-            <h4>Debug Information:</h4>
-            <p><strong>Session ID:</strong> <?php echo session_id(); ?></p>
-            <p><strong>Payment Success:</strong> <?php echo $payment_success ? 'Yes' : 'No'; ?></p>
-            <p><strong>Transaction ID:</strong> <?php echo $sabpaisaTxnId; ?></p>
-            <p><strong>Pending Data in Session:</strong> <?php echo isset($_SESSION['pending_ad_data']) ? 'Yes' : 'No'; ?></p>
-        </div>
-        <?php endif; ?>
+        <p><small>स्वयंचलितपणे पुनर्निर्देशित होण्यासाठी <span id="countdown">5</span> सेकंद...</small></p>
     </div>
     
     <script>
-        // Auto redirect after 10 seconds
-        let seconds = 10;
+        // Auto redirect after 5 seconds
+        let seconds = 5;
         const countdownEl = document.getElementById('countdown');
         
         const interval = setInterval(function() {

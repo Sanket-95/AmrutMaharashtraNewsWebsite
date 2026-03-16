@@ -10,28 +10,6 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Handle payment gateway return
-if (isset($_GET['payment_status'])) {
-    if ($_GET['payment_status'] == 'success') {
-        if (isset($_GET['txn_id'])) {
-            $_SESSION['payment_success_txn'] = $_GET['txn_id'];
-        }
-        $success = true;
-        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे.
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>';
-    } else if ($_GET['payment_status'] == 'failed') {
-        $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'पेमेंट अयशस्वी';
-        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <strong>पेमेंट अयशस्वी!</strong> ' . $message . '
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>';
-    }
-}
-
 // Include database connection and header
 include 'components/db_config.php';
 include 'components/header.php';
@@ -46,14 +24,14 @@ define('FOOTER_ADS_PATH', 'components/secondary_advertised_footer/');
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
-// Price configuration for different durations
-define('BIG_AD_PRICE_10', 1500);
-define('BIG_AD_PRICE_20', 2500);
-define('BIG_AD_PRICE_30', 3000);
+// Price configuration (GST included)
+define('BIG_AD_PRICE_10', 1770);
+define('BIG_AD_PRICE_20', 2950);
+define('BIG_AD_PRICE_30', 3540);
 
 define('SMALL_AD_PRICE_10', 1);
-define('SMALL_AD_PRICE_20', 1500);
-define('SMALL_AD_PRICE_30', 2000);
+define('SMALL_AD_PRICE_20', 1770);
+define('SMALL_AD_PRICE_30', 2360);
 
 // Duration in days
 define('DURATION_10', 10);
@@ -71,11 +49,36 @@ $success = false;
 $payment_redirect = false;
 $encrypted_data = '';
 
-$clientCode='ACAD914';   // Please use the credentials shared by your Account Manager
-$username='amrut.gom-4@gmail.com';     // Please use the credentials shared by your Account Manager
-$password='ACAD914_SP25756';     // Please use the credentials shared by your Account Manager
-$authKey='VkylGulAs8ysjQcwDU7vHCbSDz+05lxxh43s13/+P1A=';      // Please use the credentials shared by your Account Manager
-$authIV='5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';       // Please use the credentials shared by your Account Manager
+// SabPaisa Credentials
+$clientCode = 'ACAD914';
+$username = 'amrut.gom-4@gmail.com';
+$password = 'ACAD914_SP25756';
+$authKey = 'VkylGulAs8ysjQcwDU7vHCbSDz+05lxxh43s13/+P1A=';
+$authIV = '5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';
+
+// Handle payment gateway return (from callback)
+if (isset($_GET['payment_status'])) {
+    if ($_GET['payment_status'] == 'success') {
+        $txn_id = isset($_GET['txn_id']) ? $_GET['txn_id'] : '';
+        $amount = isset($_GET['amount']) ? $_GET['amount'] : '';
+        $payment_mode = isset($_GET['payment_mode']) ? $_GET['payment_mode'] : 'Payment Gateway';
+        
+        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे. 
+                Transaction ID: ' . htmlspecialchars($txn_id) . '
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>';
+        $success = true;
+    } else if ($_GET['payment_status'] == 'failed') {
+        $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'पेमेंट अयशस्वी';
+        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>पेमेंट अयशस्वी!</strong> ' . $message . '
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>';
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Check if payment gateway is selected
@@ -84,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($payment_method === 'Payment Gateway') {
         // For payment gateway, validate and prepare for redirect
         $client_name = trim($_POST['client_name'] ?? '');
+        $gst_number = trim($_POST['gst_number'] ?? '');
         $mobile_number = trim($_POST['mobile_number'] ?? '');
         $client_email = trim($_POST['client_email'] ?? '');
         $full_address = trim($_POST['full_address'] ?? '');
@@ -91,8 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $district = trim($_POST['district'] ?? '');
         $business_type = trim($_POST['business_type'] ?? '');
         $ad_title = trim($_POST['ad_title'] ?? '');
+        $ad_link = trim($_POST['ad_link'] ?? '');
         $ad_type = isset($_POST['ad_type']) ? (int)$_POST['ad_type'] : 0;
         $duration = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;
+        $start_date = $_POST['start_date'] ?? date('Y-m-d');
         
         // Calculate amount based on ad type and duration
         if ($ad_type == 1) {
@@ -116,8 +122,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($ad_title)) $errors[] = 'जाहिरात शीर्षक आवश्यक आहे.';
         if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
         if (!in_array($duration, [DURATION_10, DURATION_20, DURATION_30])) $errors[] = 'वैध कालावधी निवडा.';
+        if (empty($start_date)) $errors[] = 'सुरु तारीख आवश्यक आहे.';
+        
+        // Optional GST validation if provided
+        if (!empty($gst_number)) {
+            if (!preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/', $gst_number)) {
+                $errors[] = 'वैध GST क्रमांक प्रविष्ट करा (उदा. 27AAPFU0939F1Z5)';
+            }
+        }
         
         // Validate main image upload for payment gateway
+        $main_image_tmp = null;
+        $main_image_name = null;
+        $main_image_ext = null;
+        
         if (isset($_FILES['ad_image']) && $_FILES['ad_image']['error'] === UPLOAD_ERR_OK) {
             $file_ext = strtolower(pathinfo($_FILES['ad_image']['name'], PATHINFO_EXTENSION));
             $file_size = $_FILES['ad_image']['size'];
@@ -126,12 +144,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
             } elseif ($file_size > MAX_FILE_SIZE) {
                 $errors[] = 'फाइल साइज 2MB पेक्षा कमी असावी.';
+            } else {
+                $main_image_tmp = $_FILES['ad_image']['tmp_name'];
+                $main_image_name = $_FILES['ad_image']['name'];
+                $main_image_ext = $file_ext;
             }
         } else {
             $errors[] = 'मुख्य वेबसाईटवर प्रमुख बॅनर प्रतिमा आवश्यक आहे.';
         }
         
         // Validate social media image for big ads
+        $social_image_tmp = null;
+        $social_image_name = null;
+        $social_image_ext = null;
+        
         if ($ad_type == 1) {
             if (isset($_FILES['social_media_image']) && $_FILES['social_media_image']['error'] === UPLOAD_ERR_OK) {
                 $file_ext = strtolower(pathinfo($_FILES['social_media_image']['name'], PATHINFO_EXTENSION));
@@ -141,6 +167,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'सोशल मीडिया प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
                 } elseif ($file_size > MAX_FILE_SIZE) {
                     $errors[] = 'सोशल मीडिया प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                } else {
+                    $social_image_tmp = $_FILES['social_media_image']['tmp_name'];
+                    $social_image_name = $_FILES['social_media_image']['name'];
+                    $social_image_ext = $file_ext;
                 }
             } else {
                 $errors[] = 'सोशल मीडियावर प्रसारित होणारी बातमी प्रतिमा आवश्यक आहे.';
@@ -148,6 +178,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Validate footer image for small ads
+        $footer_image_tmp = null;
+        $footer_image_name = null;
+        $footer_image_ext = null;
+        
         if ($ad_type == 2) {
             if (isset($_FILES['footer_image']) && $_FILES['footer_image']['error'] === UPLOAD_ERR_OK) {
                 $file_ext = strtolower(pathinfo($_FILES['footer_image']['name'], PATHINFO_EXTENSION));
@@ -157,6 +191,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'फूटर प्रतिमेसाठी फक्त JPG, JPEG, PNG, WEBP फाइल्स स्वीकारल्या जातात.';
                 } elseif ($file_size > MAX_FILE_SIZE) {
                     $errors[] = 'फूटर प्रतिमेची साइज 2MB पेक्षा कमी असावी.';
+                } else {
+                    $footer_image_tmp = $_FILES['footer_image']['tmp_name'];
+                    $footer_image_name = $_FILES['footer_image']['name'];
+                    $footer_image_ext = $file_ext;
                 }
             } else {
                 $errors[] = 'फूटर जाहिरात प्रतिमा आवश्यक आहे.';
@@ -165,10 +203,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (empty($errors)) {
             // Store form data in session for after payment
-            $_SESSION['pending_ad_data'] = $_POST;
-            $_SESSION['pending_ad_image'] = $_FILES['ad_image'];
-            $_SESSION['pending_social_image'] = $_FILES['social_media_image'] ?? null;
-            $_SESSION['pending_footer_image'] = $_FILES['footer_image'] ?? null;
+            $_SESSION['pending_ad_data'] = [
+                'client_name' => $client_name,
+                'gst_number' => $gst_number,
+                'client_email' => $client_email,
+                'mobile_number' => $mobile_number,
+                'business_type' => $business_type,
+                'full_address' => $full_address,
+                'state' => $state,
+                'district' => $district,
+                'ad_title' => $ad_title,
+                'ad_link' => $ad_link,
+                'ad_type' => $ad_type,
+                'duration' => $duration,
+                'amount' => $amount,
+                'start_date' => $start_date,
+                'created_by' => $_SESSION['name'] ?? 'Admin'
+            ];
+            
+            // Store image data in session
+            if ($main_image_tmp) {
+                $_SESSION['pending_ad_image'] = [
+                    'tmp_name' => $main_image_tmp,
+                    'name' => $main_image_name,
+                    'ext' => $main_image_ext
+                ];
+            }
+            
+            if ($social_image_tmp) {
+                $_SESSION['pending_social_image'] = [
+                    'tmp_name' => $social_image_tmp,
+                    'name' => $social_image_name,
+                    'ext' => $social_image_ext
+                ];
+            }
+            
+            if ($footer_image_tmp) {
+                $_SESSION['pending_footer_image'] = [
+                    'tmp_name' => $footer_image_tmp,
+                    'name' => $footer_image_name,
+                    'ext' => $footer_image_ext
+                ];
+            }
             
             // Prepare payment gateway data
             $payerName = $client_name;
@@ -181,12 +257,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mcc = 5137;
             $channelId = 'W';
 
-            // FULL absolute URL
+            // FULL absolute URL for callback
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
             $host = $_SERVER['HTTP_HOST'];
             $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
             $callbackUrl = $protocol . $host . $basePath . '/payment_gatway/SabPaisaPostPgResponse.php';
-
             
             $encData = "?clientCode=" . $clientCode . 
                       "&transUserName=" . $username . 
@@ -212,6 +287,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Regular form processing (Cheque, Online Transfer, UPI)
         // Retrieve and sanitize inputs
         $client_name    = trim($_POST['client_name'] ?? '');
+        $gst_number     = trim($_POST['gst_number'] ?? '');
         $client_email   = trim($_POST['client_email'] ?? '');
         $mobile_number  = trim($_POST['mobile_number'] ?? '');
         $business_type  = trim($_POST['business_type'] ?? '');
@@ -224,6 +300,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $duration       = isset($_POST['duration']) ? (int)$_POST['duration'] : 0;
         $payment_method = trim($_POST['payment_method'] ?? '');
         $transaction_id = trim($_POST['transaction_id'] ?? '');
+        
+        // Optional GST validation if provided
+        if (!empty($gst_number)) {
+            if (!preg_match('/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/', $gst_number)) {
+                $errors[] = 'वैध GST क्रमांक प्रविष्ट करा (उदा. 27AAPFU0939F1Z5)';
+            }
+        }
         
         // Calculate price based on ad type and duration
         if ($ad_type == 1) {
@@ -343,17 +426,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // If no errors, insert into database
         if (empty($errors)) {
-            $payment_status = 1; // 1 for paid, 0 for pending
+            $payment_status = 1; // 1 for paid
             
             $sql = "INSERT INTO ads_management 
-                    (client_name, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, social_media_image, footer_image, ad_link, ad_type, duration, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+                    (client_name, gst_number, client_email, mobile_number, business_type, full_address, state, district, ad_title, image_name, social_media_image, footer_image, ad_link, ad_type, duration, payment_method, transaction_id, price, start_date, end_date, created_by, payment_status, is_active) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
             
             $stmt = $conn->prepare($sql);
             
             $stmt->bind_param(
-                'ssssssssssssiisssdssi',
+                'sssssssssssssiisssdssi',
                 $client_name,
+                $gst_number,
                 $client_email,
                 $mobile_number,
                 $business_type,
@@ -378,6 +462,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($stmt->execute()) {
                 $success = true;
+                echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        <strong>यशस्वी!</strong> जाहिरात यशस्वीरित्या जोडली गेली.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>';
             } else {
                 $errors[] = 'डेटाबेसमध्ये त्रुटी: ' . $conn->error;
                 // Delete uploaded files if database insert fails
@@ -394,14 +483,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-// Handle payment gateway return (you need to implement this based on your callback)
-if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && isset($_SESSION['pending_ad_data'])) {
-    // Process the pending ad data after successful payment
-    // This should be implemented based on your payment gateway callback
-    // Similar to the above insertion but with payment_status = 1
-}
-
 ?>
 
 <div class="container mt-4">
@@ -410,13 +491,18 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
             <h5 class="mb-0"><i class="bi bi-plus-circle"></i> नवीन जाहिरात जोडा</h5>
         </div>
         <div class="card-body">
-            <?php if ($success): ?>
-                <div class="alert alert-success">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    जाहिरात यशस्वीरित्या जोडली गेली. 
-                    <a href="advertisement_post.php" class="alert-link">आणखी एक जोडा</a> 
+            <?php if (!empty($errors)): ?>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <ul class="mb-0">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?php echo htmlspecialchars($error); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
-            <?php elseif ($payment_redirect): ?>
+            <?php endif; ?>
+
+            <?php if ($payment_redirect): ?>
                 <div class="text-center py-4">
                     <div class="spinner-border text-orange mb-3" style="color: #FF6600;" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -433,17 +519,6 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     <script>document.getElementById('paymentForm').submit();</script>
                 </div>
             <?php else: ?>
-                <?php if (!empty($errors)): ?>
-                    <div class="alert alert-danger">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <ul class="mb-0">
-                            <?php foreach ($errors as $error): ?>
-                                <li><?php echo htmlspecialchars($error); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </div>
-                <?php endif; ?>
-
                 <form method="POST" enctype="multipart/form-data" id="adForm">
                     <!-- Client Information Section -->
                     <h6 class="text-muted border-bottom pb-2 mb-3">
@@ -468,6 +543,16 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
+                            <label class="form-label">GST क्रमांक <small class="text-muted">(ऐच्छिक / Optional)</small></label>
+                            <input type="text" name="gst_number" class="form-control" 
+                                   value="<?php echo htmlspecialchars($_POST['gst_number'] ?? ''); ?>" 
+                                   placeholder="27AAPFU0939F1Z5" 
+                                   pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$"
+                                   title="कृपया वैध GST क्रमांक प्रविष्ट करा (उदा. 27AAPFU0939F1Z5)">
+                            <small class="text-muted">15 अंकी GST क्रमांक (उदा. 27AAPFU0939F1Z5)</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
                             <label class="form-label">मोबाईल नंबर *</label>
                             <input type="tel" name="mobile_number" class="form-control" 
                                    value="<?php echo htmlspecialchars($_POST['mobile_number'] ?? ''); ?>" 
@@ -475,7 +560,9 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                                    placeholder="9876543210" required>
                             <small class="text-muted">10 अंकी मोबाईल नंबर टाका</small>
                         </div>
-                        
+                    </div>
+                    
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">व्यवसाय प्रकार *</label>
                             <select name="business_type" class="form-select" required>
@@ -489,9 +576,7 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                                 <option value="Other" <?php echo (isset($_POST['business_type']) && $_POST['business_type'] == 'Other') ? 'selected' : ''; ?>>इतर / Other</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="row">
+                        
                         <div class="col-12 mb-3">
                             <label class="form-label">संपूर्ण पत्ता *</label>
                             <textarea name="full_address" class="form-control" rows="3" 
@@ -570,11 +655,11 @@ if (isset($_GET['payment_status']) && $_GET['payment_status'] == 'success' && is
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">किंमत (₹) *</label>
+                            <label class="form-label">किंमत (₹) * <small class="text-muted">(GST सह / GST included)</small></label>
                             <input type="number" name="price" id="price" class="form-control bg-light" 
                                    value="<?php echo htmlspecialchars($_POST['price'] ?? ''); ?>" 
                                    readonly placeholder="प्रकार व कालावधी निवडा" style="background-color:#f8f9fa; font-weight:600; color:#28a745;">
-                            <small class="text-muted">प्रकार व कालावधीनुसार किंमत स्वयं-निर्धारित</small>
+                            <small class="text-muted">प्रकार व कालावधीनुसार किंमत (करासह)</small>
                         </div>
                         
                         <div class="col-md-6 mb-3" id="main_image_container">
@@ -741,9 +826,9 @@ function updateDurationOptions() {
             option.value = days;
             
             if (adType == 1) {
-                option.text = days + ' दिवस (₹' + durationPrices[1][days] + ')';
+                option.text = days + ' दिवस (₹' + durationPrices[1][days] + ' GST सह)';
             } else {
-                option.text = days + ' दिवस (₹' + durationPrices[2][days] + ')';
+                option.text = days + ' दिवस (₹' + durationPrices[2][days] + ' GST सह)';
             }
             
             // Preserve previously selected duration if any
@@ -823,7 +908,6 @@ function toggleImageFields() {
     const adType = document.getElementById('ad_type').value;
     const bigAdFields = document.getElementById('big_ad_fields');
     const smallAdFields = document.getElementById('small_ad_fields');
-    const mainImageContainer = document.getElementById('main_image_container');
     const socialInput = document.querySelector('input[name="social_media_image"]');
     const footerInput = document.querySelector('input[name="footer_image"]');
     
@@ -852,10 +936,9 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleTransactionId();
     toggleImageFields();
     
-    // If state was previously selected (e.g., form validation failed), load its districts
+    // If state was previously selected, load its districts
     const selectedState = document.getElementById('state').value;
     if (selectedState && selectedState !== '') {
-        // Small delay to ensure states are loaded
         setTimeout(function() {
             loadDistricts();
         }, 500);
