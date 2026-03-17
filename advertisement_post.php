@@ -31,11 +31,12 @@ define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
 // Price configuration (GST included)
+// define('BIG_AD_PRICE_10', 1770);
 define('BIG_AD_PRICE_10', 1770);
 define('BIG_AD_PRICE_20', 2950);
 define('BIG_AD_PRICE_30', 3540);
 
-define('SMALL_AD_PRICE_10', 1);
+define('SMALL_AD_PRICE_10', 1180);
 define('SMALL_AD_PRICE_20', 1770);
 define('SMALL_AD_PRICE_30', 2360);
 
