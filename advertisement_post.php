@@ -2,6 +2,11 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+// Enable error logging
+ini_set('log_errors', 1);
+ini_set('error_log', 'payment_errors.log');
+
 session_start();
 
 // Login check
@@ -39,10 +44,18 @@ define('DURATION_20', 20);
 define('DURATION_30', 30);
 
 // Ensure upload directories exist
-if (!is_dir(PRIMARY_ADS_PATH)) mkdir(PRIMARY_ADS_PATH, 0755, true);
-if (!is_dir(SECONDARY_ADS_PATH)) mkdir(SECONDARY_ADS_PATH, 0755, true);
-if (!is_dir(SOCIAL_MEDIA_ADS_PATH)) mkdir(SOCIAL_MEDIA_ADS_PATH, 0755, true);
-if (!is_dir(FOOTER_ADS_PATH)) mkdir(FOOTER_ADS_PATH, 0755, true);
+$directories = [
+    PRIMARY_ADS_PATH, 
+    SECONDARY_ADS_PATH, 
+    SOCIAL_MEDIA_ADS_PATH, 
+    FOOTER_ADS_PATH
+];
+
+foreach ($directories as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+}
 
 $errors = [];
 $success = false;
@@ -58,6 +71,14 @@ $authIV = '5rTyHyY/FDpKUCpiFe+d5K2XkDkXCb99v+5GDWwnoK2KFPIVq629dikwYbluXXze';
 
 // Handle payment gateway return (from callback)
 if (isset($_GET['payment_status'])) {
+    error_log("=== Payment Return Debug ===");
+    error_log("Session ID: " . session_id());
+    error_log("GET Data: " . print_r($_GET, true));
+    error_log("Pending ad data: " . print_r($_SESSION['pending_ad_data'] ?? [], true));
+    error_log("Pending main image: " . print_r($_SESSION['pending_ad_image'] ?? [], true));
+    error_log("Pending social image: " . print_r($_SESSION['pending_social_image'] ?? [], true));
+    error_log("Pending footer image: " . print_r($_SESSION['pending_footer_image'] ?? [], true));
+    
     if ($_GET['payment_status'] == 'success') {
         $txn_id = isset($_GET['txn_id']) ? $_GET['txn_id'] : '';
         $amount = isset($_GET['amount']) ? $_GET['amount'] : '';
@@ -112,6 +133,14 @@ if (isset($_GET['payment_status'])) {
                 $social_upload_dir = 'components/primary_advertised_social_media/';
                 $footer_upload_dir = 'components/secondary_advertised_footer/';
                 
+                // Ensure directories exist
+                foreach ([$primary_upload_dir, $secondary_upload_dir, $social_upload_dir, $footer_upload_dir] as $dir) {
+                    if (!is_dir($dir)) {
+                        mkdir($dir, 0755, true);
+                        error_log("Created directory: " . $dir);
+                    }
+                }
+                
                 // Process main image
                 if ($ad_image && isset($ad_image['tmp_name']) && file_exists($ad_image['tmp_name'])) {
                     $file_ext = $ad_image['ext'] ?? 'jpg';
@@ -119,35 +148,72 @@ if (isset($_GET['payment_status'])) {
                     $upload_dir = ($ad_type == 1) ? $primary_upload_dir : $secondary_upload_dir;
                     $upload_path = $upload_dir . $image_name;
                     
-                    if (!copy($ad_image['tmp_name'], $upload_path)) {
+                    error_log("Attempting to copy main image from: " . $ad_image['tmp_name'] . " to: " . $upload_path);
+                    
+                    if (copy($ad_image['tmp_name'], $upload_path)) {
+                        error_log("Main image uploaded successfully: " . $image_name);
+                        // Set proper permissions
+                        chmod($upload_path, 0644);
+                    } else {
+                        error_log("Failed to copy main image. Error: " . error_get_last()['message']);
                         $image_name = '';
-                        error_log("Failed to copy main image");
+                    }
+                } else {
+                    error_log("Main image not found in session or file doesn't exist");
+                    if ($ad_image) {
+                        error_log("Ad image data: " . print_r($ad_image, true));
                     }
                 }
                 
                 // Process social media image for big ads
-                if ($ad_type == 1 && $social_image && isset($social_image['tmp_name']) && file_exists($social_image['tmp_name'])) {
-                    $file_ext = $social_image['ext'] ?? 'jpg';
-                    $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
-                    $upload_path = $social_upload_dir . $social_media_image;
-                    
-                    if (!copy($social_image['tmp_name'], $upload_path)) {
-                        $social_media_image = '';
-                        error_log("Failed to copy social image");
+                if ($ad_type == 1) {
+                    if ($social_image && isset($social_image['tmp_name']) && file_exists($social_image['tmp_name'])) {
+                        $file_ext = $social_image['ext'] ?? 'jpg';
+                        $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
+                        $upload_path = $social_upload_dir . $social_media_image;
+                        
+                        error_log("Attempting to copy social image from: " . $social_image['tmp_name'] . " to: " . $upload_path);
+                        
+                        if (copy($social_image['tmp_name'], $upload_path)) {
+                            error_log("Social image uploaded successfully: " . $social_media_image);
+                            chmod($upload_path, 0644);
+                        } else {
+                            error_log("Failed to copy social image. Error: " . error_get_last()['message']);
+                            $social_media_image = '';
+                        }
+                    } else {
+                        error_log("Social image not found in session for big ad");
+                        if ($social_image) {
+                            error_log("Social image data: " . print_r($social_image, true));
+                        }
                     }
                 }
                 
                 // Process footer image for small ads
-                if ($ad_type == 2 && $footer_image && isset($footer_image['tmp_name']) && file_exists($footer_image['tmp_name'])) {
-                    $file_ext = $footer_image['ext'] ?? 'jpg';
-                    $footer_image_name = time() . '_footer_' . uniqid() . '.' . $file_ext;
-                    $upload_path = $footer_upload_dir . $footer_image_name;
-                    
-                    if (!copy($footer_image['tmp_name'], $upload_path)) {
-                        $footer_image_name = '';
-                        error_log("Failed to copy footer image");
+                if ($ad_type == 2) {
+                    if ($footer_image && isset($footer_image['tmp_name']) && file_exists($footer_image['tmp_name'])) {
+                        $file_ext = $footer_image['ext'] ?? 'jpg';
+                        $footer_image_name = time() . '_footer_' . uniqid() . '.' . $file_ext;
+                        $upload_path = $footer_upload_dir . $footer_image_name;
+                        
+                        error_log("Attempting to copy footer image from: " . $footer_image['tmp_name'] . " to: " . $upload_path);
+                        
+                        if (copy($footer_image['tmp_name'], $upload_path)) {
+                            error_log("Footer image uploaded successfully: " . $footer_image_name);
+                            chmod($upload_path, 0644);
+                        } else {
+                            error_log("Failed to copy footer image. Error: " . error_get_last()['message']);
+                            $footer_image_name = '';
+                        }
+                    } else {
+                        error_log("Footer image not found in session for small ad");
+                        if ($footer_image) {
+                            error_log("Footer image data: " . print_r($footer_image, true));
+                        }
                     }
                 }
+                
+                error_log("Final image names - Main: " . $image_name . ", Social: " . $social_media_image . ", Footer: " . $footer_image_name);
                 
                 // Insert into database
                 $sql = "INSERT INTO ads_management 
@@ -160,53 +226,63 @@ if (isset($_GET['payment_status'])) {
                 
                 $stmt = $conn->prepare($sql);
                 
-                $stmt->bind_param(
-                    'sssssssssssssiisssss',
-                    $client_name,
-                    $gst_number,
-                    $client_email,
-                    $mobile_number,
-                    $business_type,
-                    $full_address,
-                    $state,
-                    $district,
-                    $ad_title,
-                    $image_name,
-                    $social_media_image,
-                    $footer_image_name,
-                    $ad_link,
-                    $ad_type,
-                    $duration,
-                    $txn_id,
-                    $price,
-                    $start_date,
-                    $end_date,
-                    $created_by
-                );
-                
-                if ($stmt->execute()) {
-                    // Clear session data after successful insert
-                    unset($_SESSION['pending_ad_data']);
-                    unset($_SESSION['pending_ad_image']);
-                    unset($_SESSION['pending_social_image']);
-                    unset($_SESSION['pending_footer_image']);
-                    
-                    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="bi bi-check-circle-fill me-2"></i>
-                            <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे. 
-                            Transaction ID: ' . htmlspecialchars($txn_id) . '
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                          </div>';
-                    $success = true;
+                if (!$stmt) {
+                    error_log("Prepare failed: " . $conn->error);
+                    echo '<div class="alert alert-danger">Database prepare error: ' . $conn->error . '</div>';
                 } else {
-                    echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>त्रुटी!</strong> डेटाबेसमध्ये माहिती जोडताना त्रुटी: ' . $conn->error . '
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                          </div>';
+                    $stmt->bind_param(
+                        'sssssssssssssiisssss',
+                        $client_name,
+                        $gst_number,
+                        $client_email,
+                        $mobile_number,
+                        $business_type,
+                        $full_address,
+                        $state,
+                        $district,
+                        $ad_title,
+                        $image_name,
+                        $social_media_image,
+                        $footer_image_name,
+                        $ad_link,
+                        $ad_type,
+                        $duration,
+                        $txn_id,
+                        $price,
+                        $start_date,
+                        $end_date,
+                        $created_by
+                    );
+                    
+                    if ($stmt->execute()) {
+                        $insert_id = $conn->insert_id;
+                        error_log("SUCCESS: Record inserted with ID: $insert_id for transaction: $txn_id");
+                        
+                        // Clear session data after successful insert
+                        unset($_SESSION['pending_ad_data']);
+                        unset($_SESSION['pending_ad_image']);
+                        unset($_SESSION['pending_social_image']);
+                        unset($_SESSION['pending_footer_image']);
+                        
+                        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे. 
+                                Transaction ID: ' . htmlspecialchars($txn_id) . '
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>';
+                        $success = true;
+                    } else {
+                        error_log("ERROR: Execute failed - " . $stmt->error);
+                        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <strong>त्रुटी!</strong> डेटाबेसमध्ये माहिती जोडताना त्रुटी: ' . $stmt->error . '
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                              </div>';
+                    }
+                    $stmt->close();
                 }
-                $stmt->close();
             } else {
+                error_log("ERROR: No pending ad data in session");
                 echo '<div class="alert alert-warning alert-dismissible fade show" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <strong>सूचना!</strong> पेमेंट यशस्वी झाले परंतु जाहिरात माहिती सापडली नाही. कृपया प्रशासकाशी संपर्क साधा.
@@ -216,6 +292,8 @@ if (isset($_GET['payment_status'])) {
             }
         } else {
             // Transaction already exists
+            $row = $check_result->fetch_assoc();
+            error_log("Transaction already exists in database with ID: " . $row['id']);
             echo '<div class="alert alert-info alert-dismissible fade show" role="alert">
                     <i class="bi bi-info-circle-fill me-2"></i>
                     <strong>माहिती!</strong> ही जाहिरात आधीच जोडली गेली आहे.
@@ -384,6 +462,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'name' => $main_image_name,
                     'ext' => $main_image_ext
                 ];
+                error_log("Stored main image in session: " . print_r($_SESSION['pending_ad_image'], true));
             }
             
             if ($social_image_tmp) {
@@ -392,6 +471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'name' => $social_image_name,
                     'ext' => $social_image_ext
                 ];
+                error_log("Stored social image in session: " . print_r($_SESSION['pending_social_image'], true));
             }
             
             if ($footer_image_tmp) {
@@ -400,6 +480,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'name' => $footer_image_name,
                     'ext' => $footer_image_ext
                 ];
+                error_log("Stored footer image in session: " . print_r($_SESSION['pending_footer_image'], true));
             }
             
             // Prepare payment gateway data
@@ -521,6 +602,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!move_uploaded_file($file_tmp, $upload_path)) {
                     $errors[] = 'मुख्य प्रतिमा अपलोड करताना त्रुटी.';
                     $image_name = '';
+                } else {
+                    chmod($upload_path, 0644);
                 }
             }
         } else {
@@ -545,6 +628,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!move_uploaded_file($file_tmp, $upload_path)) {
                         $errors[] = 'सोशल मीडिया प्रतिमा अपलोड करताना त्रुटी.';
                         $social_media_image = '';
+                    } else {
+                        chmod($upload_path, 0644);
                     }
                 }
             } else {
@@ -570,6 +655,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!move_uploaded_file($file_tmp, $upload_path)) {
                         $errors[] = 'फूटर प्रतिमा अपलोड करताना त्रुटी.';
                         $footer_image = '';
+                    } else {
+                        chmod($upload_path, 0644);
                     }
                 }
             } else {
@@ -638,6 +725,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
+<!-- Rest of your HTML and JavaScript remains exactly the same -->
 <div class="container mt-4">
     <div class="card shadow-sm">
         <div class="card-header bg-orange text-white">
@@ -673,6 +761,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php else: ?>
                 <form method="POST" enctype="multipart/form-data" id="adForm">
+                    <!-- Your existing form HTML remains exactly the same -->
                     <!-- Client Information Section -->
                     <h6 class="text-muted border-bottom pb-2 mb-3">
                         <i class="bi bi-person-badge me-2"></i>ग्राहक माहिती / Client Information
