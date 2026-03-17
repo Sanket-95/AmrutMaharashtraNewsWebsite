@@ -261,7 +261,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
             $host = $_SERVER['HTTP_HOST'];
             $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-            $callbackUrl = $protocol . $host . $basePath . '/payment_gatway/SabPaisaPostPgResponse.php';
+            // $callbackUrl = $protocol . $host . $basePath . '/payment_gatway/SabPaisaPostPgResponse.php';
+            // FULL absolute URL for callback - HARDCODE IT TO BE SAFE
+            $callbackUrl = 'https://amrutmaharashtra.org/payment_gatway/SabPaisaPostPgResponse.php';
             
             $encData = "?clientCode=" . $clientCode . 
                       "&transUserName=" . $username . 

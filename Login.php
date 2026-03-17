@@ -1,5 +1,10 @@
 <?php
 session_start();
+if (isset($_GET['payment_status']) || isset($_POST['encResponse'])) {
+    // Forward to the actual payment response handler
+    header('Location: /payment_gatway/SabPaisaPostPgResponse.php?' . $_SERVER['QUERY_STRING']);
+    exit();
+}
 include 'components/db_config.php';
 
 // Check if user is already logged in
