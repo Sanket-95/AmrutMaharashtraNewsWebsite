@@ -63,13 +63,169 @@ if (isset($_GET['payment_status'])) {
         $amount = isset($_GET['amount']) ? $_GET['amount'] : '';
         $payment_mode = isset($_GET['payment_mode']) ? $_GET['payment_mode'] : 'Payment Gateway';
         
-        echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>
-                <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे. 
-                Transaction ID: ' . htmlspecialchars($txn_id) . '
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>';
-        $success = true;
+        // Check if this transaction was already processed
+        $check_sql = "SELECT id FROM ads_management WHERE transaction_id = ?";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param('s', $txn_id);
+        $check_stmt->execute();
+        $check_result = $check_stmt->get_result();
+        
+        if ($check_result->num_rows == 0) {
+            // Transaction not found in database, we need to insert it
+            // Get the pending data from session
+            $ad_data = $_SESSION['pending_ad_data'] ?? null;
+            
+            if ($ad_data) {
+                // Extract data from session
+                $client_name = $conn->real_escape_string($ad_data['client_name'] ?? '');
+                $gst_number = $conn->real_escape_string($ad_data['gst_number'] ?? '');
+                $client_email = $conn->real_escape_string($ad_data['client_email'] ?? '');
+                $mobile_number = $conn->real_escape_string($ad_data['mobile_number'] ?? '');
+                $business_type = $conn->real_escape_string($ad_data['business_type'] ?? '');
+                $full_address = $conn->real_escape_string($ad_data['full_address'] ?? '');
+                $state = $conn->real_escape_string($ad_data['state'] ?? '');
+                $district = $conn->real_escape_string($ad_data['district'] ?? '');
+                $ad_title = $conn->real_escape_string($ad_data['ad_title'] ?? '');
+                $ad_link = $conn->real_escape_string($ad_data['ad_link'] ?? '');
+                $ad_type = (int)($ad_data['ad_type'] ?? 0);
+                $duration = (int)($ad_data['duration'] ?? 0);
+                $price = (float)($ad_data['amount'] ?? 0);
+                $start_date = $ad_data['start_date'] ?? date('Y-m-d');
+                $created_by = $conn->real_escape_string($ad_data['created_by'] ?? 'Admin');
+                
+                // Calculate end date
+                $end_date = date('Y-m-d', strtotime($start_date . ' + ' . $duration . ' days'));
+                
+                // Handle image uploads from session
+                $image_name = '';
+                $social_media_image = '';
+                $footer_image_name = '';
+                
+                // Get image data from session
+                $ad_image = $_SESSION['pending_ad_image'] ?? null;
+                $social_image = $_SESSION['pending_social_image'] ?? null;
+                $footer_image = $_SESSION['pending_footer_image'] ?? null;
+                
+                // Define upload directories
+                $primary_upload_dir = 'components/primary_advertised/';
+                $secondary_upload_dir = 'components/secondary_advertised/';
+                $social_upload_dir = 'components/primary_advertised_social_media/';
+                $footer_upload_dir = 'components/secondary_advertised_footer/';
+                
+                // Process main image
+                if ($ad_image && isset($ad_image['tmp_name']) && file_exists($ad_image['tmp_name'])) {
+                    $file_ext = $ad_image['ext'] ?? 'jpg';
+                    $image_name = time() . '_' . uniqid() . '.' . $file_ext;
+                    $upload_dir = ($ad_type == 1) ? $primary_upload_dir : $secondary_upload_dir;
+                    $upload_path = $upload_dir . $image_name;
+                    
+                    if (!copy($ad_image['tmp_name'], $upload_path)) {
+                        $image_name = '';
+                        error_log("Failed to copy main image");
+                    }
+                }
+                
+                // Process social media image for big ads
+                if ($ad_type == 1 && $social_image && isset($social_image['tmp_name']) && file_exists($social_image['tmp_name'])) {
+                    $file_ext = $social_image['ext'] ?? 'jpg';
+                    $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
+                    $upload_path = $social_upload_dir . $social_media_image;
+                    
+                    if (!copy($social_image['tmp_name'], $upload_path)) {
+                        $social_media_image = '';
+                        error_log("Failed to copy social image");
+                    }
+                }
+                
+                // Process footer image for small ads
+                if ($ad_type == 2 && $footer_image && isset($footer_image['tmp_name']) && file_exists($footer_image['tmp_name'])) {
+                    $file_ext = $footer_image['ext'] ?? 'jpg';
+                    $footer_image_name = time() . '_footer_' . uniqid() . '.' . $file_ext;
+                    $upload_path = $footer_upload_dir . $footer_image_name;
+                    
+                    if (!copy($footer_image['tmp_name'], $upload_path)) {
+                        $footer_image_name = '';
+                        error_log("Failed to copy footer image");
+                    }
+                }
+                
+                // Insert into database
+                $sql = "INSERT INTO ads_management 
+                        (client_name, gst_number, client_email, mobile_number, business_type, 
+                         full_address, state, district, ad_title, image_name, social_media_image, 
+                         footer_image, ad_link, ad_type, duration, payment_method, transaction_id, 
+                         price, start_date, end_date, created_by, payment_status, is_active) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Payment Gateway', 
+                                ?, ?, ?, ?, ?, 1, 1)";
+                
+                $stmt = $conn->prepare($sql);
+                
+                $stmt->bind_param(
+                    'sssssssssssssiisssss',
+                    $client_name,
+                    $gst_number,
+                    $client_email,
+                    $mobile_number,
+                    $business_type,
+                    $full_address,
+                    $state,
+                    $district,
+                    $ad_title,
+                    $image_name,
+                    $social_media_image,
+                    $footer_image_name,
+                    $ad_link,
+                    $ad_type,
+                    $duration,
+                    $txn_id,
+                    $price,
+                    $start_date,
+                    $end_date,
+                    $created_by
+                );
+                
+                if ($stmt->execute()) {
+                    // Clear session data after successful insert
+                    unset($_SESSION['pending_ad_data']);
+                    unset($_SESSION['pending_ad_image']);
+                    unset($_SESSION['pending_social_image']);
+                    unset($_SESSION['pending_footer_image']);
+                    
+                    echo '<div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <strong>पेमेंट यशस्वी!</strong> तुमची जाहिरात यशस्वीरित्या जोडली गेली आहे. 
+                            Transaction ID: ' . htmlspecialchars($txn_id) . '
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                          </div>';
+                    $success = true;
+                } else {
+                    echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>त्रुटी!</strong> डेटाबेसमध्ये माहिती जोडताना त्रुटी: ' . $conn->error . '
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                          </div>';
+                }
+                $stmt->close();
+            } else {
+                echo '<div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>सूचना!</strong> पेमेंट यशस्वी झाले परंतु जाहिरात माहिती सापडली नाही. कृपया प्रशासकाशी संपर्क साधा.
+                        Transaction ID: ' . htmlspecialchars($txn_id) . '
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>';
+            }
+        } else {
+            // Transaction already exists
+            echo '<div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <strong>माहिती!</strong> ही जाहिरात आधीच जोडली गेली आहे.
+                    Transaction ID: ' . htmlspecialchars($txn_id) . '
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  </div>';
+            $success = true;
+        }
+        $check_stmt->close();
+        
     } else if ($_GET['payment_status'] == 'failed') {
         $message = isset($_GET['message']) ? htmlspecialchars($_GET['message']) : 'पेमेंट अयशस्वी';
         echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -258,11 +414,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $channelId = 'W';
 
             // FULL absolute URL for callback
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-            $host = $_SERVER['HTTP_HOST'];
-            $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-            // $callbackUrl = $protocol . $host . $basePath . '/payment_gatway/SabPaisaPostPgResponse.php';
-            // FULL absolute URL for callback - HARDCODE IT TO BE SAFE
             $callbackUrl = 'https://amrutmaharashtra.org/payment_gatway/SabPaisaPostPgResponse.php';
             
             $encData = "?clientCode=" . $clientCode . 
