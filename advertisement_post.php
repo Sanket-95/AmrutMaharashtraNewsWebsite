@@ -26,6 +26,7 @@ define('PRIMARY_ADS_PATH', 'components/primary_advertised/');
 define('SECONDARY_ADS_PATH', 'components/secondary_advertised/');
 define('SOCIAL_MEDIA_ADS_PATH', 'components/primary_advertised_social_media/');
 define('FOOTER_ADS_PATH', 'components/secondary_advertised_footer/');
+define('TEMP_UPLOAD_PATH', 'components/temp_uploads/');
 define('MAX_FILE_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'webp']);
 
@@ -48,12 +49,14 @@ $directories = [
     PRIMARY_ADS_PATH, 
     SECONDARY_ADS_PATH, 
     SOCIAL_MEDIA_ADS_PATH, 
-    FOOTER_ADS_PATH
+    FOOTER_ADS_PATH,
+    TEMP_UPLOAD_PATH
 ];
 
 foreach ($directories as $dir) {
     if (!is_dir($dir)) {
         mkdir($dir, 0755, true);
+        error_log("Created directory: " . $dir);
     }
 }
 
@@ -141,25 +144,25 @@ if (isset($_GET['payment_status'])) {
                     }
                 }
                 
-                // Process main image
-                if ($ad_image && isset($ad_image['tmp_name']) && file_exists($ad_image['tmp_name'])) {
+                // Process main image - using 'path' instead of 'tmp_name'
+                if ($ad_image && isset($ad_image['path']) && file_exists($ad_image['path'])) {
                     $file_ext = $ad_image['ext'] ?? 'jpg';
                     $image_name = time() . '_' . uniqid() . '.' . $file_ext;
                     $upload_dir = ($ad_type == 1) ? $primary_upload_dir : $secondary_upload_dir;
                     $upload_path = $upload_dir . $image_name;
                     
-                    error_log("Attempting to copy main image from: " . $ad_image['tmp_name'] . " to: " . $upload_path);
+                    error_log("Moving main image from: " . $ad_image['path'] . " to: " . $upload_path);
                     
-                    if (copy($ad_image['tmp_name'], $upload_path)) {
-                        error_log("Main image uploaded successfully: " . $image_name);
-                        // Set proper permissions
+                    // Use rename to move the file
+                    if (rename($ad_image['path'], $upload_path)) {
+                        error_log("Main image moved successfully: " . $image_name);
                         chmod($upload_path, 0644);
                     } else {
-                        error_log("Failed to copy main image. Error: " . error_get_last()['message']);
+                        error_log("Failed to move main image. Error: " . print_r(error_get_last(), true));
                         $image_name = '';
                     }
                 } else {
-                    error_log("Main image not found in session or file doesn't exist");
+                    error_log("Main image not found in temp location");
                     if ($ad_image) {
                         error_log("Ad image data: " . print_r($ad_image, true));
                     }
@@ -167,49 +170,43 @@ if (isset($_GET['payment_status'])) {
                 
                 // Process social media image for big ads
                 if ($ad_type == 1) {
-                    if ($social_image && isset($social_image['tmp_name']) && file_exists($social_image['tmp_name'])) {
+                    if ($social_image && isset($social_image['path']) && file_exists($social_image['path'])) {
                         $file_ext = $social_image['ext'] ?? 'jpg';
                         $social_media_image = time() . '_social_' . uniqid() . '.' . $file_ext;
                         $upload_path = $social_upload_dir . $social_media_image;
                         
-                        error_log("Attempting to copy social image from: " . $social_image['tmp_name'] . " to: " . $upload_path);
+                        error_log("Moving social image from: " . $social_image['path'] . " to: " . $upload_path);
                         
-                        if (copy($social_image['tmp_name'], $upload_path)) {
-                            error_log("Social image uploaded successfully: " . $social_media_image);
+                        if (rename($social_image['path'], $upload_path)) {
+                            error_log("Social image moved successfully: " . $social_media_image);
                             chmod($upload_path, 0644);
                         } else {
-                            error_log("Failed to copy social image. Error: " . error_get_last()['message']);
+                            error_log("Failed to move social image. Error: " . print_r(error_get_last(), true));
                             $social_media_image = '';
                         }
                     } else {
-                        error_log("Social image not found in session for big ad");
-                        if ($social_image) {
-                            error_log("Social image data: " . print_r($social_image, true));
-                        }
+                        error_log("Social image not found in temp location for big ad");
                     }
                 }
                 
                 // Process footer image for small ads
                 if ($ad_type == 2) {
-                    if ($footer_image && isset($footer_image['tmp_name']) && file_exists($footer_image['tmp_name'])) {
+                    if ($footer_image && isset($footer_image['path']) && file_exists($footer_image['path'])) {
                         $file_ext = $footer_image['ext'] ?? 'jpg';
                         $footer_image_name = time() . '_footer_' . uniqid() . '.' . $file_ext;
                         $upload_path = $footer_upload_dir . $footer_image_name;
                         
-                        error_log("Attempting to copy footer image from: " . $footer_image['tmp_name'] . " to: " . $upload_path);
+                        error_log("Moving footer image from: " . $footer_image['path'] . " to: " . $upload_path);
                         
-                        if (copy($footer_image['tmp_name'], $upload_path)) {
-                            error_log("Footer image uploaded successfully: " . $footer_image_name);
+                        if (rename($footer_image['path'], $upload_path)) {
+                            error_log("Footer image moved successfully: " . $footer_image_name);
                             chmod($upload_path, 0644);
                         } else {
-                            error_log("Failed to copy footer image. Error: " . error_get_last()['message']);
+                            error_log("Failed to move footer image. Error: " . print_r(error_get_last(), true));
                             $footer_image_name = '';
                         }
                     } else {
-                        error_log("Footer image not found in session for small ad");
-                        if ($footer_image) {
-                            error_log("Footer image data: " . print_r($footer_image, true));
-                        }
+                        error_log("Footer image not found in temp location for small ad");
                     }
                 }
                 
@@ -257,6 +254,17 @@ if (isset($_GET['payment_status'])) {
                     if ($stmt->execute()) {
                         $insert_id = $conn->insert_id;
                         error_log("SUCCESS: Record inserted with ID: $insert_id for transaction: $txn_id");
+                        
+                        // Clean up any remaining temp files
+                        if ($ad_image && isset($ad_image['path']) && file_exists($ad_image['path'])) {
+                            unlink($ad_image['path']);
+                        }
+                        if ($social_image && isset($social_image['path']) && file_exists($social_image['path'])) {
+                            unlink($social_image['path']);
+                        }
+                        if ($footer_image && isset($footer_image['path']) && file_exists($footer_image['path'])) {
+                            unlink($footer_image['path']);
+                        }
                         
                         // Clear session data after successful insert
                         unset($_SESSION['pending_ad_data']);
@@ -455,32 +463,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'created_by' => $_SESSION['name'] ?? 'Admin'
             ];
             
-            // Store image data in session
-            if ($main_image_tmp) {
-                $_SESSION['pending_ad_image'] = [
-                    'tmp_name' => $main_image_tmp,
-                    'name' => $main_image_name,
-                    'ext' => $main_image_ext
-                ];
-                error_log("Stored main image in session: " . print_r($_SESSION['pending_ad_image'], true));
+            // IMPORTANT: Move uploaded files to permanent temp location
+            if ($main_image_tmp && file_exists($main_image_tmp)) {
+                $temp_image_name = 'main_' . time() . '_' . uniqid() . '.' . $main_image_ext;
+                $temp_image_path = TEMP_UPLOAD_PATH . $temp_image_name;
+                
+                if (move_uploaded_file($main_image_tmp, $temp_image_path)) {
+                    $_SESSION['pending_ad_image'] = [
+                        'path' => $temp_image_path,
+                        'name' => $main_image_name,
+                        'ext' => $main_image_ext,
+                        'temp_name' => $temp_image_name
+                    ];
+                    error_log("Moved main image to temp: " . $temp_image_path);
+                } else {
+                    error_log("Failed to move main image to temp");
+                }
             }
             
-            if ($social_image_tmp) {
-                $_SESSION['pending_social_image'] = [
-                    'tmp_name' => $social_image_tmp,
-                    'name' => $social_image_name,
-                    'ext' => $social_image_ext
-                ];
-                error_log("Stored social image in session: " . print_r($_SESSION['pending_social_image'], true));
+            if ($social_image_tmp && file_exists($social_image_tmp)) {
+                $temp_social_name = 'social_' . time() . '_' . uniqid() . '.' . $social_image_ext;
+                $temp_social_path = TEMP_UPLOAD_PATH . $temp_social_name;
+                
+                if (move_uploaded_file($social_image_tmp, $temp_social_path)) {
+                    $_SESSION['pending_social_image'] = [
+                        'path' => $temp_social_path,
+                        'name' => $social_image_name,
+                        'ext' => $social_image_ext,
+                        'temp_name' => $temp_social_name
+                    ];
+                    error_log("Moved social image to temp: " . $temp_social_path);
+                }
             }
             
-            if ($footer_image_tmp) {
-                $_SESSION['pending_footer_image'] = [
-                    'tmp_name' => $footer_image_tmp,
-                    'name' => $footer_image_name,
-                    'ext' => $footer_image_ext
-                ];
-                error_log("Stored footer image in session: " . print_r($_SESSION['pending_footer_image'], true));
+            if ($footer_image_tmp && file_exists($footer_image_tmp)) {
+                $temp_footer_name = 'footer_' . time() . '_' . uniqid() . '.' . $footer_image_ext;
+                $temp_footer_path = TEMP_UPLOAD_PATH . $temp_footer_name;
+                
+                if (move_uploaded_file($footer_image_tmp, $temp_footer_path)) {
+                    $_SESSION['pending_footer_image'] = [
+                        'path' => $temp_footer_path,
+                        'name' => $footer_image_name,
+                        'ext' => $footer_image_ext,
+                        'temp_name' => $temp_footer_name
+                    ];
+                    error_log("Moved footer image to temp: " . $temp_footer_path);
+                }
             }
             
             // Prepare payment gateway data
