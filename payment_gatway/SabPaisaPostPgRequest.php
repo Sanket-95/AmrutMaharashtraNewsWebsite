@@ -33,7 +33,7 @@ $amount=300;
 $amountType='INR';
 $mcc=5137;
 $channelId='W'; 
-$callbackUrl='http://127.0.0.1/php2.0/SabPaisaPostPgResponse.php';
+$callbackUrl='http://127.0.0.1/payment_gatway/SabPaisaPostPgResponse.php';
 // Extra Parameter you can use 20 extra parameters(udf1 to udf20)
 //$Class='VIII';
 //$Roll='1008';
