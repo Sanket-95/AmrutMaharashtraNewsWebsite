@@ -1333,7 +1333,7 @@ function loadDistricts() {
         console.error('Error loading districts:', error);
         districtSelect.innerHTML = "<option value=''>-- जिल्हा निवडा / Select District --</option>";
         
-        // Add a fallback message
+        // Add a fallback message.....
         const errorOption = document.createElement("option");
         errorOption.value = "";
         errorOption.text = "जिल्हे लोड करण्यात त्रुटी / Error loading districts";
