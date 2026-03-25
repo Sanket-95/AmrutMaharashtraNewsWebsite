@@ -55,7 +55,10 @@ ob_clean();
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
         await OneSignal.init({
-        appId: "1804ac55-a47c-4bd8-835f-e304856f9cab",
+        // For https://amrutmaharashtra.org/
+        // appId: "1804ac55-a47c-4bd8-835f-e304856f9cab",
+        // For https://amrutmaharashtra.com/
+         appId: "9a132907-3ef8-4384-94f1-41c8537c3ef2",
         });
     });
     </script>
