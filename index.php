@@ -2,11 +2,12 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+include 'components/db_config.php';
+include 'components/visitor_log.php';
 include 'components/header_fixed.php';
 include 'components/navbar.php';
 // include 'components/navbar copy.php';    
-include 'components/db_config.php';
-include 'components/visitor_log.php';
+
 
 // Fetch top news for carousel
 $top_news_query = "SELECT 

@@ -1,5 +1,5 @@
 <?php
-include_once 'db_config.php';
+// include_once 'db_config.php';
 
 // Cookie name
 $cookie_name = "visitor_id";
@@ -15,13 +15,30 @@ if(!isset($_COOKIE[$cookie_name])) {
 
     // Get visitor info
     $ip = $_SERVER['REMOTE_ADDR'];
+
+    // Convert local IPv6 loopback to IPv4 for local testing
+    if ($ip === '::1') {
+        $ip = '127.0.0.1';
+    }
+
     $user_agent = $_SERVER['HTTP_USER_AGENT'];
     $visit_time = date('Y-m-d H:i:s');
 
-    // Insert into database
+    // Prepare SQL statement
     $stmt = $conn->prepare("INSERT INTO visitors_log (visitor_id, ip_address, user_agent, visit_time) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $visitor_id, $ip, $user_agent, $visit_time);
-    $stmt->execute();
-    $stmt->close();
+
+    // Check for prepare errors
+    if ($stmt === false) {
+        error_log("Prepare failed: " . $conn->error);
+    } else {
+        $stmt->bind_param("ssss", $visitor_id, $ip, $user_agent, $visit_time);
+
+        // Execute and check for errors
+        if(!$stmt->execute()) {
+            error_log("Execute failed: " . $stmt->error);
+        }
+
+        $stmt->close();
+    }
 }
 ?>
