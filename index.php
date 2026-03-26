@@ -6,6 +6,7 @@ include 'components/header_fixed.php';
 include 'components/navbar.php';
 // include 'components/navbar copy.php';    
 include 'components/db_config.php';
+include 'components/visitor_log.php';
 
 // Fetch top news for carousel
 $top_news_query = "SELECT 

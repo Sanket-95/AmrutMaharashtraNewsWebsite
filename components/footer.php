@@ -45,9 +45,53 @@
                 </ul>
             </div>
             
-            <!-- Column 3: Policies & Terms - REMOVED -->
+            <!-- Column 3: Visitor Stats -->
             <div class="col-lg-2 col-md-6 mb-4">
-                <!-- Empty column for layout consistency -->
+                <h5 class="text-orange mb-3">Visitor Stats</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <i class="bi bi-people-fill text-orange me-2"></i>
+                        <span>Total Visitors: 
+                            <?php
+                            // Create a new independent database connection for footer
+                            $visitor_count = 0;
+                            
+                            // Database configuration
+                            $db_host = 'localhost';
+                            $db_user = 'root';
+                            $db_pass = '';
+                            $db_name = 'amrutmaharashtra';
+                            
+                            // Create new connection
+                            $footer_conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+                            
+                            // Check connection
+                            if (!$footer_conn->connect_error) {
+                                $footer_conn->set_charset("utf8mb4");
+                                
+                                // Fetch visitor count
+                                $count_query = "SELECT MAX(id) as total_visitors FROM visitors_log";
+                                $count_result = $footer_conn->query($count_query);
+                                if ($count_result && $count_result->num_rows > 0) {
+                                    $count_row = $count_result->fetch_assoc();
+                                    $visitor_count = $count_row['total_visitors'] ?? 0;
+                                }
+                                
+                                // Close the connection
+                                $footer_conn->close();
+                            }
+                            
+                            echo number_format($visitor_count);
+                            ?>
+                        </span>
+                    </li>
+                    <!-- <li class="mb-3">
+                        <i class="bi bi-graph-up text-orange me-2"></i>
+                        <span>Active Visitors: 
+                            <span class="text-success">●</span> Online
+                        </span>
+                    </li> -->
+                </ul>
             </div>
             
             <!-- Column 4: Contact Info - UPDATED -->
@@ -151,6 +195,19 @@
         width: calc(100% - 30px);
     }
     
+    /* Visitor stats styling */
+    .visitor-stats {
+        background: rgba(255, 102, 0, 0.1);
+        border-radius: 8px;
+        padding: 5px 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .visitor-stats:hover {
+        background: rgba(255, 102, 0, 0.2);
+        transform: translateX(5px);
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .footer-logo h3 {
@@ -173,6 +230,11 @@
         ul.list-unstyled li span {
             width: calc(100% - 25px);
             font-size: 0.9rem;
+        }
+        
+        /* Visitor stats on mobile */
+        .col-lg-2.col-md-6.mb-4 {
+            margin-top: 10px;
         }
     }
 
@@ -219,6 +281,25 @@
     }
 }
 
+/* Visitor count animation */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.visitor-count {
+    display: inline-block;
+    animation: pulse 2s ease-in-out;
+    font-weight: bold;
+    color: #FF6600;
+}
 </style>
 
 <!-- Bootstrap JS Bundle with Popper -->
@@ -303,8 +384,15 @@
                     url + '</a>';
             }
         });
+        
+        // Add animation to visitor count
+        const visitorCount = document.querySelector('.visitor-count');
+        if (visitorCount) {
+            visitorCount.classList.add('visitor-count');
+        }
     });
 </script>
+
 <!-- WhatsApp Floating Button -->
 <!-- <a href="https://wa.me/919112226524" 
    class="whatsapp-float" 
