@@ -53,35 +53,23 @@
                         <i class="bi bi-people-fill text-orange me-2"></i>
                         <span>Total Visitors: 
                             <?php
-                            // Create a new independent database connection for footer
-                            $visitor_count = 0;
-                            
-                            // Database configuration
-                            // $db_host = 'localhost';
-                            // $db_user = 'root';
-                            // $db_pass = '';
-                            // $db_name = 'amrutmaharashtra';
                             include_once 'db_config.php';
-                            
-                            // Create new connection
-                            $footer_conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
-                            
-                            // Check connection
-                            if (!$footer_conn->connect_error) {
-                                $footer_conn->set_charset("utf8mb4");
-                                
-                                // Fetch visitor count
-                                $count_query = "SELECT MAX(id) as total_visitors FROM visitors_log";
-                                $count_result = $footer_conn->query($count_query);
-                                if ($count_result && $count_result->num_rows > 0) {
+
+                            $visitor_count = 0;
+
+                            if ($conn && !$conn->connect_error) {
+                                $conn->set_charset("utf8mb4");
+
+                                // Fetch total visitor count
+                                $count_query = "SELECT COUNT(*) AS total_visitors FROM visitors_log";
+                                $count_result = $conn->query($count_query);
+
+                                if ($count_result) {
                                     $count_row = $count_result->fetch_assoc();
                                     $visitor_count = $count_row['total_visitors'] ?? 0;
                                 }
-                                
-                                // Close the connection
-                                $footer_conn->close();
                             }
-                            
+
                             echo number_format($visitor_count);
                             ?>
                         </span>
