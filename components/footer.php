@@ -57,10 +57,11 @@
                             $visitor_count = 0;
                             
                             // Database configuration
-                            $db_host = 'localhost';
-                            $db_user = 'root';
-                            $db_pass = '';
-                            $db_name = 'amrutmaharashtra';
+                            // $db_host = 'localhost';
+                            // $db_user = 'root';
+                            // $db_pass = '';
+                            // $db_name = 'amrutmaharashtra';
+                            include_once 'db_config.php';
                             
                             // Create new connection
                             $footer_conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
