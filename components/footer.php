@@ -64,7 +64,7 @@
                             include_once 'db_config.php';
                             
                             // Create new connection
-                            $footer_conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+                            $footer_conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
                             
                             // Check connection
                             if (!$footer_conn->connect_error) {
