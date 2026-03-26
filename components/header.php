@@ -4,6 +4,23 @@
 
 // Get current page URL
 $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+
+
+$visitor_count = 0;
+
+if ($conn && !$conn->connect_error) {
+    $conn->set_charset("utf8mb4");
+
+    $count_query = "SELECT COUNT(*) AS total_visitors FROM visitors_log";
+    $count_result = $conn->query($count_query);
+
+    if ($count_result) {
+        $count_row = $count_result->fetch_assoc();
+        $visitor_count = $count_row['total_visitors'] ?? 0;
+    }
+}
+
+
 ?>
 <!DOCTYPE html>
 <html lang="mr" prefix="og: https://ogp.me/ns#">
