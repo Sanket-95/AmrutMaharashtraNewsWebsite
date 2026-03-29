@@ -406,7 +406,7 @@ if (isset($_SESSION['user_id'])) {
                 ?>
             </div>
             
-            <!-- Right side buttons -->
+            <!-- Right side buttons. -->
             <div class="nav-buttons-container">
                 <!-- Desktop buttons -->
                 <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
@@ -415,6 +415,9 @@ if (isset($_SESSION['user_id'])) {
                         <i class="bi bi-speedometer2"></i>
                         <span>जाहिरात विश्लेषण</span>
                     </a>
+                    <?php endif; ?>
+
+                    <?php if ($user_roll === 'Super Admin'): ?>
                     <a href="advertisement_post.php" class="dashboard-btn">
                         <i class="bi bi-megaphone"></i>
                         <span>जाहिरात</span>
@@ -541,6 +544,9 @@ if (isset($_SESSION['user_id'])) {
                 <i class="bi bi-speedometer2"></i>
                 <span>जाहिरात विश्लेषण</span>
             </a>
+            <?php endif; ?>
+
+            <?php if ($user_roll === 'Super Admin'): ?>
             <a href="advertisement_post.php" class="mobile-menu-item">
                 <i class="bi bi-megaphone"></i>
                 <span>जाहिरात</span>
