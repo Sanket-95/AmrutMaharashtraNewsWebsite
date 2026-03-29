@@ -410,7 +410,7 @@ if (isset($_SESSION['user_id'])) {
             <div class="nav-buttons-container">
                 <!-- Desktop buttons -->
                 <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
-                    <?php if ($user_roll === 'Super Admin'): ?>
+                    <?php if ($user_roll === 'Super Admin' || $user_name === 'Vijay Joshi'): ?>
                     <a href="ads_analytics.php" class="dashboard-btn">
                         <i class="bi bi-speedometer2"></i>
                         <span>जाहिरात विश्लेषण</span>
@@ -536,7 +536,7 @@ if (isset($_SESSION['user_id'])) {
             }
             ?>
             
-            <?php if ($user_roll === 'Super Admin'): ?>
+            <?php if ($user_roll === 'Super Admin' || $user_name === 'Vijay Joshi'): ?>
             <a href="ads_analytics.php" class="mobile-menu-item">
                 <i class="bi bi-speedometer2"></i>
                 <span>जाहिरात विश्लेषण</span>
