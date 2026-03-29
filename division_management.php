@@ -12,11 +12,11 @@ if ($_SESSION['roll'] !== 'admin') {
     header('Location: index.php');
     exit();
 }
-
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
-include 'components/db_config.php';
+
 
 // Get current username for updated_by
 $current_username = $_SESSION['username'] ?? '';

@@ -12,11 +12,11 @@ if (!isset($_SESSION['user_id'])) {
 //     header('Location: index.php');
 //     exit();
 // }
-
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
-include 'components/db_config.php';
+
 
 // Get current username for logging
 $current_username = $_SESSION['username'] ?? '';

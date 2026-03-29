@@ -1,4 +1,5 @@
 <?php
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
 ?>

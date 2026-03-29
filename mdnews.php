@@ -14,11 +14,11 @@ if (!in_array($_SESSION['roll'], $allowed_roles)) {
     header('Location: index.php');
     exit();
 }
-
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
-include 'components/db_config.php';
+
 
 // Get user info
 $user_roll = $_SESSION['roll'] ?? '';

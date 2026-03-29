@@ -6,11 +6,11 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
-
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
-include 'components/db_config.php';
+
 
 // Set timezone to IST
 date_default_timezone_set('Asia/Kolkata');

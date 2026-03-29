@@ -1,9 +1,10 @@
 <?php  
 //  <!-- category_news.php -->
 session_start();
+include 'components/db_config.php';
 include 'components/header.php';
 include 'components/navbar.php';
-include 'components/db_config.php';
+
 
 // Category mapping array
 $category_map = [
