@@ -42,7 +42,7 @@ if (!isset($_COOKIE[$cookie_name])) {
 
     $stmt->close();
 
-    // 2️⃣ Insert visitor info + location
+    // 2️⃣ Insert visitor info + location .
     $stmt = $conn->prepare(
         "INSERT INTO visitors_log (visitor_id, ip_address, user_agent, visit_time, country, region, city, zip) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
