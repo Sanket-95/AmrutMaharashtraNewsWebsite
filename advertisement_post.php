@@ -598,7 +598,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($ad_type, [1, 2])) $errors[] = 'वैध प्रकार निवडा.';
         if (!in_array($duration, [DURATION_10, DURATION_20, DURATION_30])) $errors[] = 'वैध कालावधी निवडा.';
         if (empty($payment_method)) $errors[] = 'पेमेंट पद्धत निवडा.';
-        if (empty($transaction_id)) $errors[] = 'ट्रांझॅक्शन ID आवश्यक आहे.';
+        if (!in_array($payment_method, ['Payment Gateway', 'Amrut Scheme'])) {
+            if (empty($transaction_id)) $errors[] = 'ट्रांझॅक्शन ID आवश्यक आहे.';
+        }
         if (empty($start_date)) $errors[] = 'सुरु तारीख आवश्यक आहे.';
         
         // Auto-calculate end date based on duration
@@ -977,6 +979,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <option value="Cheque" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Cheque') ? 'selected' : ''; ?>>धनादेश / Cheque</option>
                                 <option value="Online Transfer" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Online Transfer') ? 'selected' : ''; ?>>ऑनलाईन ट्रान्सफर / Online Transfer</option>
                                 <option value="UPI" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'UPI') ? 'selected' : ''; ?>>UPI</option>
+                                <option value="Amrut Scheme" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Amrut Scheme') ? 'selected' : ''; ?>>अमृत योजना / Amrut Scheme's</option>
                                 <option value="Payment Gateway" <?php echo (isset($_POST['payment_method']) && $_POST['payment_method'] == 'Payment Gateway') ? 'selected' : ''; ?>>💳 पेमेंट गेटवे / Payment Gateway</option>
                             </select>
                         </div>
@@ -1165,7 +1168,7 @@ function toggleTransactionId() {
     const transactionContainer = document.getElementById('transaction_id_container');
     const transactionInput = document.querySelector('input[name="transaction_id"]');
     
-    if (paymentMethod === 'Payment Gateway') {
+    if (paymentMethod === 'Payment Gateway' || paymentMethod === 'Amrut Scheme') {
         transactionContainer.style.display = 'none';
         transactionInput.removeAttribute('required');
     } else {
