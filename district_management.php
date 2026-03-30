@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Only admin can access this page
-if ($_SESSION['roll'] !== 'admin') {
+if ($_SESSION['roll'] !== 'Super Admin') {
     header('Location: index.php');
     exit();
 }
