@@ -1,4 +1,4 @@
-<!-- Login Navbar Component -->
+<!-- Login Navbar Component with User Management Dropdown -->
 <style>
     .login-navbar {
         background: linear-gradient(135deg, #ff8c00, #ff6600);
@@ -189,6 +189,11 @@
         color: white;
     }
     
+    /* User Management Dropdown Styles */
+    .user-mgmt-dropdown {
+        position: relative;
+    }
+    
     .user-mgmt-btn {
         background: #28a745;
         color: white;
@@ -203,12 +208,69 @@
         transition: all 0.3s ease;
         font-size: 14px;
         white-space: nowrap;
+        cursor: pointer;
     }
     
     .user-mgmt-btn:hover {
         background: #218838;
         transform: translateY(-1px);
         color: white;
+    }
+    
+    .user-mgmt-btn i:last-child {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+    }
+    
+    .user-mgmt-dropdown.open .user-mgmt-btn i:last-child {
+        transform: rotate(180deg);
+    }
+    
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+        min-width: 200px;
+        z-index: 1000;
+        margin-top: 5px;
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .user-mgmt-dropdown.open .dropdown-menu {
+        display: block;
+    }
+    
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        text-decoration: none;
+        color: #333;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .dropdown-item:hover {
+        background: #fff5e6;
+        color: #ff6600;
+    }
+    
+    .dropdown-item i {
+        font-size: 16px;
+        width: 20px;
+        color: #ff6600;
     }
     
     .mobile-menu-toggle {
@@ -271,6 +333,51 @@
         font-size: 18px;
     }
     
+    /* Mobile dropdown submenu for user management */
+    .mobile-submenu {
+        margin-left: 30px;
+        margin-top: 5px;
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .mobile-submenu.show {
+        display: flex;
+    }
+    
+    .mobile-submenu-item {
+        background: rgba(255, 255, 255, 0.9);
+        color: #ff6600;
+        padding: 10px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        font-size: 13px;
+    }
+    
+    .mobile-submenu-item:hover {
+        background: white;
+        transform: translateX(5px);
+    }
+    
+    .mobile-menu-parent {
+        cursor: pointer;
+        justify-content: space-between;
+    }
+    
+    .mobile-menu-parent .arrow-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-menu-parent.open .arrow-icon {
+        transform: rotate(180deg);
+    }
+    
     @media (max-width: 992px) {
         .login-navbar-content {
             padding: 0 12px;
@@ -283,6 +390,10 @@
         
         .nav-buttons-container {
             gap: 6px;
+        }
+        
+        .dropdown-menu {
+            min-width: 180px;
         }
     }
     
@@ -337,6 +448,11 @@
         
         .mobile-menu-item span {
             font-size: 14px;
+        }
+        
+        .dropdown-menu {
+            right: 0;
+            left: auto;
         }
     }
 </style>
@@ -406,7 +522,7 @@ if (isset($_SESSION['user_id'])) {
                 ?>
             </div>
             
-            <!-- Right side buttons. -->
+            <!-- Right side buttons -->
             <div class="nav-buttons-container">
                 <!-- Desktop buttons -->
                 <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
@@ -434,12 +550,29 @@ if (isset($_SESSION['user_id'])) {
                     </a>
                     <?php endif; ?>
                     
-                    <!-- User Management Button (for Super Admin) -->
+                    <!-- User Management Dropdown (for Super Admin) -->
                     <?php if ($user_roll === 'Super Admin'): ?>
-                    <a href="newUser.php" class="user-mgmt-btn">
-                        <i class="bi bi-people"></i>
-                        <span>यूजर व्यवस्थापन</span>
-                    </a>
+                    <div class="user-mgmt-dropdown" id="userMgmtDropdown">
+                        <button class="user-mgmt-btn" id="userMgmtBtn">
+                            <i class="bi bi-people"></i>
+                            <span>यूजर व्यवस्थापन</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="newUser.php" class="dropdown-item">
+                                <i class="bi bi-person-plus"></i>
+                                <span>यूजर व्यवस्थापन</span>
+                            </a>
+                            <a href="division_management.php" class="dropdown-item">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>राज्य व्यवस्थापन</span>
+                            </a>
+                            <a href="district_management.php" class="dropdown-item">
+                                <i class="bi bi-geo-alt"></i>
+                                <span>जिल्हा व्यवस्थापन</span>
+                            </a>
+                        </div>
+                    </div>
                     <?php endif; ?>
                 </div>
                 
@@ -560,11 +693,31 @@ if (isset($_SESSION['user_id'])) {
             </a>
             <?php endif; ?>
             
+            <!-- Mobile User Management with Submenu (for Super Admin) -->
             <?php if ($user_roll === 'Super Admin'): ?>
-            <a href="newUser.php" class="mobile-menu-item">
-                <i class="bi bi-people"></i>
-                <span>यूजर व्यवस्थापन</span>
-            </a>
+            <div class="mobile-menu-parent mobile-menu-item" id="mobileUserMgmtParent">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bi bi-people"></i>
+                        <span>यूजर व्यवस्थापन</span>
+                    </span>
+                    <i class="bi bi-chevron-down arrow-icon"></i>
+                </div>
+            </div>
+            <div class="mobile-submenu" id="mobileUserSubmenu">
+                <a href="newUser.php" class="mobile-submenu-item">
+                    <i class="bi bi-person-plus"></i>
+                    <span>यूजर व्यवस्थापन</span>
+                </a>
+                <a href="division_management.php" class="mobile-submenu-item">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>राज्य व्यवस्थापन</span>
+                </a>
+                <a href="district_management.php" class="mobile-submenu-item">
+                    <i class="bi bi-geo-alt"></i>
+                    <span>जिल्हा व्यवस्थापन</span>
+                </a>
+            </div>
             <?php endif; ?>
             
             <a href="profile.php" class="mobile-menu-item">
@@ -582,25 +735,64 @@ if (isset($_SESSION['user_id'])) {
             const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const mobileMenu = document.getElementById('mobileMenu');
             
+            // Desktop dropdown for User Management
+            const userMgmtDropdown = document.getElementById('userMgmtDropdown');
+            const userMgmtBtn = document.getElementById('userMgmtBtn');
+            
+            if (userMgmtDropdown && userMgmtBtn) {
+                userMgmtBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    userMgmtDropdown.classList.toggle('open');
+                    // Close profile modal if open
+                    if (profileModal.classList.contains('show')) {
+                        profileModal.classList.remove('show');
+                    }
+                });
+            }
+            
+            // Mobile submenu for User Management
+            const mobileUserMgmtParent = document.getElementById('mobileUserMgmtParent');
+            const mobileUserSubmenu = document.getElementById('mobileUserSubmenu');
+            
+            if (mobileUserMgmtParent && mobileUserSubmenu) {
+                mobileUserMgmtParent.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('open');
+                    mobileUserSubmenu.classList.toggle('show');
+                });
+            }
+            
             // Profile button click handler
-            profileButton.addEventListener('click', function(e) {
-                e.stopPropagation();
-                profileModal.classList.toggle('show');
-                // Close mobile menu if open
-                if (mobileMenu.classList.contains('show')) {
-                    mobileMenu.classList.remove('show');
-                }
-            });
+            if (profileButton) {
+                profileButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileModal.classList.toggle('show');
+                    // Close desktop dropdown if open
+                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                        userMgmtDropdown.classList.remove('open');
+                    }
+                    // Close mobile menu if open
+                    if (mobileMenu.classList.contains('show')) {
+                        mobileMenu.classList.remove('show');
+                    }
+                });
+            }
             
             // Mobile menu toggle click handler
-            mobileMenuToggle.addEventListener('click', function(e) {
-                e.stopPropagation();
-                mobileMenu.classList.toggle('show');
-                // Close profile modal if open
-                if (profileModal.classList.contains('show')) {
-                    profileModal.classList.remove('show');
-                }
-            });
+            if (mobileMenuToggle) {
+                mobileMenuToggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    mobileMenu.classList.toggle('show');
+                    // Close profile modal if open
+                    if (profileModal.classList.contains('show')) {
+                        profileModal.classList.remove('show');
+                    }
+                    // Close desktop dropdown if open
+                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                        userMgmtDropdown.classList.remove('open');
+                    }
+                });
+            }
             
             // Prevent modal from closing when clicking on settings link
             if (settingsLink) {
@@ -611,10 +803,16 @@ if (isset($_SESSION['user_id'])) {
             
             // Close menus when clicking outside
             document.addEventListener('click', function(e) {
-                if (!profileButton.contains(e.target) && !profileModal.contains(e.target)) {
+                // Close profile modal
+                if (profileButton && !profileButton.contains(e.target) && profileModal && !profileModal.contains(e.target)) {
                     profileModal.classList.remove('show');
                 }
-                if (!mobileMenuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+                // Close desktop dropdown
+                if (userMgmtDropdown && userMgmtBtn && !userMgmtBtn.contains(e.target) && !userMgmtDropdown.contains(e.target)) {
+                    userMgmtDropdown.classList.remove('open');
+                }
+                // Close mobile menu
+                if (mobileMenuToggle && !mobileMenuToggle.contains(e.target) && mobileMenu && !mobileMenu.contains(e.target)) {
                     mobileMenu.classList.remove('show');
                 }
             });
@@ -622,10 +820,11 @@ if (isset($_SESSION['user_id'])) {
             // Close menus on window resize if above mobile breakpoint
             window.addEventListener('resize', function() {
                 if (window.innerWidth > 768) {
-                    mobileMenu.classList.remove('show');
+                    if (mobileMenu) mobileMenu.classList.remove('show');
                 }
             });
         });
     </script>
     <?php
 }
+?>
