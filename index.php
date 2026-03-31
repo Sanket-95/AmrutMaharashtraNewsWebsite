@@ -859,7 +859,7 @@ error_log("All real categories: " . print_r($all_real_categories, true));
     include 'components/top_news_carousel.php'; 
     ?>
     
-    <!-- Include Dynamic Category Sections -->
+    <!-- Include Dynamic Category Sections.. -->
     <?php include 'components/dynamic_category_sections.php'; ?>
 </main>
 
