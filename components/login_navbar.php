@@ -571,6 +571,10 @@ if (isset($_SESSION['user_id'])) {
                                 <i class="bi bi-geo-alt"></i>
                                 <span>जिल्हा व्यवस्थापन</span>
                             </a>
+                            <a href="manage_nav_categories.php" class="dropdown-item">
+                                <i class="bi bi-list-ul"></i>
+                                <span>नेव्हिगेशन कॅटेगरी व्यवस्थापन</span>
+                            </a>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -716,6 +720,10 @@ if (isset($_SESSION['user_id'])) {
                 <a href="district_management.php" class="mobile-submenu-item">
                     <i class="bi bi-geo-alt"></i>
                     <span>जिल्हा व्यवस्थापन</span>
+                </a>
+                <a href="manage_nav_categories.php" class="mobile-submenu-item">
+                    <i class="bi bi-list-ul"></i>
+                    <span>नेव्हिगेशन कॅटेगरी व्यवस्थापन</span>
                 </a>
             </div>
             <?php endif; ?>
