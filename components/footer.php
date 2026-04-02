@@ -45,21 +45,16 @@
                 </ul>
             </div>
             
-            <!-- Column 3: Visitor Stats -->
+            <!-- Column 3: Visitor Stats with Animated Counter -->
             <div class="col-lg-2 col-md-6 mb-4">
                 <h5 class="text-orange mb-3">Visitor Stats</h5>
                 <ul class="list-unstyled">
-                    <li class="mb-3">
+                    <li class="mb-3 visitor-stats-item" id="visitorStatsItem">
                         <i class="bi bi-people-fill text-orange me-2"></i>
-                        <span>Total Visitors: <?php echo number_format($visitor_count); ?></span>
-                    </li>
-    
-                    <!-- <li class="mb-3">
-                        <i class="bi bi-graph-up text-orange me-2"></i>
-                        <span>Active Visitors: 
-                            <span class="text-success">●</span> Online
+                        <span>Total Visitors: 
+                            <span class="visitor-count" id="visitorCounter">0</span>
                         </span>
-                    </li> -->
+                    </li>
                 </ul>
             </div>
             
@@ -165,16 +160,63 @@
     }
     
     /* Visitor stats styling */
-    .visitor-stats {
+    .visitor-stats-item {
         background: rgba(255, 102, 0, 0.1);
         border-radius: 8px;
-        padding: 5px 10px;
+        padding: 8px 12px !important;
         transition: all 0.3s ease;
     }
     
-    .visitor-stats:hover {
+    .visitor-stats-item:hover {
         background: rgba(255, 102, 0, 0.2);
         transform: translateX(5px);
+    }
+    
+    /* Counter animation styles */
+    .visitor-count {
+        display: inline-block;
+        font-weight: bold;
+        color: #FF6600;
+        font-size: 1.1rem;
+        min-width: 60px;
+        text-align: right;
+    }
+    
+    /* Pulse animation when count completes */
+    @keyframes countPulse {
+        0% {
+            transform: scale(1);
+            color: #FF6600;
+        }
+        50% {
+            transform: scale(1.15);
+            color: #ffaa33;
+        }
+        100% {
+            transform: scale(1);
+            color: #FF6600;
+        }
+    }
+    
+    .count-animate {
+        animation: countPulse 0.6s ease-in-out;
+    }
+    
+    /* Shine effect on counter */
+    @keyframes shine {
+        0% {
+            text-shadow: 0 0 0px rgba(255, 102, 0, 0);
+        }
+        50% {
+            text-shadow: 0 0 8px rgba(255, 102, 0, 0.6);
+        }
+        100% {
+            text-shadow: 0 0 0px rgba(255, 102, 0, 0);
+        }
+    }
+    
+    .shine-effect {
+        animation: shine 0.8s ease-in-out;
     }
     
     /* Responsive adjustments */
@@ -205,78 +247,164 @@
         .col-lg-2.col-md-6.mb-4 {
             margin-top: 10px;
         }
+        
+        .visitor-count {
+            font-size: 1rem;
+            min-width: 50px;
+        }
     }
 
     /* WhatsApp Floating Button */
     .whatsapp-float {
-    position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-
-    width: 56px;
-    height: 56px;
-    background-color: #25D366 !important;
-    color: #fff !important;
-    border-radius: 50%;
-
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 28px;
-    z-index: 99999; /* above everything */
-
-    box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-    text-decoration: none !important;
-}
-
-.whatsapp-float i {
-    color: #fff !important;
-}
-
-.whatsapp-float:hover {
-    transform: scale(1.05);
-    color: #fff;
-}
-
-/* Mobile responsive */
-@media (max-width: 768px) {
-    .whatsapp-float {
-        bottom: 15px !important;
-        right: 15px !important;
-        width: 48px;
-        height: 48px;
-        font-size: 24px;
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        width: 56px;
+        height: 56px;
+        background-color: #25D366 !important;
+        color: #fff !important;
+        border-radius: 50%;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        z-index: 99999; /* above everything */
+        box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        text-decoration: none !important;
     }
-}
-
-/* Visitor count animation */
-@keyframes pulse {
-    0% {
-        transform: scale(1);
+    
+    .whatsapp-float i {
+        color: #fff !important;
     }
-    50% {
+    
+    .whatsapp-float:hover {
         transform: scale(1.05);
+        color: #fff;
     }
-    100% {
-        transform: scale(1);
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .whatsapp-float {
+            bottom: 15px !important;
+            right: 15px !important;
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+        }
     }
-}
-
-.visitor-count {
-    display: inline-block;
-    animation: pulse 2s ease-in-out;
-    font-weight: bold;
-    color: #FF6600;
-}
 </style>
 
 <!-- Bootstrap JS Bundle with Popper -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Custom JS (optional) -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ============================================
+        // VISITOR COUNTER ANIMATION ON SCROLL TO BOTTOM
+        // ============================================
+        
+        // Get the actual visitor count from PHP (passed as variable)
+        // This should be set in your PHP before including this footer
+        const targetCount = <?php echo isset($visitor_count) ? intval($visitor_count) : 12458; ?>;
+        const counterElement = document.getElementById('visitorCounter');
+        
+        // Flag to track if animation has been triggered
+        let animationTriggered = false;
+        let animationInProgress = false;
+        
+        // Function to animate the counter
+        function animateCounter(targetNumber) {
+            if (animationInProgress) return;
+            animationInProgress = true;
+            
+            let currentNumber = 0;
+            const duration = 2000; // Animation duration in milliseconds
+            const steps = 60; // Number of steps for smooth animation
+            const increment = targetNumber / steps;
+            let step = 0;
+            
+            // Add shine effect to the counter container
+            const statsItem = document.getElementById('visitorStatsItem');
+            if (statsItem) {
+                statsItem.classList.add('shine-effect');
+                setTimeout(() => {
+                    statsItem.classList.remove('shine-effect');
+                }, 800);
+            }
+            
+            const timer = setInterval(() => {
+                step++;
+                currentNumber = Math.min(Math.ceil(increment * step), targetNumber);
+                counterElement.textContent = currentNumber.toLocaleString('en-IN');
+                
+                if (step >= steps) {
+                    counterElement.textContent = targetNumber.toLocaleString('en-IN');
+                    clearInterval(timer);
+                    animationInProgress = false;
+                    
+                    // Add pulse animation when counting completes
+                    counterElement.classList.add('count-animate');
+                    setTimeout(() => {
+                        counterElement.classList.remove('count-animate');
+                    }, 600);
+                }
+            }, duration / steps);
+        }
+        
+        // Function to check if footer/visitor stats is in viewport
+        function isElementInViewport(el) {
+            const rect = el.getBoundingClientRect();
+            const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+            
+            // Element is considered visible when it's in the viewport or near the bottom
+            // Allow some offset to trigger before fully visible
+            const offset = 100;
+            return rect.top <= windowHeight - offset && rect.bottom >= offset;
+        }
+        
+        // Function to check if user has scrolled near bottom of page
+        function isNearBottom() {
+            const scrollPosition = window.scrollY + window.innerHeight;
+            const pageHeight = document.documentElement.scrollHeight;
+            // Trigger when within 200px of bottom OR when footer is visible
+            return (pageHeight - scrollPosition) <= 300;
+        }
+        
+        // Function to check and trigger animation
+        function checkAndTriggerAnimation() {
+            if (animationTriggered) return;
+            
+            const statsItem = document.getElementById('visitorStatsItem');
+            const isVisible = statsItem && isElementInViewport(statsItem);
+            const nearBottom = isNearBottom();
+            
+            if (isVisible || nearBottom) {
+                animationTriggered = true;
+                animateCounter(targetCount);
+                // Remove scroll listener once triggered
+                window.removeEventListener('scroll', checkAndTriggerAnimation);
+                window.removeEventListener('resize', checkAndTriggerAnimation);
+                window.removeEventListener('touchmove', checkAndTriggerAnimation);
+            }
+        }
+        
+        // Initialize counter with 0 initially
+        if (counterElement) {
+            counterElement.textContent = '0';
+        }
+        
+        // Add scroll listeners
+        window.addEventListener('scroll', checkAndTriggerAnimation);
+        window.addEventListener('resize', checkAndTriggerAnimation);
+        window.addEventListener('touchmove', checkAndTriggerAnimation);
+        
+        // Also trigger on initial load if footer is already visible
+        setTimeout(checkAndTriggerAnimation, 500);
+        
+        // ============================================
+        // EXISTING FUNCTIONALITY (PRESERVED)
+        // ============================================
+        
         // Active nav link highlighting
         const currentPage = window.location.pathname.split('/').pop();
         const navLinks = document.querySelectorAll('.nav-link');
@@ -288,7 +416,10 @@
         });
         
         // Current year for copyright
-        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        const yearElement = document.getElementById('currentYear');
+        if (yearElement) {
+            yearElement.textContent = new Date().getFullYear();
+        }
         
         // Smooth scroll to top
         const backToTop = document.querySelector('.back-to-top');
@@ -354,21 +485,20 @@
             }
         });
         
-        // Add animation to visitor count
-        const visitorCount = document.querySelector('.visitor-count');
-        if (visitorCount) {
-            visitorCount.classList.add('visitor-count');
+        // Add hover effect to visitor stats item
+        const visitorStatsItem = document.getElementById('visitorStatsItem');
+        if (visitorStatsItem) {
+            visitorStatsItem.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(5px)';
+            });
+            visitorStatsItem.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0)';
+            });
         }
     });
 </script>
 
 <!-- WhatsApp Floating Button -->
-<!-- <a href="https://wa.me/919112226524" 
-   class="whatsapp-float" 
-   target="_blank" 
-   aria-label="Chat on WhatsApp">
-    <i class="bi bi-whatsapp"></i>
-</a> -->
 <?php if (!empty($showWhatsapp) && $showWhatsapp === true): ?>
     <!-- WhatsApp Floating Button -->
     <a href="https://wa.me/919112226524"
@@ -378,5 +508,6 @@
         <i class="bi bi-whatsapp"></i>
     </a>
 <?php endif; ?>
+
 </body>
 </html>
