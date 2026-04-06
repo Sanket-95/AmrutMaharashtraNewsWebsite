@@ -21,149 +21,251 @@ $user_roll = $_SESSION['roll'] ?? '';
 $user_location = $_SESSION['location'] ?? '';
 $username = $_SESSION['username'] ?? '';
 
-// DEBUG: Check what's in session
-// echo "Debug: user_roll = $user_roll, user_location = $user_location<br>";
+// ============================================
+// DYNAMIC DATABASE FUNCTIONS (Replacing static arrays)
+// ============================================
 
-// For division_head, location might be the region name itself, not a district
-// Let's check if location is a region or district
-function getRegionFromLocation($location) {
-    // List of all regions
-    $regions = ['kokan', 'pune', 'sambhajinagar', 'nashik', 'amaravati', 'nagpur'];
+/**
+ * Fetch all regions (divisions) from database
+ * @return array Array of regions with id, division, marathiname
+ */
+function getAllRegions($conn) {
+    $regions = [];
+    $query = "SELECT id, division, marathiname FROM mdivision ORDER BY division ASC";
+    $result = mysqli_query($conn, $query);
     
-    // If location is directly a region, return it
-    if (in_array($location, $regions)) {
-        return $location;
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $regions[] = [
+                'id' => $row['id'],
+                'division' => $row['division'],
+                'marathiname' => $row['marathiname']
+            ];
+        }
+    }
+    return $regions;
+}
+
+/**
+ * Fetch all categories from database
+ * @return array Array of categories with catagory, marathi_name
+ */
+function getAllCategories($conn) {
+    $categories = [];
+    $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $categories[] = [
+                'catagory' => $row['catagory'],
+                'marathi_name' => $row['marathi_name']
+            ];
+        }
+    }
+    return $categories;
+}
+
+/**
+ * Fetch districts by region (division) from database
+ * @param int $divisionId Division ID
+ * @return array Array of districts
+ */
+function getDistrictsByRegion($conn, $divisionId) {
+    $districts = [];
+    $query = "SELECT district, dmarathi FROM mdistrict WHERE divisionid = ? ORDER BY district ASC";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "i", $divisionId);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $districts[] = [
+                'district' => $row['district'],
+                'dmarathi' => $row['dmarathi']
+            ];
+        }
+    }
+    mysqli_stmt_close($stmt);
+    return $districts;
+}
+
+/**
+ * Get all districts with their region mapping (for quick lookup)
+ * @return array Associative array of district -> region
+ */
+function getAllDistrictsWithRegion($conn) {
+    $districtToRegion = [];
+    $query = "SELECT d.district, d.divisionid, m.division 
+              FROM mdistrict d 
+              JOIN mdivision m ON d.divisionid = m.id";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $districtToRegion[$row['district']] = $row['division'];
+        }
+    }
+    return $districtToRegion;
+}
+
+/**
+ * Get region from location (district name or region name)
+ * @param string $location District name or region name
+ * @return string Region name
+ */
+function getRegionFromLocation($conn, $location) {
+    // First, check if location is a region
+    $regionQuery = "SELECT division FROM mdivision WHERE division = ?";
+    $stmt = mysqli_prepare($conn, $regionQuery);
+    mysqli_stmt_bind_param($stmt, "s", $location);
+    mysqli_stmt_execute($stmt);
+    $regionResult = mysqli_stmt_get_result($stmt);
+    
+    if ($regionResult && mysqli_num_rows($regionResult) > 0) {
+        $row = mysqli_fetch_assoc($regionResult);
+        mysqli_stmt_close($stmt);
+        return $row['division'];
+    }
+    mysqli_stmt_close($stmt);
+    
+    // If not a region, check if it's a district and map to region
+    $districtQuery = "SELECT m.division 
+                      FROM mdistrict d 
+                      JOIN mdivision m ON d.divisionid = m.id 
+                      WHERE d.district = ?";
+    $stmt = mysqli_prepare($conn, $districtQuery);
+    mysqli_stmt_bind_param($stmt, "s", $location);
+    mysqli_stmt_execute($stmt);
+    $districtResult = mysqli_stmt_get_result($stmt);
+    
+    if ($districtResult && mysqli_num_rows($districtResult) > 0) {
+        $row = mysqli_fetch_assoc($districtResult);
+        mysqli_stmt_close($stmt);
+        return $row['division'];
+    }
+    mysqli_stmt_close($stmt);
+    
+    return '';
+}
+
+/**
+ * Get Marathi name for a district
+ * @param string $districtValue English district name
+ * @return string Marathi district name
+ */
+function getMarathiDistrictName($conn, $districtValue) {
+    $query = "SELECT dmarathi FROM mdistrict WHERE district = ?";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "s", $districtValue);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['dmarathi'];
+    }
+    mysqli_stmt_close($stmt);
+    return $districtValue;
+}
+
+/**
+ * Get Marathi name for a region
+ * @param string $regionValue English region name
+ * @return string Marathi region name
+ */
+function getMarathiRegionName($conn, $regionValue) {
+    $query = "SELECT marathiname FROM mdivision WHERE division = ?";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "s", $regionValue);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['marathiname'];
+    }
+    mysqli_stmt_close($stmt);
+    return $regionValue;
+}
+
+/**
+ * Get all regions with their districts as JSON (for JavaScript)
+ * @return array Complete region-district mapping
+ */
+function getAllRegionDistrictMapping($conn) {
+    $mapping = [];
+    $regions = getAllRegions($conn);
+    
+    foreach ($regions as $region) {
+        $districts = getDistrictsByRegion($conn, $region['id']);
+        $districtList = [];
+        foreach ($districts as $district) {
+            $districtList[] = [
+                'value' => $district['district'],
+                'text' => $district['dmarathi']
+            ];
+        }
+        $mapping[$region['division']] = $districtList;
     }
     
-    // Otherwise, try to map district to region
-    $districtToRegion = [
-        // Kokan region districts
-        'palghar' => 'kokan',
-        'thane' => 'kokan',
-        'mumbai_city' => 'kokan',
-        'mumbai_suburban' => 'kokan',
-        'raigad' => 'kokan',
-        'ratnagiri' => 'kokan',
-        'sindhudurg' => 'kokan',
-        
-        // Pune region districts
-        'pune' => 'pune',
-        'satara' => 'pune',
-        'kolhapur' => 'pune',
-        'sangli' => 'pune',
-        'solapur' => 'pune',
-        
-        // Sambhajinagar region districts
-        'chhatrapati_sambhajinagar' => 'sambhajinagar',
-        'beed' => 'sambhajinagar',
-        'jalna' => 'sambhajinagar',
-        'parbhani' => 'sambhajinagar',
-        'hingoli' => 'sambhajinagar',
-        'nanded' => 'sambhajinagar',
-        'latur' => 'sambhajinagar',
-        'dharashiv' => 'sambhajinagar',
-        
-        // Nashik region districts
-        'nashik' => 'nashik',
-        'dhule' => 'nashik',
-        'nandurbar' => 'nashik',
-        'ahmednagar' => 'nashik',
-        'jalgaon' => 'nashik',
-        'ahilyanagar' => 'nashik',
-        
-        // Amaravati region districts
-        'amaravati' => 'amaravati',
-        'akola' => 'amaravati',
-        'buldhana' => 'amaravati',
-        'washim' => 'amaravati',
-        'yavatmal' => 'amaravati',
-        
-        // Nagpur region districts
-        'nagpur' => 'nagpur',
-        'wardha' => 'nagpur',
-        'bhandara' => 'nagpur',
-        'gondia' => 'nagpur',
-        'chandrapur' => 'nagpur',
-        'gadchiroli' => 'nagpur'
-    ];
-    
-    return isset($districtToRegion[$location]) ? $districtToRegion[$location] : '';
+    return $mapping;
 }
+
+// ============================================
+// FETCH DYNAMIC DATA FOR CURRENT PAGE
+// ============================================
+
+// Get all regions for dropdowns
+$allRegions = getAllRegions($conn);
+
+// Get all categories for dropdown
+$allCategories = getAllCategories($conn);
+
+// Get district-to-region mapping for quick lookup
+$districtToRegionMap = getAllDistrictsWithRegion($conn);
 
 // Determine user's region
 $user_region = '';
 if (!empty($user_location)) {
-    $user_region = getRegionFromLocation($user_location);
+    $user_region = getRegionFromLocation($conn, $user_location);
 }
 
-// DEBUG: Check region determination
-// echo "Debug: Determined user_region = $user_region<br>";
+// Get all region-district mapping for JavaScript
+$regionDistrictMapping = getAllRegionDistrictMapping($conn);
+$regionDistrictJSON = json_encode($regionDistrictMapping);
 
 // Determine if publisher name should be editable
 $publisher_editable = ($user_roll === 'admin');
 $publisher_value = $user_name;
 
-// Get Marathi district names for display
-function getMarathiDistrictName($districtValue) {
-    $districtMap = [
-        'palghar' => 'पालघर',
-        'thane' => 'ठाणे',
-        'mumbai_city' => 'मुंबई शहर',
-        'mumbai_suburban' => 'मुंबई उपनगर',
-        'raigad' => 'रायगड',
-        'ratnagiri' => 'रत्नागिरी',
-        'sindhudurg' => 'सिंधुदुर्ग',
-        'pune' => 'पुणे',
-        'satara' => 'सातारा',
-        'kolhapur' => 'कोल्हापूर',
-        'sangli' => 'सांगली',
-        'solapur' => 'सोलापूर',
-        'chhatrapati_sambhajinagar' => 'छत्रपती संभाजीनगर',
-        'beed' => 'बीड',
-        'jalna' => 'जालना',
-        'parbhani' => 'परभणी',
-        'hingoli' => 'हिंगोली',
-        'nanded' => 'नांदेड',
-        'latur' => 'लातूर',
-        'dharashiv' => 'धाराशिव',
-        'nashik' => 'नाशिक',
-        'dhule' => 'धुळे',
-        'nandurbar' => 'नंदुरबार',
-        'ahmednagar' => 'अहमदनगर',
-        'jalgaon' => 'जळगाव',
-        'ahilyanagar' => 'अहिल्यानगर',
-        'amaravati' => 'अमरावती',
-        'akola' => 'अकोला',
-        'buldhana' => 'बुलढाणा',
-        'washim' => 'वाशीम',
-        'yavatmal' => 'यवतमाळ',
-        'nagpur' => 'नागपूर',
-        'wardha' => 'वर्धा',
-        'bhandara' => 'भंडारा',
-        'gondia' => 'गोंदिया',
-        'chandrapur' => 'चंद्रपूर',
-        'gadchiroli' => 'गडचिरोली'
-    ];
+// For division_head, get districts of their region for pre-population
+$divisionHeadDistricts = [];
+if ($user_roll === 'division_head' && !empty($user_location)) {
+    // Find division ID for this region
+    $divIdQuery = "SELECT id FROM mdivision WHERE division = ?";
+    $stmt = mysqli_prepare($conn, $divIdQuery);
+    mysqli_stmt_bind_param($stmt, "s", $user_location);
+    mysqli_stmt_execute($stmt);
+    $divResult = mysqli_stmt_get_result($stmt);
     
-    return isset($districtMap[$districtValue]) ? $districtMap[$districtValue] : $districtValue;
+    if ($divResult && mysqli_num_rows($divResult) > 0) {
+        $divRow = mysqli_fetch_assoc($divResult);
+        $divisionHeadDistricts = getDistrictsByRegion($conn, $divRow['id']);
+    }
+    mysqli_stmt_close($stmt);
 }
 
-// Get Marathi region names for display
-function getMarathiRegionName($regionValue) {
-    $regionMap = [
-        'kokan' => 'कोकण',
-        'pune' => 'पुणे',
-        'sambhajinagar' => 'संभाजीनगर',
-        'nashik' => 'नाशिक',
-        'amaravati' => 'अमरावती',
-        'nagpur' => 'नागपूर'
-    ];
-    
-    return isset($regionMap[$regionValue]) ? $regionMap[$regionValue] : $regionValue;
+// For district_user, get their district Marathi name
+$userDistrictMarathi = '';
+if ($user_roll === 'district_user' && !empty($user_location)) {
+    $userDistrictMarathi = getMarathiDistrictName($conn, $user_location);
 }
 
 // Get current date and time in the format for datetime-local input
-// Using simple PHP approach that should work
 $currentDateTime = date('Y-m-d\TH:i');
 ?>
 
@@ -189,32 +291,29 @@ $currentDateTime = date('Y-m-d\TH:i');
                             <i class="fas fa-globe me-1"></i> प्रदेश निवडा *
                         </label>
                         <?php if($user_roll === 'admin'): ?>
-                            <!-- For admin - editable dropdown -->
+                            <!-- For admin - editable dropdown from database -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <option value="kokan">कोकण</option>
-                                <option value="pune">पुणे</option>
-                                <option value="sambhajinagar">संभाजीनगर</option>
-                                <option value="nashik">नाशिक</option>
-                                <option value="amaravati">अमरावती</option>
-                                <option value="nagpur">नागपूर</option>
+                                <?php foreach($allRegions as $region): ?>
+                                    <option value="<?php echo htmlspecialchars($region['division']); ?>">
+                                        <?php echo htmlspecialchars($region['marathiname']); ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         <?php elseif($user_roll === 'division_head'): ?>
                             <!-- For division_head - auto-filled region from session, but editable -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <?php 
-                                $regions = ['kokan', 'pune', 'sambhajinagar', 'nashik', 'amaravati', 'nagpur'];
-                                foreach($regions as $region): ?>
-                                    <option value="<?php echo $region; ?>" <?php echo ($user_location === $region) ? 'selected' : ''; ?>>
-                                        <?php echo getMarathiRegionName($region); ?>
+                                <?php foreach($allRegions as $region): ?>
+                                    <option value="<?php echo htmlspecialchars($region['division']); ?>" <?php echo ($user_location === $region['division']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($region['marathiname']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
                             <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                                 <i class="fas fa-info-circle"></i> 
                                 <?php if(!empty($user_location)): ?>
-                                    आपला प्रदेश "<?php echo getMarathiRegionName($user_location); ?>" आपोआप निवडला गेला आहे (बदलू शकता)
+                                    आपला प्रदेश "<?php echo htmlspecialchars(getMarathiRegionName($conn, $user_location)); ?>" आपोआप निवडला गेला आहे (बदलू शकता)
                                 <?php else: ?>
                                     कृपया आपला प्रदेश निवडा
                                 <?php endif; ?>
@@ -230,9 +329,9 @@ $currentDateTime = date('Y-m-d\TH:i');
                                 align-items: center;
                                 padding: 0.375rem 0.75rem;
                             ">
-                                <input type="hidden" name="region" value="<?php echo $user_region; ?>">
+                                <input type="hidden" name="region" value="<?php echo htmlspecialchars($user_region); ?>">
                                 <span>
-                                    <?php echo getMarathiRegionName($user_region); ?>
+                                    <?php echo htmlspecialchars(getMarathiRegionName($conn, $user_region)); ?>
                                 </span>
                             </div>
                             <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
@@ -242,12 +341,11 @@ $currentDateTime = date('Y-m-d\TH:i');
                             <!-- Default dropdown for other roles -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <option value="kokan">कोकण</option>
-                                <option value="pune">पुणे</option>
-                                <option value="sambhajinagar">संभाजीनगर</option>
-                                <option value="nashik">नाशिक</option>
-                                <option value="amaravati">अमरावती</option>
-                                <option value="nagpur">नागपूर</option>
+                                <?php foreach($allRegions as $region): ?>
+                                    <option value="<?php echo htmlspecialchars($region['division']); ?>">
+                                        <?php echo htmlspecialchars($region['marathiname']); ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         <?php endif; ?>
                     </div>
@@ -262,43 +360,17 @@ $currentDateTime = date('Y-m-d\TH:i');
                                 <option value="">-- प्रथम प्रदेश निवडा --</option>
                             </select>
                         <?php elseif($user_roll === 'division_head'): ?>
-                            <!-- For division_head - dropdown shows districts from selected region -->
+                            <!-- For division_head - dropdown shows districts from selected region from database -->
                             <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- जिल्हा निवडा --</option>
-                                <?php 
-                                // Determine which region to show districts for
-                                $region_for_districts = $user_location; // For division_head, location is region
-                                $districts_for_region = [];
-                                
-                                switch($region_for_districts) {
-                                    case 'kokan':
-                                        $districts_for_region = ['palghar', 'thane', 'mumbai_city', 'mumbai_suburban', 'raigad', 'ratnagiri', 'sindhudurg'];
-                                        break;
-                                    case 'pune':
-                                        $districts_for_region = ['pune', 'satara', 'kolhapur', 'sangli', 'solapur'];
-                                        break;
-                                    case 'sambhajinagar':
-                                        $districts_for_region = ['chhatrapati_sambhajinagar', 'beed', 'jalna', 'parbhani', 'hingoli', 'nanded', 'latur', 'dharashiv'];
-                                        break;
-                                    case 'nashik':
-                                        $districts_for_region = ['nashik', 'dhule', 'nandurbar', 'ahmednagar', 'jalgaon', 'ahilyanagar'];
-                                        break;
-                                    case 'amaravati':
-                                        $districts_for_region = ['amaravati', 'akola', 'buldhana', 'washim', 'yavatmal'];
-                                        break;
-                                    case 'nagpur':
-                                        $districts_for_region = ['nagpur', 'wardha', 'bhandara', 'gondia', 'chandrapur', 'gadchiroli'];
-                                        break;
-                                    default:
-                                        $districts_for_region = [];
-                                }
-                                
-                                foreach($districts_for_region as $district): ?>
-                                    <option value="<?php echo $district; ?>"><?php echo getMarathiDistrictName($district); ?></option>
+                                <?php foreach($divisionHeadDistricts as $district): ?>
+                                    <option value="<?php echo htmlspecialchars($district['district']); ?>">
+                                        <?php echo htmlspecialchars($district['dmarathi']); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         <?php elseif($user_roll === 'district_user'): ?>
-                            <!-- For district_user - readonly field showing auto-filled district ----------->
+                            <!-- For district_user - readonly field showing auto-filled district -->
                             <div class="form-control shadow-sm" style="
                                 border-color: #FFA500; 
                                 font-family: 'Mukta', sans-serif; 
@@ -308,9 +380,9 @@ $currentDateTime = date('Y-m-d\TH:i');
                                 align-items: center;
                                 padding: 0.375rem 0.75rem;
                             ">
-                                <input type="hidden" name="district" value="<?php echo $user_location; ?>">
+                                <input type="hidden" name="district" value="<?php echo htmlspecialchars($user_location); ?>">
                                 <span>
-                                    <?php echo getMarathiDistrictName($user_location); ?>
+                                    <?php echo htmlspecialchars($userDistrictMarathi); ?>
                                 </span>
                             </div>
                             <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
@@ -342,29 +414,22 @@ $currentDateTime = date('Y-m-d\TH:i');
                     </div>
                 </div>
                 
-                <!-- Category Selection -->
+                <!-- Category Selection - DYNAMIC FROM DATABASE -->
                 <div class="mb-4">
                     <label class="form-label fw-bold" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                         <i class="fas fa-tags me-1"></i> वर्ग निवडा *
                     </label>
                     <select class="form-select shadow-sm" name="category" id="categorySelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                         <option value="">-- वर्ग निवडा --</option>
-                        <option value="Amrut Events">अमृत घडामोडी</option>
-                        <option value="Beneficiary Story">लाभार्थी स्टोरी</option>
-                        <option value="Blog">ब्लॉग</option>
-                        <option value="Amrut Service">अमृत सेवाकार्य</option>
-                        <option value="Today Special">दिनविशेष</option>
-                        <option value="Successful Entrepreneur">यशस्वी उद्योजक</option>
-                        <option value="Words Amrut">शब्दांमृत</option>
-                        <option value="Smart Farmer">स्मार्ट शेतकरी</option>
-                        <option value="Capable Student">सक्षम विद्यार्थी</option>
-                        <option value="Spirituality">अध्यात्म</option>
-                        <option value="Social Situation">सामाजिक परिवर्तक</option>
-                        <option value="Women Power">स्त्रीशक्ती</option>
-                        <option value="Tourism">पर्यटन</option>
-                        <option value="News">वार्ता</option>
-                        <option value="Articles">लेख</option>
+                        <?php foreach($allCategories as $category): ?>
+                            <option value="<?php echo htmlspecialchars($category['catagory']); ?>">
+                                <?php echo htmlspecialchars($category['marathi_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
+                    <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
+                        <i class="fas fa-info-circle"></i> कृपया बातमीचा योग्य वर्ग निवडा
+                    </div>
                 </div>
                 
                 <!-- Top News Checkbox -->
@@ -530,7 +595,7 @@ $currentDateTime = date('Y-m-d\TH:i');
                     <br><span style="color: #FF6600;">
                         <i class="fas fa-user-shield"></i> प्रदेश प्रमुख: 
                         <?php if(!empty($user_location)): ?>
-                            आपला प्रदेश "<?php echo getMarathiRegionName($user_location); ?>" आपोआप निवडला गेला आहे (बदलू शकता), जिल्हा निवडू शकता
+                            आपला प्रदेश "<?php echo htmlspecialchars(getMarathiRegionName($conn, $user_location)); ?>" आपोआप निवडला गेला आहे (बदलू शकता), जिल्हा निवडू शकता
                         <?php else: ?>
                             कृपया आपला प्रदेश निवडा, त्यानंतर जिल्हा निवडू शकता
                         <?php endif; ?>
@@ -791,6 +856,9 @@ $currentDateTime = date('Y-m-d\TH:i');
         "hideMethod": "fadeOut"
     };
 
+    // Region-District mapping from database (dynamic)
+    const regionDistrictMapping = <?php echo $regionDistrictJSON; ?>;
+    
     // Character counter for summary
     document.addEventListener('DOMContentLoaded', function() {
         const summaryTextarea = document.querySelector('textarea[name="news_summary"]');
@@ -850,62 +918,28 @@ $currentDateTime = date('Y-m-d\TH:i');
             }
         });
         
-        // Region-based district selection
+        // Region-based district selection using dynamic database mapping
         const regionSelect = document.getElementById('regionSelect');
         const districtSelect = document.getElementById('districtSelect');
         
-        // District data for each region (English values for database, Marathi display)
-        const districtData = {
-            'kokan': [
-                {value: 'palghar', text: 'पालघर'},
-                {value: 'thane', text: 'ठाणे'},
-                {value: 'mumbai_city', text: 'मुंबई शहर'},
-                {value: 'mumbai_suburban', text: 'मुंबई उपनगर'},
-                {value: 'raigad', text: 'रायगड'},
-                {value: 'ratnagiri', text: 'रत्नागिरी'},
-                {value: 'sindhudurg', text: 'सिंधुदुर्ग'}
-            ],
-            'pune': [
-                {value: 'pune', text: 'पुणे'},
-                {value: 'satara', text: 'सातारा'},
-                {value: 'kolhapur', text: 'कोल्हापूर'},
-                {value: 'sangli', text: 'सांगली'},
-                {value: 'solapur', text: 'सोलापूर'}
-            ],
-            'sambhajinagar': [
-                {value: 'chhatrapati_sambhajinagar', text: 'छत्रपती संभाजीनगर'},
-                {value: 'beed', text: 'बीड'},
-                {value: 'jalna', text: 'जालना'},
-                {value: 'parbhani', text: 'परभणी'},
-                {value: 'hingoli', text: 'हिंगोली'},
-                {value: 'nanded', text: 'नांदेड'},
-                {value: 'latur', text: 'लातूर'},
-                {value: 'dharashiv', text: 'धाराशिव'}
-            ],
-            'nashik': [
-                {value: 'nashik', text: 'नाशिक'},
-                {value: 'dhule', text: 'धुळे'},
-                {value: 'nandurbar', text: 'नंदुरबार'},
-                {value: 'ahmednagar', text: 'अहमदनगर'},
-                {value: 'jalgaon', text: 'जळगाव'},
-                {value: 'ahilyanagar', text: 'अहिल्यानगर'}
-            ],
-            'amaravati': [
-                {value: 'amaravati', text: 'अमरावती'},
-                {value: 'akola', text: 'अकोला'},
-                {value: 'buldhana', text: 'बुलढाणा'},
-                {value: 'washim', text: 'वाशीम'},
-                {value: 'yavatmal', text: 'यवतमाळ'}
-            ],
-            'nagpur': [
-                {value: 'nagpur', text: 'नागपूर'},
-                {value: 'wardha', text: 'वर्धा'},
-                {value: 'bhandara', text: 'भंडारा'},
-                {value: 'gondia', text: 'गोंदिया'},
-                {value: 'chandrapur', text: 'चंद्रपूर'},
-                {value: 'gadchiroli', text: 'गडचिरोली'}
-            ]
-        };
+        function populateDistricts(selectedRegion) {
+            if (districtSelect) {
+                districtSelect.innerHTML = '<option value="">-- जिल्हा निवडा --</option>';
+                
+                if (selectedRegion && regionDistrictMapping[selectedRegion]) {
+                    districtSelect.disabled = false;
+                    regionDistrictMapping[selectedRegion].forEach(district => {
+                        const option = document.createElement('option');
+                        option.value = district.value;
+                        option.textContent = district.text;
+                        districtSelect.appendChild(option);
+                    });
+                } else {
+                    districtSelect.disabled = true;
+                    districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
+                }
+            }
+        }
         
         // Only add event listener for admin (division_head doesn't need dynamic update as districts are pre-loaded)
         if (regionSelect && districtSelect && '<?php echo $user_roll; ?>' === 'admin') {
@@ -923,25 +957,6 @@ $currentDateTime = date('Y-m-d\TH:i');
         
         // For division_head, districts are already pre-loaded in PHP, no JS needed
         // For district_user, both fields are readonly
-        
-        function populateDistricts(selectedRegion) {
-            if (districtSelect) {
-                districtSelect.innerHTML = '<option value="">-- जिल्हा निवडा --</option>';
-                
-                if (selectedRegion && districtData[selectedRegion]) {
-                    districtSelect.disabled = false;
-                    districtData[selectedRegion].forEach(district => {
-                        const option = document.createElement('option');
-                        option.value = district.value;
-                        option.textContent = district.text;
-                        districtSelect.appendChild(option);
-                    });
-                } else {
-                    districtSelect.disabled = true;
-                    districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
-                }
-            }
-        }
         
         // Form validation
         const form = document.getElementById('newsForm');
@@ -966,57 +981,37 @@ $currentDateTime = date('Y-m-d\TH:i');
             }
         });
         
-        // Set current datetime button functionality - SIMPLIFIED
+        // Set current datetime button functionality
         const setCurrentDateTimeBtn = document.getElementById('setCurrentDateTimeBtn');
         const publishDateTimeInput = document.getElementById('publishDateTime');
         
         if (setCurrentDateTimeBtn && publishDateTimeInput) {
             setCurrentDateTimeBtn.addEventListener('click', function() {
-                // SIMPLE approach - use the browser's local time directly
                 const now = new Date();
-                
-                // Get local date components
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const day = String(now.getDate()).padStart(2, '0');
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
-                
-                // Format: YYYY-MM-DDTHH:MM
                 const currentDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
-                
-                // Set the value
                 publishDateTimeInput.value = currentDateTime;
-                
-                // Debug log
-                console.log('Current time set to:', currentDateTime);
-                console.log('Browser local time:', now.toString());
-                
-                // Show success message
                 toastr.success('आत्ताची तारीख आणि वेळ सेट केली गेली आहे!');
             });
-            
-            // Also set on page load if needed
-            // Note: We're already setting it via PHP, so this is just for the button
         }
         
         // Check for URL parameters on page load
         function checkURLParameters() {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Show success message
             if (urlParams.get('success') === '1') {
                 toastr.success('बातमी यशस्वीरित्या सबमिट केली गेली आहे!');
                 
-                // Clear form after success
                 setTimeout(function() {
                     form.reset();
                     
-                    // Reset region and district based on user role
                     const userRoll = '<?php echo $user_roll; ?>';
                     
                     if (userRoll === 'admin') {
-                        // For admin, reset both dropdowns
                         if (regionSelect) {
                             regionSelect.value = '';
                         }
@@ -1025,27 +1020,19 @@ $currentDateTime = date('Y-m-d\TH:i');
                             districtSelect.innerHTML = '<option value="">-- प्रथम प्रदेश निवडा --</option>';
                         }
                     } else if (userRoll === 'division_head') {
-                        // For division_head, reset region to session location
                         if (regionSelect) {
-                            regionSelect.value = '<?php echo $user_location; ?>';
-                            // Districts will be auto-populated by PHP on page reload
+                            regionSelect.value = '<?php echo htmlspecialchars($user_location); ?>';
                         }
                     }
-                    // For district_user, no reset needed as fields are readonly
                     
-                    // Set publisher name back to user's name
                     const publisherInput = document.querySelector('input[name="publisher_name"]');
                     if (publisherInput && !<?php echo $publisher_editable ? 'false' : 'true'; ?>) {
                         publisherInput.value = '<?php echo htmlspecialchars($publisher_value); ?>';
                     }
                     
-                    // Uncheck topnews checkbox
                     document.getElementById('topNewsCheckbox').checked = false;
                     
-                    // Reset datetime to current date and time using PHP value
                     if (publishDateTimeInput) {
-                        // This will use the PHP-generated datetime which is in IST
-                        // The datetime-local input will interpret it as local time
                         publishDateTimeInput.value = '<?php echo $currentDateTime; ?>';
                     }
                     
@@ -1053,24 +1040,20 @@ $currentDateTime = date('Y-m-d\TH:i');
                     imagePreviewDiv.innerHTML = '';
                     updateCharCount();
                     
-                    // Clear URL parameters
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }, 100);
             }
             
-            // Show error message
             if (urlParams.get('error')) {
                 const errorMsg = urlParams.get('error');
                 toastr.error(decodeURIComponent(errorMsg));
                 
-                // Clear URL parameters after showing error
                 setTimeout(function() {
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }, 100);
             }
         }
         
-        // Call the function when page loads
         checkURLParameters();
     });
 </script>

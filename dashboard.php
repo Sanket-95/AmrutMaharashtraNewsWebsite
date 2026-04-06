@@ -11,7 +11,6 @@ include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
 
-
 // Get user info
 $user_name = $_SESSION['name'] ?? 'User';
 
@@ -24,16 +23,35 @@ $from_date = $_GET['from_date'] ?? $default_from_date;
 $to_date = $_GET['to_date'] ?? $default_to_date;
 $selected_region = $_GET['region'] ?? 'all';
 
-// Define region options with Marathi names
-$region_options = [
-    'all' => 'सर्व प्रदेश',
-    'Konkan' => 'कोकण',
-    'Pune' => 'पुणे',
-    'Sambhajinagar' => 'संभाजीनगर',
-    'Nashik' => 'नाशिक',
-    'Amravati' => 'अमरावती',
-    'Nagpur' => 'नागपूर'
-];
+// ============================================
+// DYNAMIC REGION OPTIONS FROM DATABASE
+// ============================================
+
+/**
+ * Fetch all regions from database with 'all' option
+ * @return array Associative array with region values as keys and Marathi names as values
+ */
+function getRegionOptions($conn) {
+    $region_options = [];
+    
+    // First add the 'all' option
+    $region_options['all'] = 'सर्व प्रदेश';
+    
+    // Fetch all regions from mdivision table
+    $query = "SELECT division, marathiname FROM mdivision ORDER BY division ASC";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $region_options[$row['division']] = $row['marathiname'];
+        }
+    }
+    
+    return $region_options;
+}
+
+// Get dynamic region options
+$region_options = getRegionOptions($conn);
 ?>
 <!-- Flatpickr CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

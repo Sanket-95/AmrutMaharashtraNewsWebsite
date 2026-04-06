@@ -17,6 +17,173 @@ if (!in_array($_SESSION['roll'], $allowed_roles)) {
 
 include 'components/db_config.php';
 
+// ============================================
+// DYNAMIC DATABASE FUNCTIONS
+// ============================================
+
+/**
+ * Fetch all regions (divisions) from database
+ * @return array Array of regions with id, division, marathiname
+ */
+function getAllRegions($conn) {
+    $regions = [];
+    $query = "SELECT id, division, marathiname FROM mdivision ORDER BY division ASC";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $regions[$row['division']] = $row['marathiname'];
+        }
+    }
+    return $regions;
+}
+
+/**
+ * Fetch all districts from database
+ * @return array Array of districts with district, dmarathi
+ */
+function getAllDistricts($conn) {
+    $districts = [];
+    $query = "SELECT district, dmarathi FROM mdistrict ORDER BY district ASC";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $districts[$row['district']] = $row['dmarathi'];
+        }
+    }
+    return $districts;
+}
+
+/**
+ * Fetch all categories from database
+ * @return array Array of categories with catagory, marathi_name
+ */
+function getAllCategories($conn) {
+    $categories = [];
+    $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    $result = mysqli_query($conn, $query);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $categories[$row['catagory']] = $row['marathi_name'];
+        }
+    }
+    return $categories;
+}
+
+/**
+ * Get region from location (district name or region name)
+ * @param string $location District name or region name
+ * @return string Region name
+ */
+function getRegionFromLocation($conn, $location) {
+    // First, check if location is a region
+    $regionQuery = "SELECT division FROM mdivision WHERE division = ?";
+    $stmt = mysqli_prepare($conn, $regionQuery);
+    mysqli_stmt_bind_param($stmt, "s", $location);
+    mysqli_stmt_execute($stmt);
+    $regionResult = mysqli_stmt_get_result($stmt);
+    
+    if ($regionResult && mysqli_num_rows($regionResult) > 0) {
+        $row = mysqli_fetch_assoc($regionResult);
+        mysqli_stmt_close($stmt);
+        return $row['division'];
+    }
+    mysqli_stmt_close($stmt);
+    
+    // If not a region, check if it's a district and map to region
+    $districtQuery = "SELECT m.division 
+                      FROM mdistrict d 
+                      JOIN mdivision m ON d.divisionid = m.id 
+                      WHERE d.district = ?";
+    $stmt = mysqli_prepare($conn, $districtQuery);
+    mysqli_stmt_bind_param($stmt, "s", $location);
+    mysqli_stmt_execute($stmt);
+    $districtResult = mysqli_stmt_get_result($stmt);
+    
+    if ($districtResult && mysqli_num_rows($districtResult) > 0) {
+        $row = mysqli_fetch_assoc($districtResult);
+        mysqli_stmt_close($stmt);
+        return $row['division'];
+    }
+    mysqli_stmt_close($stmt);
+    
+    return '';
+}
+
+/**
+ * Get Marathi name for a district
+ * @param string $districtValue English district name
+ * @return string Marathi district name
+ */
+function getMarathiDistrictName($conn, $districtValue) {
+    $query = "SELECT dmarathi FROM mdistrict WHERE district = ?";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "s", $districtValue);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['dmarathi'];
+    }
+    mysqli_stmt_close($stmt);
+    return $districtValue;
+}
+
+/**
+ * Get Marathi name for a region
+ * @param string $regionValue English region name
+ * @return string Marathi region name
+ */
+function getMarathiRegionName($conn, $regionValue) {
+    $query = "SELECT marathiname FROM mdivision WHERE division = ?";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "s", $regionValue);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['marathiname'];
+    }
+    mysqli_stmt_close($stmt);
+    return $regionValue;
+}
+
+/**
+ * Get Marathi name for a category
+ * @param string $categoryValue English category name
+ * @return string Marathi category name
+ */
+function getMarathiCategoryName($conn, $categoryValue) {
+    $query = "SELECT marathi_name FROM catagory_list WHERE catagory = ? AND is_enable = 1";
+    $stmt = mysqli_prepare($conn, $query);
+    mysqli_stmt_bind_param($stmt, "s", $categoryValue);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    
+    if ($result && mysqli_num_rows($result) > 0) {
+        $row = mysqli_fetch_assoc($result);
+        mysqli_stmt_close($stmt);
+        return $row['marathi_name'];
+    }
+    mysqli_stmt_close($stmt);
+    return $categoryValue;
+}
+
+// ============================================
+// FETCH DYNAMIC DATA
+// ============================================
+
+// Get all dynamic data from database
+$allRegions = getAllRegions($conn);
+$allDistricts = getAllDistricts($conn);
+$allCategories = getAllCategories($conn);
+
 // Get news_id from URL
 $news_id = $_GET['news_id'] ?? 0;
 
@@ -500,76 +667,8 @@ if (!isset($news) || empty($news)) {
 $user_roll = $_SESSION['roll'];
 $user_region = $_SESSION['location'];
 
-// Function to get region from location
-function getRegionFromLocation($location) {
-    $location = strtolower($location);
-    
-    // List of all regions
-    $regions = ['kokan', 'pune', 'sambhajinagar', 'nashik', 'amaravati', 'nagpur'];
-    
-    // If location is directly a region, return it
-    if (in_array($location, $regions)) {
-        return $location;
-    }
-    
-    // District to region mapping
-    $districtToRegion = [
-        // Kokan region districts
-        'palghar' => 'kokan',
-        'thane' => 'kokan',
-        'mumbai_city' => 'kokan',
-        'mumbai' => 'kokan',
-        'mumbai_suburban' => 'kokan',
-        'raigad' => 'kokan',
-        'ratnagiri' => 'kokan',
-        'sindhudurg' => 'kokan',
-        
-        // Pune region districts
-        'pune' => 'pune',
-        'satara' => 'pune',
-        'kolhapur' => 'pune',
-        'sangli' => 'pune',
-        'solapur' => 'pune',
-        
-        // Sambhajinagar region districts
-        'chhatrapati_sambhajinagar' => 'sambhajinagar',
-        'beed' => 'sambhajinagar',
-        'jalna' => 'sambhajinagar',
-        'parbhani' => 'sambhajinagar',
-        'hingoli' => 'sambhajinagar',
-        'nanded' => 'sambhajinagar',
-        'latur' => 'sambhajinagar',
-        'dharashiv' => 'sambhajinagar',
-        
-        // Nashik region districts
-        'nashik' => 'nashik',
-        'dhule' => 'nashik',
-        'nandurbar' => 'nashik',
-        'ahmednagar' => 'nashik',
-        'jalgaon' => 'nashik',
-        'ahilyanagar' => 'nashik',
-        
-        // Amaravati region districts
-        'amaravati' => 'amaravati',
-        'akola' => 'amaravati',
-        'buldhana' => 'amaravati',
-        'washim' => 'amaravati',
-        'yavatmal' => 'amaravati',
-        
-        // Nagpur region districts
-        'nagpur' => 'nagpur',
-        'wardha' => 'nagpur',
-        'bhandara' => 'नागपूर',
-        'gondia' => 'नागपूर',
-        'chandrapur' => 'नागपूर',
-        'gadchiroli' => 'नागपूर'
-    ];
-    
-    return isset($districtToRegion[$location]) ? $districtToRegion[$location] : $location;
-}
-
-// Get user's region from location
-$user_region_for_check = getRegionFromLocation($user_region);
+// Get user's region from location using database function
+$user_region_for_check = getRegionFromLocation($conn, $user_region);
 
 // For division_head, check if news belongs to their region
 if ($user_roll === 'division_head' && strtolower($news['Region']) !== strtolower($user_region_for_check)) {
@@ -579,7 +678,7 @@ if ($user_roll === 'division_head' && strtolower($news['Region']) !== strtolower
     exit();
 }
 
-// Get Marathi names for display
+// Get Marathi status name
 function getMarathiStatusName($status) {
     $status_names = [
         0 => 'प्रलंबित',
@@ -588,211 +687,6 @@ function getMarathiStatusName($status) {
     ];
     return $status_names[$status] ?? 'अज्ञात';
 }
-
-function getMarathiCategoryName($category) {
-    $category_map = [
-        // 'home' => 'मुख्यपृष्ठ',
-        
-        // Old
-        // 'amrut_events' => 'अमृत घडामोडी',
-        // 'beneficiary_story' => 'लाभार्थी स्टोरी',
-        // 'blog' => 'ब्लॉग',
-        // 'amrut_service' => 'अमृत सेवाकार्य',
-        // 'today_special' => 'दिनविशेष',
-        // 'successful_entrepreneur' => 'यशस्वी उद्योजक',
-        // 'words_amrut' => 'शब्दांमृत',
-        // 'smart_farmer' => 'स्मार्ट शेतकरी',
-        // 'capable_student' => 'सक्षम विद्यार्थी',
-        // 'spirituality' => 'अध्यात्म',
-        // 'social_situation' => 'सामाजिक परिवर्तक',
-        // 'women_power' => 'स्त्रीशक्ती',
-        // 'tourism' => 'पर्यटन',
-        // 'news' => 'वार्ता',
-        // 'articles' => 'लेख'
-
-
-        // New
-        'Amrut Events' => 'अमृत घडामोडी',
-        'Beneficiary Story' => 'लाभार्थी स्टोरी',
-        'Blog' => 'ब्लॉग',
-        'Today Special' => 'दिनविशेष',
-        'Successful Entrepreneur' => 'यशस्वी उद्योजक',
-        'Words Amrut' => 'शब्दांमृत',
-        'Smart Farmer' => 'स्मार्ट शेतकरी',
-        'Capable Student' => 'सक्षम विद्यार्थी',
-        'Spirituality' => 'अध्यात्म',
-        'Social Situation' => 'सामाजिक परिवर्तक',
-        'Women Power' => 'स्त्रीशक्ती',
-        'Tourism' => 'पर्यटन',
-        'Amrut Service' => 'अमृत सेवा कार्य',
-        'News' => 'वार्ता',
-        'Articles' => 'लेख'
-    ];
-    return $category_map[$category] ?? $category;
-}
-
-function getMarathiRegionName($regionValue) {
-    // Convert to lowercase for comparison
-    $regionValue = strtolower($regionValue);
-    $regionMap = [
-        'kokan' => 'कोकण',
-        'pune' => 'पुणे',
-        'sambhajinagar' => 'संभाजीनगर',
-        'nashik' => 'नाशिक',
-        'amaravati' => 'अमरावती',
-        'nagpur' => 'नागपूर',
-        'mumbai' => 'मुंबई',
-        'ratnagiri' => 'रत्नागिरी',
-        'solapur' => 'सोलापूर',
-        'kolhapur' => 'कोल्हापूर',
-        'thane' => 'ठाणे',
-        'raigad' => 'रायगड',
-        'jalna' => 'जालना',
-        'nanded' => 'नांदेड',
-        'ahilyanagar' => 'अहिल्यानगर',
-        'sangli' => 'सांगली',
-        'satara' => 'सातारा',
-        'gadchiroli' => 'गडचिरोली'
-    ];
-    return isset($regionMap[$regionValue]) ? $regionMap[$regionValue] : $regionValue;
-}
-
-function getMarathiDistrictName($districtValue) {
-    // Convert to lowercase for comparison
-    $districtValue = strtolower($districtValue);
-    $districtMap = [
-        'palghar' => 'पालघर',
-        'thane' => 'ठाणे',
-        'mumbai_city' => 'मुंबई शहर',
-        'mumbai' => 'मुंबई',
-        'mumbai_suburban' => 'मुंबई उपनगर',
-        'raigad' => 'रायगड',
-        'ratnagiri' => 'रत्नागिरी',
-        'sindhudurg' => 'सिंधुदुर्ग',
-        'pune' => 'पुणे',
-        'satara' => 'सातारा',
-        'kolhapur' => 'कोल्हापूर',
-        'sangli' => 'सांगली',
-        'solapur' => 'सोलापूर',
-        'chhatrapati_sambhajinagar' => 'छत्रपती संभाजीनगर',
-        'beed' => 'बीड',
-        'jalna' => 'जालना',
-        'parbhani' => 'परभणी',
-        'hingoli' => 'हिंगोली',
-        'nanded' => 'नांदेड',
-        'latur' => 'लातूर',
-        'dharashiv' => 'धाराशिव',
-        'nashik' => 'नाशिक',
-        'dhule' => 'धुळे',
-        'nandurbar' => 'नंदुरबार',
-        'ahmednagar' => 'अहमदनगर',
-        'jalgaon' => 'जळगाव',
-        'ahilyanagar' => 'अहिल्यानगर',
-        'amaravati' => 'अमरावती',
-        'akola' => 'अकोला',
-        'buldhana' => 'बुलढाणा',
-        'washim' => 'वाशीम',
-        'yavatmal' => 'यवतमाळ',
-        'nagpur' => 'नागपूर',
-        'wardha' => 'वर्धा',
-        'bhandara' => 'भंडारा',
-        'gondia' => 'गोंदिया',
-        'chandrapur' => 'चंद्रपूर',
-        'gadchiroli' => 'गडचिरोली'
-    ];
-    return isset($districtMap[$districtValue]) ? $districtMap[$districtValue] : $districtValue;
-}
-
-// Get all categories for dropdown
-$categories = [
-    // 'home' => 'मुख्यपृष्ठ',
-
-    // Old
-    // 'amrut_events' => 'अमृत घडामोडी',
-    // 'beneficiary_story' => 'लाभार्थी स्टोरी',
-    // 'blog' => 'ब्लॉग',
-    // 'amrut_service' => 'अमृत सेवाकार्य',
-    // 'today_special' => 'दिनविशेष',
-    // 'successful_entrepreneur' => 'यशस्वी उद्योजक',
-    // 'words_amrut' => 'शब्दांमृत',
-    // 'smart_farmer' => 'स्मार्ट शेतकरी',
-    // 'capable_student' => 'सक्षम विद्यार्थी',
-    // 'spirituality' => 'अध्यात्म',
-    // 'social_situation' => 'सामाजिक परिवर्तक',
-    // 'women_power' => 'स्त्रीशक्ती',
-    // 'tourism' => 'पर्यटन',
-    // 'news' => 'वार्ता',
-    // 'articles' => 'लेख'
-
-    // New
-    'Amrut Events' => 'अमृत घडामोडी',
-    'Beneficiary Story' => 'लाभार्थी स्टोरी',
-    'Blog' => 'ब्लॉग',
-    'Today Special' => 'दिनविशेष',
-    'Successful Entrepreneur' => 'यशस्वी उद्योजक',
-    'Words Amrut' => 'शब्दांमृत',
-    'Smart Farmer' => 'स्मार्ट शेतकरी',
-    'Capable Student' => 'सक्षम विद्यार्थी',
-    'Spirituality' => 'अध्यात्म',
-    'Social Situation' => 'सामाजिक परिवर्तक',
-    'Women Power' => 'स्त्रीशक्ती',
-    'Tourism' => 'पर्यटन',
-    'Amrut Service' => 'अमृत सेवा कार्य',
-    'News' => 'वार्ता',
-    'Articles' => 'लेख'
-];
-
-// Get all districts for dropdown
-$districts = [
-    'palghar' => 'पालघर',
-    'thane' => 'ठाणे',
-    'mumbai_city' => 'मुंबई शहर',
-    'mumbai' => 'मुंबई',
-    'mumbai_suburban' => 'मुंबई उपनगर',
-    'raigad' => 'रायगड',
-    'ratnagiri' => 'रत्नागिरी',
-    'sindhudurg' => 'सिंधुदुर्ग',
-    'pune' => 'पुणे',
-    'satara' => 'सातारा',
-    'kolhapur' => 'कोल्हापूर',
-    'sangli' => 'सांगली',
-    'solapur' => 'सोलापूर',
-    'chhatrapati_sambhajinagar' => 'छत्रपती संभाजीनगर',
-    'beed' => 'बीड',
-    'jalna' => 'जालना',
-    'parbhani' => 'परभणी',
-    'hingoli' => 'हिंगोली',
-    'nanded' => 'नांदेड',
-    'latur' => 'लातूर',
-    'dharashiv' => 'धाराशिव',
-    'nashik' => 'नाशिक',
-    'dhule' => 'धुळे',
-    'nandurbar' => 'नंदुरबार',
-    'ahmednagar' => 'अहमदनगर',
-    'jalgaon' => 'जळगाव',
-    'ahilyanagar' => 'अहिल्यानगर',
-    'amaravati' => 'अमरावती',
-    'akola' => 'अकोला',
-    'buldhana' => 'बुलढाणा',
-    'washim' => 'वाशीम',
-    'yavatmal' => 'यवतमाळ',
-    'nagpur' => 'नागपूर',
-    'wardha' => 'वर्धा',
-    'bhandara' => 'भंडारा',
-    'gondia' => 'गोंदिया',
-    'chandrapur' => 'चंद्रपूर',
-    'gadchiroli' => 'गडचिरोली'
-];
-
-// Get all regions for dropdown
-$regions = [
-    'kokan' => 'कोकण',
-    'pune' => 'पुणे',
-    'sambhajinagar' => 'संभाजीनगर',
-    'nashik' => 'नाशिक',
-    'amaravati' => 'अमरावती',
-    'nagpur' => 'नागपूर'
-];
 
 // Now include header files after all processing
 include 'components/header.php';
@@ -1438,9 +1332,9 @@ include 'components/login_navbar.php';
                                                     name="region" 
                                                     <?php echo !$edit_mode ? 'disabled' : ''; ?>
                                                     style="border: 1px solid #FFA500;">
-                                                <?php foreach ($regions as $region_value => $region_name): ?>
-                                                <option value="<?php echo $region_value; ?>" <?php echo (strtolower($news['Region']) == strtolower($region_value)) ? 'selected' : ''; ?>>
-                                                    <?php echo $region_name; ?>
+                                                <?php foreach ($allRegions as $region_value => $region_name): ?>
+                                                <option value="<?php echo htmlspecialchars($region_value); ?>" <?php echo (strtolower($news['Region']) == strtolower($region_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($region_name); ?>
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1453,9 +1347,9 @@ include 'components/login_navbar.php';
                                                     name="district" 
                                                     <?php echo !$edit_mode ? 'disabled' : ''; ?>
                                                     style="border: 1px solid #FFA500;">
-                                                <?php foreach ($districts as $district_value => $district_name): ?>
-                                                <option value="<?php echo $district_value; ?>" <?php echo (strtolower($news['district_name']) == strtolower($district_value)) ? 'selected' : ''; ?>>
-                                                    <?php echo $district_name; ?>
+                                                <?php foreach ($allDistricts as $district_value => $district_name): ?>
+                                                <option value="<?php echo htmlspecialchars($district_value); ?>" <?php echo (strtolower($news['district_name']) == strtolower($district_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($district_name); ?>
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
@@ -1468,9 +1362,9 @@ include 'components/login_navbar.php';
                                                     name="category" 
                                                     <?php echo !$edit_mode ? 'disabled' : ''; ?>
                                                     style="border: 1px solid #FFA500;">
-                                                <?php foreach ($categories as $category_value => $category_name): ?>
-                                                <option value="<?php echo $category_value; ?>" <?php echo (strtolower($news['category_name']) == strtolower($category_value)) ? 'selected' : ''; ?>>
-                                                    <?php echo $category_name; ?>
+                                                <?php foreach ($allCategories as $category_value => $category_name): ?>
+                                                <option value="<?php echo htmlspecialchars($category_value); ?>" <?php echo (strtolower($news['category_name']) == strtolower($category_value)) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($category_name); ?>
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
