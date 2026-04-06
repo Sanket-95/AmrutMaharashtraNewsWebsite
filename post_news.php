@@ -1,16 +1,30 @@
 <?php
 session_start();
 
-// Check if user is logged in ........
+// Enable error reporting for debugging (remove in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
+
+// Check if db_config.php exists and include it
+if (!file_exists('components/db_config.php')) {
+    die('Database configuration file not found. Please check the path.');
+}
 include 'components/db_config.php';
+
+// Test database connection
+if (!$conn || mysqli_connect_errno()) {
+    die('Database connection failed: ' . mysqli_connect_error());
+}
+
 include 'components/header.php';
 include 'components/navbar.php';
 include 'components/login_navbar.php';
-
 
 // Set timezone to IST
 date_default_timezone_set('Asia/Kolkata');
@@ -75,19 +89,21 @@ function getDistrictsByRegion($conn, $divisionId) {
     $districts = [];
     $query = "SELECT district, dmarathi FROM mdistrict WHERE divisionid = ? ORDER BY district ASC";
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_bind_param($stmt, "i", $divisionId);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            $districts[] = [
-                'district' => $row['district'],
-                'dmarathi' => $row['dmarathi']
-            ];
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "i", $divisionId);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        if ($result && mysqli_num_rows($result) > 0) {
+            while ($row = mysqli_fetch_assoc($result)) {
+                $districts[] = [
+                    'district' => $row['district'],
+                    'dmarathi' => $row['dmarathi']
+                ];
+            }
         }
+        mysqli_stmt_close($stmt);
     }
-    mysqli_stmt_close($stmt);
     return $districts;
 }
 
@@ -116,19 +132,25 @@ function getAllDistrictsWithRegion($conn) {
  * @return string Region name
  */
 function getRegionFromLocation($conn, $location) {
+    if (empty($location)) {
+        return '';
+    }
+    
     // First, check if location is a region
     $regionQuery = "SELECT division FROM mdivision WHERE division = ?";
     $stmt = mysqli_prepare($conn, $regionQuery);
-    mysqli_stmt_bind_param($stmt, "s", $location);
-    mysqli_stmt_execute($stmt);
-    $regionResult = mysqli_stmt_get_result($stmt);
-    
-    if ($regionResult && mysqli_num_rows($regionResult) > 0) {
-        $row = mysqli_fetch_assoc($regionResult);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $location);
+        mysqli_stmt_execute($stmt);
+        $regionResult = mysqli_stmt_get_result($stmt);
+        
+        if ($regionResult && mysqli_num_rows($regionResult) > 0) {
+            $row = mysqli_fetch_assoc($regionResult);
+            mysqli_stmt_close($stmt);
+            return $row['division'];
+        }
         mysqli_stmt_close($stmt);
-        return $row['division'];
     }
-    mysqli_stmt_close($stmt);
     
     // If not a region, check if it's a district and map to region
     $districtQuery = "SELECT m.division 
@@ -136,16 +158,18 @@ function getRegionFromLocation($conn, $location) {
                       JOIN mdivision m ON d.divisionid = m.id 
                       WHERE d.district = ?";
     $stmt = mysqli_prepare($conn, $districtQuery);
-    mysqli_stmt_bind_param($stmt, "s", $location);
-    mysqli_stmt_execute($stmt);
-    $districtResult = mysqli_stmt_get_result($stmt);
-    
-    if ($districtResult && mysqli_num_rows($districtResult) > 0) {
-        $row = mysqli_fetch_assoc($districtResult);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $location);
+        mysqli_stmt_execute($stmt);
+        $districtResult = mysqli_stmt_get_result($stmt);
+        
+        if ($districtResult && mysqli_num_rows($districtResult) > 0) {
+            $row = mysqli_fetch_assoc($districtResult);
+            mysqli_stmt_close($stmt);
+            return $row['division'];
+        }
         mysqli_stmt_close($stmt);
-        return $row['division'];
     }
-    mysqli_stmt_close($stmt);
     
     return '';
 }
@@ -156,18 +180,24 @@ function getRegionFromLocation($conn, $location) {
  * @return string Marathi district name
  */
 function getMarathiDistrictName($conn, $districtValue) {
+    if (empty($districtValue)) {
+        return '';
+    }
+    
     $query = "SELECT dmarathi FROM mdistrict WHERE district = ?";
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_bind_param($stmt, "s", $districtValue);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if ($result && mysqli_num_rows($result) > 0) {
-        $row = mysqli_fetch_assoc($result);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $districtValue);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        if ($result && mysqli_num_rows($result) > 0) {
+            $row = mysqli_fetch_assoc($result);
+            mysqli_stmt_close($stmt);
+            return $row['dmarathi'];
+        }
         mysqli_stmt_close($stmt);
-        return $row['dmarathi'];
     }
-    mysqli_stmt_close($stmt);
     return $districtValue;
 }
 
@@ -177,18 +207,24 @@ function getMarathiDistrictName($conn, $districtValue) {
  * @return string Marathi region name
  */
 function getMarathiRegionName($conn, $regionValue) {
+    if (empty($regionValue)) {
+        return '';
+    }
+    
     $query = "SELECT marathiname FROM mdivision WHERE division = ?";
     $stmt = mysqli_prepare($conn, $query);
-    mysqli_stmt_bind_param($stmt, "s", $regionValue);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    
-    if ($result && mysqli_num_rows($result) > 0) {
-        $row = mysqli_fetch_assoc($result);
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, "s", $regionValue);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        
+        if ($result && mysqli_num_rows($result) > 0) {
+            $row = mysqli_fetch_assoc($result);
+            mysqli_stmt_close($stmt);
+            return $row['marathiname'];
+        }
         mysqli_stmt_close($stmt);
-        return $row['marathiname'];
     }
-    mysqli_stmt_close($stmt);
     return $regionValue;
 }
 
@@ -219,50 +255,90 @@ function getAllRegionDistrictMapping($conn) {
 // FETCH DYNAMIC DATA FOR CURRENT PAGE
 // ============================================
 
+// Initialize variables with default values to prevent undefined variable errors
+$allRegions = [];
+$allCategories = [];
+$regionDistrictMapping = [];
+$regionDistrictJSON = '{}';
+$user_region = '';
+$divisionHeadDistricts = [];
+$userDistrictMarathi = '';
+$publisher_editable = false;
+$publisher_value = $user_name;
+
 // Get all regions for dropdowns
-$allRegions = getAllRegions($conn);
+try {
+    $allRegions = getAllRegions($conn);
+} catch (Exception $e) {
+    error_log("Error fetching regions: " . $e->getMessage());
+}
 
 // Get all categories for dropdown
-$allCategories = getAllCategories($conn);
+try {
+    $allCategories = getAllCategories($conn);
+} catch (Exception $e) {
+    error_log("Error fetching categories: " . $e->getMessage());
+}
 
 // Get district-to-region mapping for quick lookup
-$districtToRegionMap = getAllDistrictsWithRegion($conn);
+try {
+    $districtToRegionMap = getAllDistrictsWithRegion($conn);
+} catch (Exception $e) {
+    error_log("Error fetching district mapping: " . $e->getMessage());
+    $districtToRegionMap = [];
+}
 
 // Determine user's region
-$user_region = '';
 if (!empty($user_location)) {
-    $user_region = getRegionFromLocation($conn, $user_location);
+    try {
+        $user_region = getRegionFromLocation($conn, $user_location);
+    } catch (Exception $e) {
+        error_log("Error getting user region: " . $e->getMessage());
+    }
 }
 
 // Get all region-district mapping for JavaScript
-$regionDistrictMapping = getAllRegionDistrictMapping($conn);
-$regionDistrictJSON = json_encode($regionDistrictMapping);
+try {
+    $regionDistrictMapping = getAllRegionDistrictMapping($conn);
+    $regionDistrictJSON = json_encode($regionDistrictMapping);
+} catch (Exception $e) {
+    error_log("Error creating region-district mapping: " . $e->getMessage());
+    $regionDistrictJSON = '{}';
+}
 
 // Determine if publisher name should be editable
 $publisher_editable = ($user_roll === 'admin');
 $publisher_value = $user_name;
 
 // For division_head, get districts of their region for pre-population
-$divisionHeadDistricts = [];
 if ($user_roll === 'division_head' && !empty($user_location)) {
-    // Find division ID for this region
-    $divIdQuery = "SELECT id FROM mdivision WHERE division = ?";
-    $stmt = mysqli_prepare($conn, $divIdQuery);
-    mysqli_stmt_bind_param($stmt, "s", $user_location);
-    mysqli_stmt_execute($stmt);
-    $divResult = mysqli_stmt_get_result($stmt);
-    
-    if ($divResult && mysqli_num_rows($divResult) > 0) {
-        $divRow = mysqli_fetch_assoc($divResult);
-        $divisionHeadDistricts = getDistrictsByRegion($conn, $divRow['id']);
+    try {
+        // Find division ID for this region
+        $divIdQuery = "SELECT id FROM mdivision WHERE division = ?";
+        $stmt = mysqli_prepare($conn, $divIdQuery);
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, "s", $user_location);
+            mysqli_stmt_execute($stmt);
+            $divResult = mysqli_stmt_get_result($stmt);
+            
+            if ($divResult && mysqli_num_rows($divResult) > 0) {
+                $divRow = mysqli_fetch_assoc($divResult);
+                $divisionHeadDistricts = getDistrictsByRegion($conn, $divRow['id']);
+            }
+            mysqli_stmt_close($stmt);
+        }
+    } catch (Exception $e) {
+        error_log("Error fetching division head districts: " . $e->getMessage());
     }
-    mysqli_stmt_close($stmt);
 }
 
 // For district_user, get their district Marathi name
-$userDistrictMarathi = '';
 if ($user_roll === 'district_user' && !empty($user_location)) {
-    $userDistrictMarathi = getMarathiDistrictName($conn, $user_location);
+    try {
+        $userDistrictMarathi = getMarathiDistrictName($conn, $user_location);
+    } catch (Exception $e) {
+        error_log("Error fetching user district name: " . $e->getMessage());
+    }
 }
 
 // Get current date and time in the format for datetime-local input
@@ -294,21 +370,29 @@ $currentDateTime = date('Y-m-d\TH:i');
                             <!-- For admin - editable dropdown from database -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <?php foreach($allRegions as $region): ?>
-                                    <option value="<?php echo htmlspecialchars($region['division']); ?>">
-                                        <?php echo htmlspecialchars($region['marathiname']); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                                <?php if(!empty($allRegions)): ?>
+                                    <?php foreach($allRegions as $region): ?>
+                                        <option value="<?php echo htmlspecialchars($region['division']); ?>">
+                                            <?php echo htmlspecialchars($region['marathiname']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>कोणतेही प्रदेश उपलब्ध नाहीत</option>
+                                <?php endif; ?>
                             </select>
                         <?php elseif($user_roll === 'division_head'): ?>
                             <!-- For division_head - auto-filled region from session, but editable -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <?php foreach($allRegions as $region): ?>
-                                    <option value="<?php echo htmlspecialchars($region['division']); ?>" <?php echo ($user_location === $region['division']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($region['marathiname']); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                                <?php if(!empty($allRegions)): ?>
+                                    <?php foreach($allRegions as $region): ?>
+                                        <option value="<?php echo htmlspecialchars($region['division']); ?>" <?php echo ($user_location === $region['division']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($region['marathiname']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>कोणतेही प्रदेश उपलब्ध नाहीत</option>
+                                <?php endif; ?>
                             </select>
                             <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                                 <i class="fas fa-info-circle"></i> 
@@ -341,11 +425,15 @@ $currentDateTime = date('Y-m-d\TH:i');
                             <!-- Default dropdown for other roles -->
                             <select class="form-select shadow-sm" name="region" id="regionSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- प्रदेश निवडा --</option>
-                                <?php foreach($allRegions as $region): ?>
-                                    <option value="<?php echo htmlspecialchars($region['division']); ?>">
-                                        <?php echo htmlspecialchars($region['marathiname']); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                                <?php if(!empty($allRegions)): ?>
+                                    <?php foreach($allRegions as $region): ?>
+                                        <option value="<?php echo htmlspecialchars($region['division']); ?>">
+                                            <?php echo htmlspecialchars($region['marathiname']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>कोणतेही प्रदेश उपलब्ध नाहीत</option>
+                                <?php endif; ?>
                             </select>
                         <?php endif; ?>
                     </div>
@@ -363,11 +451,15 @@ $currentDateTime = date('Y-m-d\TH:i');
                             <!-- For division_head - dropdown shows districts from selected region from database -->
                             <select class="form-select shadow-sm" name="district" id="districtSelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                                 <option value="">-- जिल्हा निवडा --</option>
-                                <?php foreach($divisionHeadDistricts as $district): ?>
-                                    <option value="<?php echo htmlspecialchars($district['district']); ?>">
-                                        <?php echo htmlspecialchars($district['dmarathi']); ?>
-                                    </option>
-                                <?php endforeach; ?>
+                                <?php if(!empty($divisionHeadDistricts)): ?>
+                                    <?php foreach($divisionHeadDistricts as $district): ?>
+                                        <option value="<?php echo htmlspecialchars($district['district']); ?>">
+                                            <?php echo htmlspecialchars($district['dmarathi']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>कोणतेही जिल्हे उपलब्ध नाहीत</option>
+                                <?php endif; ?>
                             </select>
                         <?php elseif($user_roll === 'district_user'): ?>
                             <!-- For district_user - readonly field showing auto-filled district -->
@@ -421,11 +513,15 @@ $currentDateTime = date('Y-m-d\TH:i');
                     </label>
                     <select class="form-select shadow-sm" name="category" id="categorySelect" required style="border-color: #FFA500; font-family: 'Mukta', sans-serif; height: 50px;">
                         <option value="">-- वर्ग निवडा --</option>
-                        <?php foreach($allCategories as $category): ?>
-                            <option value="<?php echo htmlspecialchars($category['catagory']); ?>">
-                                <?php echo htmlspecialchars($category['marathi_name']); ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if(!empty($allCategories)): ?>
+                            <?php foreach($allCategories as $category): ?>
+                                <option value="<?php echo htmlspecialchars($category['catagory']); ?>">
+                                    <?php echo htmlspecialchars($category['marathi_name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="" disabled>कोणतेही वर्ग उपलब्ध नाहीत</option>
+                        <?php endif; ?>
                     </select>
                     <div class="form-text" style="color: #FF6600; font-family: 'Mukta', sans-serif;">
                         <i class="fas fa-info-circle"></i> कृपया बातमीचा योग्य वर्ग निवडा
@@ -620,6 +716,9 @@ $currentDateTime = date('Y-m-d\TH:i');
 <!-- Include Toastr for notifications -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<!-- Include Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <!-- Include Fonts for Marathi -->
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700&family=Khand:wght@400;500;600&display=swap" rel="stylesheet">
@@ -875,48 +974,54 @@ $currentDateTime = date('Y-m-d\TH:i');
             charCount.textContent = marathiCount;
         }
         
-        summaryTextarea.addEventListener('input', updateCharCount);
-        updateCharCount();
+        if (summaryTextarea) {
+            summaryTextarea.addEventListener('input', updateCharCount);
+            updateCharCount();
+        }
         
         // Cover photo preview
         const coverPhotoInput = document.getElementById('coverPhoto');
         const coverPreview = document.getElementById('coverPreview');
         
-        coverPhotoInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    coverPreview.src = e.target.result;
-                    coverPreview.style.display = 'block';
+        if (coverPhotoInput && coverPreview) {
+            coverPhotoInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        coverPreview.src = e.target.result;
+                        coverPreview.style.display = 'block';
+                    }
+                    reader.readAsDataURL(file);
                 }
-                reader.readAsDataURL(file);
-            }
-        });
+            });
+        }
         
         // Single image preview for additional image
         const newsImageInput = document.getElementById('newsImage');
         const imagePreviewDiv = document.getElementById('imagePreview');
         
-        newsImageInput.addEventListener('change', function(e) {
-            imagePreviewDiv.innerHTML = '';
-            const file = e.target.files[0];
-            
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'img-thumbnail';
-                    img.style.width = '100px';
-                    img.style.height = '100px';
-                    img.style.objectFit = 'cover';
-                    img.style.margin = '5px';
-                    imagePreviewDiv.appendChild(img);
+        if (newsImageInput && imagePreviewDiv) {
+            newsImageInput.addEventListener('change', function(e) {
+                imagePreviewDiv.innerHTML = '';
+                const file = e.target.files[0];
+                
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-thumbnail';
+                        img.style.width = '100px';
+                        img.style.height = '100px';
+                        img.style.objectFit = 'cover';
+                        img.style.margin = '5px';
+                        imagePreviewDiv.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
                 }
-                reader.readAsDataURL(file);
-            }
-        });
+            });
+        }
         
         // Region-based district selection using dynamic database mapping
         const regionSelect = document.getElementById('regionSelect');
@@ -926,7 +1031,7 @@ $currentDateTime = date('Y-m-d\TH:i');
             if (districtSelect) {
                 districtSelect.innerHTML = '<option value="">-- जिल्हा निवडा --</option>';
                 
-                if (selectedRegion && regionDistrictMapping[selectedRegion]) {
+                if (selectedRegion && regionDistrictMapping && regionDistrictMapping[selectedRegion] && regionDistrictMapping[selectedRegion].length > 0) {
                     districtSelect.disabled = false;
                     regionDistrictMapping[selectedRegion].forEach(district => {
                         const option = document.createElement('option');
@@ -960,26 +1065,28 @@ $currentDateTime = date('Y-m-d\TH:i');
         
         // Form validation
         const form = document.getElementById('newsForm');
-        form.addEventListener('submit', function(e) {
-            let valid = true;
-            
-            // Check file size (5MB limit)
-            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-            
-            if (coverPhotoInput.files[0] && coverPhotoInput.files[0].size > maxSize) {
-                toastr.error('मुख्य चित्र ५MB पेक्षा मोठे नसावे!');
-                valid = false;
-            }
-            
-            if (newsImageInput.files[0] && newsImageInput.files[0].size > maxSize) {
-                toastr.error('अतिरिक्त चित्र ५MB पेक्षा मोठे नसावे!');
-                valid = false;
-            }
-            
-            if (!valid) {
-                e.preventDefault();
-            }
-        });
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                let valid = true;
+                
+                // Check file size (5MB limit)
+                const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+                
+                if (coverPhotoInput && coverPhotoInput.files[0] && coverPhotoInput.files[0].size > maxSize) {
+                    toastr.error('मुख्य चित्र ५MB पेक्षा मोठे नसावे!');
+                    valid = false;
+                }
+                
+                if (newsImageInput && newsImageInput.files[0] && newsImageInput.files[0].size > maxSize) {
+                    toastr.error('अतिरिक्त चित्र ५MB पेक्षा मोठे नसावे!');
+                    valid = false;
+                }
+                
+                if (!valid) {
+                    e.preventDefault();
+                }
+            });
+        }
         
         // Set current datetime button functionality
         const setCurrentDateTimeBtn = document.getElementById('setCurrentDateTimeBtn');
@@ -1007,7 +1114,7 @@ $currentDateTime = date('Y-m-d\TH:i');
                 toastr.success('बातमी यशस्वीरित्या सबमिट केली गेली आहे!');
                 
                 setTimeout(function() {
-                    form.reset();
+                    if (form) form.reset();
                     
                     const userRoll = '<?php echo $user_roll; ?>';
                     
@@ -1030,15 +1137,16 @@ $currentDateTime = date('Y-m-d\TH:i');
                         publisherInput.value = '<?php echo htmlspecialchars($publisher_value); ?>';
                     }
                     
-                    document.getElementById('topNewsCheckbox').checked = false;
+                    const topNewsCheckbox = document.getElementById('topNewsCheckbox');
+                    if (topNewsCheckbox) topNewsCheckbox.checked = false;
                     
                     if (publishDateTimeInput) {
                         publishDateTimeInput.value = '<?php echo $currentDateTime; ?>';
                     }
                     
-                    coverPreview.style.display = 'none';
-                    imagePreviewDiv.innerHTML = '';
-                    updateCharCount();
+                    if (coverPreview) coverPreview.style.display = 'none';
+                    if (imagePreviewDiv) imagePreviewDiv.innerHTML = '';
+                    if (summaryTextarea) updateCharCount();
                     
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }, 100);
