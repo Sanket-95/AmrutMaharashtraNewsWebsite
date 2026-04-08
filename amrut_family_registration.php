@@ -981,6 +981,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     toastr.error('<?php echo addslashes($error_message); ?>');
     <?php endif; ?>
 </script>
+  
 
 </body>
 </html>
