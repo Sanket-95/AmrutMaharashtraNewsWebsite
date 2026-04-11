@@ -48,7 +48,7 @@ include 'components/navbar.php';
         color: white;
     }
     
-    /* About Header */
+    /* About Header. */
     .about-header {
         text-align: center;
         margin-bottom: 50px;
