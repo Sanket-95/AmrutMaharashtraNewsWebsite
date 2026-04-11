@@ -45,6 +45,11 @@
         justify-content: flex-end;
     }
     
+    /* Dashboard Dropdown Styles */
+    .dashboard-dropdown {
+        position: relative;
+    }
+    
     .dashboard-btn {
         background: white;
         color: #ff6600;
@@ -59,11 +64,68 @@
         transition: all 0.3s ease;
         font-size: 14px;
         white-space: nowrap;
+        cursor: pointer;
     }
     
     .dashboard-btn:hover {
         background: #fff5e6;
         transform: translateY(-1px);
+    }
+    
+    .dashboard-btn i:last-child {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+    }
+    
+    .dashboard-dropdown.open .dashboard-btn i:last-child {
+        transform: rotate(180deg);
+    }
+    
+    .dashboard-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+        min-width: 200px;
+        z-index: 1000;
+        margin-top: 5px;
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .dashboard-dropdown.open .dashboard-dropdown-menu {
+        display: block;
+    }
+    
+    .dashboard-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        text-decoration: none;
+        color: #333;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .dashboard-dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .dashboard-dropdown-item:hover {
+        background: #fff5e6;
+        color: #ff6600;
+    }
+    
+    .dashboard-dropdown-item i {
+        font-size: 16px;
+        width: 20px;
+        color: #ff6600;
     }
     
     .profile-container {
@@ -392,7 +454,8 @@
             gap: 6px;
         }
         
-        .dropdown-menu {
+        .dropdown-menu,
+        .dashboard-dropdown-menu {
             min-width: 180px;
         }
     }
@@ -450,7 +513,8 @@
             font-size: 14px;
         }
         
-        .dropdown-menu {
+        .dropdown-menu,
+        .dashboard-dropdown-menu {
             right: 0;
             left: auto;
         }
@@ -473,6 +537,15 @@ if (isset($_SESSION['user_id'])) {
     
     // Check if current page is dashboard.php
     $is_dashboard_page = ($current_page === 'dashboard.php');
+    
+    // Determine if user has access to dashboard
+    $has_dashboard_access = (!$is_dashboard_page && $user_roll !== 'district_user');
+    
+    // Determine if user has access to ads analytics
+    $has_ads_analytics_access = ($user_roll === 'Super Admin' || $user_name === 'Vijay Joshi');
+    
+    // Check if any dashboard items are visible
+    $show_dashboard_dropdown = ($has_dashboard_access || $has_ads_analytics_access);
     ?>
     
     <div class="login-navbar">
@@ -526,11 +599,31 @@ if (isset($_SESSION['user_id'])) {
             <div class="nav-buttons-container">
                 <!-- Desktop buttons -->
                 <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
-                    <?php if ($user_roll === 'Super Admin' || $user_name === 'Vijay Joshi'): ?>
-                    <a href="ads_analytics.php" class="dashboard-btn">
-                        <i class="bi bi-speedometer2"></i>
-                        <span>जाहिरात विश्लेषण</span>
-                    </a>
+                    
+                    <!-- Dashboard Dropdown (Combined) -->
+                    <?php if ($show_dashboard_dropdown): ?>
+                    <div class="dashboard-dropdown" id="dashboardDropdown">
+                        <button class="dashboard-btn" id="dashboardBtn">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>डॅशबोर्ड</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="dashboard-dropdown-menu">
+                            <?php if ($has_dashboard_access): ?>
+                            <a href="dashboard.php" class="dashboard-dropdown-item">
+                                <i class="bi bi-newspaper"></i>
+                                <span>न्यूज डॅशबोर्ड</span>
+                            </a>
+                            <?php endif; ?>
+                            
+                            <?php if ($has_ads_analytics_access): ?>
+                            <a href="ads_analytics.php" class="dashboard-dropdown-item">
+                                <i class="bi bi-graph-up"></i>
+                                <span>जाहिरात विश्लेषण</span>
+                            </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                     <?php endif; ?>
 
                     <?php if ($user_roll === 'Super Admin'): ?>
@@ -540,22 +633,12 @@ if (isset($_SESSION['user_id'])) {
                     </a>
                     <?php endif; ?>
                     
-                    <?php 
-                    // Show dashboard button only for non-district users and not on dashboard page
-                    if (!$is_dashboard_page && $user_roll !== 'district_user'):
-                    ?>
-                    <a href="dashboard.php" class="dashboard-btn">
-                        <i class="bi bi-speedometer2"></i>
-                        <span>डॅशबोर्ड</span>
-                    </a>
-                    <?php endif; ?>
-                    
                     <!-- User Management Dropdown (for Super Admin) -->
                     <?php if ($user_roll === 'Super Admin'): ?>
                     <div class="user-mgmt-dropdown" id="userMgmtDropdown">
                         <button class="user-mgmt-btn" id="userMgmtBtn">
                             <i class="bi bi-people"></i>
-                            <span>यूजर व्यवस्थापन</span>
+                            <span>व्यवस्थापन</span>
                             <i class="bi bi-chevron-down"></i>
                         </button>
                         <div class="dropdown-menu">
@@ -676,11 +759,32 @@ if (isset($_SESSION['user_id'])) {
             }
             ?>
             
-            <?php if ($user_roll === 'Super Admin' || $user_name === 'Vijay Joshi'): ?>
-            <a href="ads_analytics.php" class="mobile-menu-item">
-                <i class="bi bi-speedometer2"></i>
-                <span>जाहिरात विश्लेषण</span>
-            </a>
+            <!-- Mobile Dashboard Dropdown -->
+            <?php if ($show_dashboard_dropdown): ?>
+            <div class="mobile-menu-parent mobile-menu-item" id="mobileDashboardParent">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>डॅशबोर्ड</span>
+                    </span>
+                    <i class="bi bi-chevron-down arrow-icon"></i>
+                </div>
+            </div>
+            <div class="mobile-submenu" id="mobileDashboardSubmenu">
+                <?php if ($has_dashboard_access): ?>
+                <a href="dashboard.php" class="mobile-submenu-item">
+                    <i class="bi bi-newspaper"></i>
+                    <span>न्यूज डॅशबोर्ड</span>
+                </a>
+                <?php endif; ?>
+                
+                <?php if ($has_ads_analytics_access): ?>
+                <a href="ads_analytics.php" class="mobile-submenu-item">
+                    <i class="bi bi-graph-up"></i>
+                    <span>जाहिरात विश्लेषण</span>
+                </a>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
 
             <?php if ($user_roll === 'Super Admin'): ?>
@@ -690,20 +794,13 @@ if (isset($_SESSION['user_id'])) {
             </a>
             <?php endif; ?>
             
-            <?php if (!$is_dashboard_page && $user_roll !== 'district_user'): ?>
-            <a href="dashboard.php" class="mobile-menu-item">
-                <i class="bi bi-speedometer2"></i>
-                <span>डॅशबोर्ड</span>
-            </a>
-            <?php endif; ?>
-            
             <!-- Mobile User Management with Submenu (for Super Admin) -->
             <?php if ($user_roll === 'Super Admin'): ?>
             <div class="mobile-menu-parent mobile-menu-item" id="mobileUserMgmtParent">
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                     <span style="display: flex; align-items: center; gap: 10px;">
                         <i class="bi bi-people"></i>
-                        <span>यूजर व्यवस्थापन</span>
+                        <span>व्यवस्थापन</span>
                     </span>
                     <i class="bi bi-chevron-down arrow-icon"></i>
                 </div>
@@ -743,6 +840,25 @@ if (isset($_SESSION['user_id'])) {
             const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const mobileMenu = document.getElementById('mobileMenu');
             
+            // Desktop dropdown for Dashboard
+            const dashboardDropdown = document.getElementById('dashboardDropdown');
+            const dashboardBtn = document.getElementById('dashboardBtn');
+            
+            if (dashboardDropdown && dashboardBtn) {
+                dashboardBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    dashboardDropdown.classList.toggle('open');
+                    // Close profile modal if open
+                    if (profileModal.classList.contains('show')) {
+                        profileModal.classList.remove('show');
+                    }
+                    // Close user management dropdown if open
+                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                        userMgmtDropdown.classList.remove('open');
+                    }
+                });
+            }
+            
             // Desktop dropdown for User Management
             const userMgmtDropdown = document.getElementById('userMgmtDropdown');
             const userMgmtBtn = document.getElementById('userMgmtBtn');
@@ -755,6 +871,22 @@ if (isset($_SESSION['user_id'])) {
                     if (profileModal.classList.contains('show')) {
                         profileModal.classList.remove('show');
                     }
+                    // Close dashboard dropdown if open
+                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                        dashboardDropdown.classList.remove('open');
+                    }
+                });
+            }
+            
+            // Mobile submenu for Dashboard
+            const mobileDashboardParent = document.getElementById('mobileDashboardParent');
+            const mobileDashboardSubmenu = document.getElementById('mobileDashboardSubmenu');
+            
+            if (mobileDashboardParent && mobileDashboardSubmenu) {
+                mobileDashboardParent.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('open');
+                    mobileDashboardSubmenu.classList.toggle('show');
                 });
             }
             
@@ -775,7 +907,10 @@ if (isset($_SESSION['user_id'])) {
                 profileButton.addEventListener('click', function(e) {
                     e.stopPropagation();
                     profileModal.classList.toggle('show');
-                    // Close desktop dropdown if open
+                    // Close desktop dropdowns if open
+                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                        dashboardDropdown.classList.remove('open');
+                    }
                     if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
                         userMgmtDropdown.classList.remove('open');
                     }
@@ -795,7 +930,10 @@ if (isset($_SESSION['user_id'])) {
                     if (profileModal.classList.contains('show')) {
                         profileModal.classList.remove('show');
                     }
-                    // Close desktop dropdown if open
+                    // Close desktop dropdowns if open
+                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                        dashboardDropdown.classList.remove('open');
+                    }
                     if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
                         userMgmtDropdown.classList.remove('open');
                     }
@@ -815,7 +953,11 @@ if (isset($_SESSION['user_id'])) {
                 if (profileButton && !profileButton.contains(e.target) && profileModal && !profileModal.contains(e.target)) {
                     profileModal.classList.remove('show');
                 }
-                // Close desktop dropdown
+                // Close desktop dashboard dropdown
+                if (dashboardDropdown && dashboardBtn && !dashboardBtn.contains(e.target) && !dashboardDropdown.contains(e.target)) {
+                    dashboardDropdown.classList.remove('open');
+                }
+                // Close desktop user management dropdown
                 if (userMgmtDropdown && userMgmtBtn && !userMgmtBtn.contains(e.target) && !userMgmtDropdown.contains(e.target)) {
                     userMgmtDropdown.classList.remove('open');
                 }
