@@ -43,9 +43,10 @@ $categories[] = [
     'group' => 'main'
 ];
 
+// First, get all enabled items ordered by display_order
 $sql = "SELECT * FROM nav_categories 
         WHERE is_enable = 1 
-        ORDER BY group_name, parent_id, display_order";
+        ORDER BY display_order ASC, parent_id ASC";
 
 $result = mysqli_query($conn, $sql);
 
@@ -54,56 +55,74 @@ while ($row = mysqli_fetch_assoc($result)) {
     $data[] = $row;
 }
 
-$indexed = [];
-foreach ($data as $row) {
-    $indexed[$row['cid']] = $row;
-}
+// Separate top-level items and children
+$top_level_items = [];
+$children_items = [];
 
 foreach ($data as $row) {
-
-    // Top level items
     if (is_null($row['parent_id'])) {
-
-        if ($row['type'] == 'group') {
-
-            $groupItem = [
-                'label' => $row['label_name'],
-                'value' => $row['value_name'],
-                'group' => $row['group_name'],
-                'is_group' => true,
-                'children' => []
-            ];
-
-            // find children
-            foreach ($data as $child) {
-                if ($child['parent_id'] == $row['cid']) {
-
-                    $childItem = [
-                        'label' => $child['label_name'],
-                        'value' => $child['value_name']
-                    ];
-
-                    if ($child['type'] == 'link') {
-                        $childItem['type'] = 'link';
-                        $childItem['url'] = $child['url'];
-                    }
-
-                    $groupItem['children'][] = $childItem;
-                }
-            }
-
-            $categories[] = $groupItem;
-
-        } elseif ($row['type'] == 'category') {
-
-            $categories[] = [
-                'label' => $row['label_name'],
-                'value' => $row['value_name'],
-                'group' => $row['group_name']
-            ];
-        }
+        $top_level_items[] = $row;
+    } else {
+        $children_items[] = $row;
     }
 }
+
+// Sort top level items by display_order
+usort($top_level_items, function($a, $b) {
+    return ($a['display_order'] ?? 0) - ($b['display_order'] ?? 0);
+});
+
+// Process top level items in order
+foreach ($top_level_items as $row) {
+
+    if ($row['type'] == 'group') {
+
+        $groupItem = [
+            'label' => $row['label_name'],
+            'value' => $row['value_name'],
+            'group' => $row['group_name'],
+            'is_group' => true,
+            'children' => []
+        ];
+
+        // Find children for this group
+        foreach ($children_items as $child) {
+            if ($child['parent_id'] == $row['cid']) {
+                $childItem = [
+                    'label' => $child['label_name'],
+                    'value' => $child['value_name'],
+                    'display_order' => $child['display_order']
+                ];
+
+                if ($child['type'] == 'link') {
+                    $childItem['type'] = 'link';
+                    $childItem['url'] = $child['url'];
+                }
+
+                $groupItem['children'][] = $childItem;
+            }
+        }
+        
+        // Sort children by display_order
+        usort($groupItem['children'], function($a, $b) {
+            return ($a['display_order'] ?? 0) - ($b['display_order'] ?? 0);
+        });
+
+        $categories[] = $groupItem;
+
+    } elseif ($row['type'] == 'category') {
+
+        $categories[] = [
+            'label' => $row['label_name'],
+            'value' => $row['value_name'],
+            'group' => $row['group_name']
+        ];
+    }
+}
+
+// Debug: Log categories
+error_log("Categories: " . print_r($categories, true));
+
 echo "<script>";
 echo "console.log(" . json_encode($categories) . ");";
 echo "</script>";
@@ -744,15 +763,16 @@ error_log("All real categories: " . print_r($all_real_categories, true));
             <?php foreach ($categories as $index => $category): ?>
                 <?php if (isset($category['is_group']) && $category['is_group']): ?>
                     <!-- Grouped Category with Dropdown Toggle -->
-                    <button class="category-dropdown-toggle <?php echo $index === 1 ? 'active' : ''; ?>" 
+                    <button class="category-dropdown-toggle" 
                             data-category="<?php echo htmlspecialchars($category['value']); ?>"
+                            data-group-value="<?php echo htmlspecialchars($category['value']); ?>"
                             id="dropdown-toggle-<?php echo htmlspecialchars($category['value']); ?>">
                         <?php echo htmlspecialchars($category['label']); ?>
                     </button>
                 <?php else: ?>
                     <!-- Regular Category Link -->
                     <a href="javascript:void(0);" 
-                       class="category-link <?php echo $index === 0 ? 'active' : ''; ?>" 
+                       class="category-link <?php echo $category['value'] === 'home' ? 'active' : ''; ?>" 
                        data-category="<?php echo htmlspecialchars($category['value']); ?>">
                         <?php echo htmlspecialchars($category['label']); ?>
                     </a>
@@ -787,8 +807,9 @@ error_log("All real categories: " . print_r($all_real_categories, true));
                     <!-- Mobile Grouped Category with Submenu -->
                     <div class="mobile-category-item">
                         <a href="javascript:void(0);" 
-                           class="mobile-category-main mobile-category-toggle <?php echo $index === 1 ? 'active' : ''; ?>"
+                           class="mobile-category-main mobile-category-toggle"
                            data-category="<?php echo htmlspecialchars($category['value']); ?>"
+                           data-group-value="<?php echo htmlspecialchars($category['value']); ?>"
                            data-toggle="submenu">
                             <?php echo htmlspecialchars($category['label']); ?>
                         </a>
@@ -796,7 +817,8 @@ error_log("All real categories: " . print_r($all_real_categories, true));
                             <?php foreach ($category['children'] as $child): ?>
                                 <?php if (isset($child['type']) && $child['type'] === 'link'): ?>
                                     <a href="<?php echo htmlspecialchars($child['url']); ?>" 
-                                       class="mobile-submenu-item link-item">
+                                       class="mobile-submenu-item link-item"
+                                       <?php echo (preg_match('/^https?:\/\//', $child['url'])) ? 'target="_blank" rel="noopener noreferrer"' : ''; ?>>
                                         <?php echo htmlspecialchars($child['label']); ?>
                                     </a>
                                 <?php else: ?>
@@ -812,7 +834,7 @@ error_log("All real categories: " . print_r($all_real_categories, true));
                 <?php else: ?>
                     <!-- Mobile Regular Category Link -->
                     <a href="javascript:void(0);" 
-                       class="mobile-category-main <?php echo $index === 0 ? 'active' : ''; ?>" 
+                       class="mobile-category-main <?php echo $category['value'] === 'home' ? 'active' : ''; ?>" 
                        data-category="<?php echo htmlspecialchars($category['value']); ?>">
                         <?php echo htmlspecialchars($category['label']); ?>
                     </a>
@@ -826,30 +848,34 @@ error_log("All real categories: " . print_r($all_real_categories, true));
     </div>
 </div>
 
-<!-- SEPARATE DROPDOWN LAYER (outside fixed navbar) -->
+<!-- DYNAMIC DROPDOWN LAYERS FOR ALL GROUPS -->
 <div class="dropdown-wrapper" id="dropdownWrapper">
-    <div class="category-dropdown-menu" id="amrutAboutDropdown">
-        <?php 
-        // Find the "अमृत विषयी" group
-        foreach ($categories as $category):
-            if (isset($category['is_group']) && $category['value'] === 'amrut_about_group'): 
-        ?>
-            <?php foreach ($category['children'] as $child): ?>
-                <?php if (isset($child['type']) && $child['type'] === 'link'): ?>
-                    <a href="<?php echo htmlspecialchars($child['url']); ?>" 
-                       class="dropdown-item link-item">
-                        <?php echo htmlspecialchars($child['label']); ?>
-                    </a>
-                <?php else: ?>
-                    <a href="javascript:void(0);" 
-                       class="dropdown-item" 
-                       data-category="<?php echo htmlspecialchars($child['value']); ?>">
-                        <?php echo htmlspecialchars($child['label']); ?>
-                    </a>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        <?php endif; endforeach; ?>
-    </div>
+    <?php foreach ($categories as $category): ?>
+        <?php if (isset($category['is_group']) && $category['is_group']): ?>
+            <div class="category-dropdown-menu" id="dropdown-<?php echo htmlspecialchars($category['value']); ?>">
+                <?php foreach ($category['children'] as $child): ?>
+                    <?php if (isset($child['type']) && $child['type'] === 'link'): ?>
+                        <?php 
+                        $url = $child['url'];
+                        $is_external = preg_match('/^https?:\/\//', $url);
+                        $target_attr = $is_external ? 'target="_blank" rel="noopener noreferrer"' : '';
+                        ?>
+                        <a href="<?php echo htmlspecialchars($url); ?>" 
+                           class="dropdown-item link-item"
+                           <?php echo $target_attr; ?>>
+                            <?php echo htmlspecialchars($child['label']); ?>
+                        </a>
+                    <?php else: ?>
+                        <a href="javascript:void(0);" 
+                           class="dropdown-item" 
+                           data-category="<?php echo htmlspecialchars($child['value']); ?>">
+                            <?php echo htmlspecialchars($child['label']); ?>
+                        </a>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    <?php endforeach; ?>
 </div>
 
 <main class="container mt-4">
@@ -873,34 +899,34 @@ const originalCategories = <?php echo json_encode($categories); ?>;
 // Debug: Check what's in allRealCategories
 console.log('All REAL Categories (including group children):', allRealCategories);
 
-// Store dropdown position
-let currentDropdown = null;
+// Store current dropdown information
+let currentDropdownId = null;
+let currentDropdownButton = null;
 let dropdownToggleRect = null;
 
 // Function to update dropdown position
-function updateDropdownPosition() {
-    if (currentDropdown && dropdownToggleRect) {
-        const dropdownMenu = document.getElementById('amrutAboutDropdown');
-        if (dropdownMenu) {
-            // Get the container
-            const container = document.querySelector('.container-fluid.px-3');
-            const containerRect = container.getBoundingClientRect();
-            
-            // Calculate position
-            const toggleCenter = dropdownToggleRect.left + (dropdownToggleRect.width / 2);
-            const dropdownWidth = 250; // Width from CSS
-            
-            let leftPosition = toggleCenter - (dropdownWidth / 2);
-            
-            // Ensure dropdown stays within viewport
-            const minLeft = containerRect.left + 15;
-            const maxLeft = containerRect.right - dropdownWidth - 15;
-            
-            leftPosition = Math.max(minLeft, Math.min(leftPosition, maxLeft));
-            
-            // Apply position
-            dropdownMenu.style.left = (leftPosition - containerRect.left) + 'px';
-        }
+function updateDropdownPosition(dropdownId, toggleButton) {
+    const dropdownMenu = document.getElementById(dropdownId);
+    if (dropdownMenu && toggleButton) {
+        // Get the container
+        const container = document.querySelector('.container-fluid.px-3');
+        const containerRect = container.getBoundingClientRect();
+        const buttonRect = toggleButton.getBoundingClientRect();
+        
+        // Calculate position
+        const toggleCenter = buttonRect.left + (buttonRect.width / 2);
+        const dropdownWidth = 250; // Width from CSS
+        
+        let leftPosition = toggleCenter - (dropdownWidth / 2);
+        
+        // Ensure dropdown stays within viewport
+        const minLeft = containerRect.left + 15;
+        const maxLeft = containerRect.right - dropdownWidth - 15;
+        
+        leftPosition = Math.max(minLeft, Math.min(leftPosition, maxLeft));
+        
+        // Apply position
+        dropdownMenu.style.left = (leftPosition - containerRect.left) + 'px';
     }
 }
 
@@ -912,12 +938,6 @@ function scrollToCategorySection(categoryValue) {
     if (categoryValue === 'home') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return true;
-    }
-    
-    // Check if this is a group (not a real category)
-    if (categoryValue === 'amrut_about_group') {
-        console.log('This is a group, not a category. Opening dropdown instead.');
-        return false;
     }
     
     // Find the category in allRealCategories
@@ -978,12 +998,10 @@ function filterNews(categoryValue, marathiLabel = '', event = null) {
     
     console.log('filterNews called for category:', categoryValue, 'Label:', marathiLabel);
     
-    // If this is the group toggle, just open/close dropdown
-    if (categoryValue === 'amrut_about_group') {
-        const toggleButton = document.querySelector('.category-dropdown-toggle[data-category="amrut_about_group"]');
-        if (toggleButton) {
-            toggleDropdown(toggleButton);
-        }
+    // Check if this is a group (has a dropdown)
+    const groupButton = document.querySelector(`.category-dropdown-toggle[data-category="${categoryValue}"]`);
+    if (groupButton) {
+        toggleDropdown(groupButton);
         return false;
     }
     
@@ -1003,13 +1021,13 @@ function filterNews(categoryValue, marathiLabel = '', event = null) {
     // Try to scroll to the section
     const scrolled = scrollToCategorySection(categoryValue);
     
-    if (!scrolled && categoryValue !== 'amrut_about_group') {
+    if (!scrolled) {
         console.warn('Initial scroll failed for category:', categoryValue);
         
         // Try again after a short delay
         setTimeout(() => {
             const retryScrolled = scrollToCategorySection(categoryValue);
-            if (!retryScrolled && categoryValue !== 'amrut_about_group') {
+            if (!retryScrolled) {
                 console.error('Failed to scroll to category after retry:', categoryValue);
             }
         }, 300);
@@ -1033,12 +1051,10 @@ function updateActiveCategory(categoryValue) {
         element.classList.remove('active');
     });
     
-    // If it's a group, activate the group toggle
-    if (categoryValue === 'amrut_about_group') {
-        const groupToggle = document.querySelector('.category-dropdown-toggle[data-category="amrut_about_group"]');
-        if (groupToggle) {
-            groupToggle.classList.add('active');
-        }
+    // Check if it's a group
+    const groupToggle = document.querySelector(`.category-dropdown-toggle[data-category="${categoryValue}"]`);
+    if (groupToggle) {
+        groupToggle.classList.add('active');
         return;
     }
     
@@ -1054,9 +1070,9 @@ function updateActiveCategory(categoryValue) {
             const isChild = category.children.some(child => child.value === categoryValue);
             if (isChild) {
                 // Activate the parent group toggle (desktop)
-                const groupToggle = document.querySelector(`.category-dropdown-toggle[data-category="${category.value}"]`);
-                if (groupToggle) {
-                    groupToggle.classList.add('active');
+                const groupToggleDesktop = document.querySelector(`.category-dropdown-toggle[data-category="${category.value}"]`);
+                if (groupToggleDesktop) {
+                    groupToggleDesktop.classList.add('active');
                 }
                 
                 // Also activate mobile group toggle
@@ -1072,11 +1088,21 @@ function updateActiveCategory(categoryValue) {
 
 // Function to toggle dropdown
 function toggleDropdown(toggleButton) {
-    const dropdownMenu = document.getElementById('amrutAboutDropdown');
+    const groupValue = toggleButton.getAttribute('data-group-value') || toggleButton.getAttribute('data-category');
+    const dropdownId = `dropdown-${groupValue}`;
+    const dropdownMenu = document.getElementById(dropdownId);
     
-    if (dropdownMenu.classList.contains('show')) {
+    if (!dropdownMenu) {
+        console.warn('Dropdown menu not found for:', dropdownId);
+        return;
+    }
+    
+    if (currentDropdownId === dropdownId && dropdownMenu.classList.contains('show')) {
         closeDropdown();
     } else {
+        // Close any open dropdown first
+        closeDropdown();
+        
         // Close mobile menu if open
         const mobileMenu = document.getElementById('mobileCategoriesMenu');
         const mobileToggle = document.getElementById('mobileCategoriesToggle');
@@ -1085,36 +1111,46 @@ function toggleDropdown(toggleButton) {
             mobileToggle.classList.remove('active');
         }
         
-        // Set current dropdown and get position
-        currentDropdown = toggleButton;
+        // Set current dropdown info
+        currentDropdownId = dropdownId;
+        currentDropdownButton = toggleButton;
         dropdownToggleRect = toggleButton.getBoundingClientRect();
         
         // Update position and show
-        updateDropdownPosition();
+        updateDropdownPosition(dropdownId, toggleButton);
         dropdownMenu.classList.add('show');
         toggleButton.classList.add('active');
         
         // Add resize and scroll listeners
-        window.addEventListener('resize', updateDropdownPosition);
-        window.addEventListener('scroll', updateDropdownPosition);
+        const updatePositionHandler = () => updateDropdownPosition(dropdownId, currentDropdownButton);
+        window.addEventListener('resize', updatePositionHandler);
+        window.addEventListener('scroll', updatePositionHandler);
+        
+        // Store handler for removal
+        dropdownMenu.updatePositionHandler = updatePositionHandler;
     }
 }
 
 // Function to close dropdown
 function closeDropdown() {
-    const dropdownMenu = document.getElementById('amrutAboutDropdown');
-    dropdownMenu.classList.remove('show');
+    if (currentDropdownId) {
+        const dropdownMenu = document.getElementById(currentDropdownId);
+        if (dropdownMenu) {
+            dropdownMenu.classList.remove('show');
+            if (dropdownMenu.updatePositionHandler) {
+                window.removeEventListener('resize', dropdownMenu.updatePositionHandler);
+                window.removeEventListener('scroll', dropdownMenu.updatePositionHandler);
+            }
+        }
+    }
     
     document.querySelectorAll('.category-dropdown-toggle').forEach(toggle => {
         toggle.classList.remove('active');
     });
     
-    currentDropdown = null;
+    currentDropdownId = null;
+    currentDropdownButton = null;
     dropdownToggleRect = null;
-    
-    // Remove listeners
-    window.removeEventListener('resize', updateDropdownPosition);
-    window.removeEventListener('scroll', updateDropdownPosition);
 }
 
 function goToContact(event) {
@@ -1195,16 +1231,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle dropdown toggle click (for the group)
+    // Handle dropdown toggle click for ALL groups
     document.querySelectorAll('.category-dropdown-toggle').forEach(toggle => {
         toggle.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            const categoryValue = this.getAttribute('data-category');
-            
-            if (categoryValue === 'amrut_about_group') {
-                toggleDropdown(this);
-            }
+            toggleDropdown(this);
         });
     });
     
