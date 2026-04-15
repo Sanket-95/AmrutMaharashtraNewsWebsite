@@ -128,6 +128,89 @@
         color: #ff6600;
     }
     
+    /* Advertisement Dropdown Styles */
+    .ad-dropdown {
+        position: relative;
+    }
+    
+    .ad-btn {
+        background: white;
+        color: #ff6600;
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    
+    .ad-btn:hover {
+        background: #fff5e6;
+        transform: translateY(-1px);
+    }
+    
+    .ad-btn i:last-child {
+        font-size: 12px;
+        transition: transform 0.3s ease;
+    }
+    
+    .ad-dropdown.open .ad-btn i:last-child {
+        transform: rotate(180deg);
+    }
+    
+    .ad-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+        min-width: 200px;
+        z-index: 1000;
+        margin-top: 5px;
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .ad-dropdown.open .ad-dropdown-menu {
+        display: block;
+    }
+    
+    .ad-dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        text-decoration: none;
+        color: #333;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .ad-dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    .ad-dropdown-item:hover {
+        background: #fff5e6;
+        color: #ff6600;
+    }
+    
+    .ad-dropdown-item i {
+        font-size: 16px;
+        width: 20px;
+        color: #ff6600;
+    }
+    
     .profile-container {
         position: relative;
     }
@@ -445,7 +528,7 @@
             padding: 0 12px;
         }
         
-        .news-btn, .dashboard-btn, .user-mgmt-btn {
+        .news-btn, .dashboard-btn, .ad-btn, .user-mgmt-btn {
             padding: 5px 12px;
             font-size: 13px;
         }
@@ -455,7 +538,8 @@
         }
         
         .dropdown-menu,
-        .dashboard-dropdown-menu {
+        .dashboard-dropdown-menu,
+        .ad-dropdown-menu {
             min-width: 180px;
         }
     }
@@ -490,16 +574,16 @@
     }
     
     @media (max-width: 480px) {
-        .news-btn span, .dashboard-btn span, .user-mgmt-btn span {
+        .news-btn span, .dashboard-btn span, .ad-btn span, .user-mgmt-btn span {
             display: none;
         }
         
-        .news-btn i, .dashboard-btn i, .user-mgmt-btn i {
+        .news-btn i, .dashboard-btn i, .ad-btn i, .user-mgmt-btn i {
             font-size: 16px;
             margin: 0;
         }
         
-        .news-btn, .dashboard-btn, .user-mgmt-btn {
+        .news-btn, .dashboard-btn, .ad-btn, .user-mgmt-btn {
             padding: 6px 10px;
         }
         
@@ -514,7 +598,8 @@
         }
         
         .dropdown-menu,
-        .dashboard-dropdown-menu {
+        .dashboard-dropdown-menu,
+        .ad-dropdown-menu {
             right: 0;
             left: auto;
         }
@@ -546,6 +631,9 @@ if (isset($_SESSION['user_id'])) {
     
     // Check if any dashboard items are visible
     $show_dashboard_dropdown = ($has_dashboard_access || $has_ads_analytics_access);
+    
+    // Check if user has access to advertisement section (Super Admin only)
+    $has_ad_access = ($user_roll === 'Super Admin');
     ?>
     
     <div class="login-navbar">
@@ -626,11 +714,25 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                     <?php endif; ?>
 
-                    <?php if ($user_roll === 'Super Admin'): ?>
-                    <a href="advertisement_post.php" class="dashboard-btn">
-                        <i class="bi bi-megaphone"></i>
-                        <span>जाहिरात</span>
-                    </a>
+                    <!-- Advertisement Dropdown (for Super Admin only) -->
+                    <?php if ($has_ad_access): ?>
+                    <div class="ad-dropdown" id="adDropdown">
+                        <button class="ad-btn" id="adBtn">
+                            <i class="bi bi-megaphone"></i>
+                            <span>जाहिरात</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="ad-dropdown-menu">
+                            <a href="advertisement_post.php" class="ad-dropdown-item">
+                                <i class="bi bi-plus-circle"></i>
+                                <span>जाहिरात पोस्टिंग</span>
+                            </a>
+                            <a href="social_media_ads_gallery.php" class="ad-dropdown-item">
+                                <i class="bi bi-images"></i>
+                                <span>जाहिरात प्रतिमा गॅलरी</span>
+                            </a>
+                        </div>
+                    </div>
                     <?php endif; ?>
                     
                     <!-- User Management Dropdown (for Super Admin) -->
@@ -648,7 +750,7 @@ if (isset($_SESSION['user_id'])) {
                             </a>
                             <a href="division_management.php" class="dropdown-item">
                                 <i class="bi bi-diagram-3"></i>
-                                <span>राज्य व्यवस्थापन</span>
+                                <span>विभाग व्यवस्थापन</span>
                             </a>
                             <a href="district_management.php" class="dropdown-item">
                                 <i class="bi bi-geo-alt"></i>
@@ -787,11 +889,27 @@ if (isset($_SESSION['user_id'])) {
             </div>
             <?php endif; ?>
 
-            <?php if ($user_roll === 'Super Admin'): ?>
-            <a href="advertisement_post.php" class="mobile-menu-item">
-                <i class="bi bi-megaphone"></i>
-                <span>जाहिरात</span>
-            </a>
+            <!-- Mobile Advertisement Dropdown (for Super Admin only) -->
+            <?php if ($has_ad_access): ?>
+            <div class="mobile-menu-parent mobile-menu-item" id="mobileAdParent">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bi bi-megaphone"></i>
+                        <span>जाहिरात</span>
+                    </span>
+                    <i class="bi bi-chevron-down arrow-icon"></i>
+                </div>
+            </div>
+            <div class="mobile-submenu" id="mobileAdSubmenu">
+                <a href="advertisement_post.php" class="mobile-submenu-item">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>जाहिरात पोस्टिंग</span>
+                </a>
+                <a href="social_media_ads_gallery.php" class="mobile-submenu-item">
+                    <i class="bi bi-images"></i>
+                    <span>जाहिरात प्रतिमा गॅलरी</span>
+                </a>
+            </div>
             <?php endif; ?>
             
             <!-- Mobile User Management with Submenu (for Super Admin) -->
@@ -812,7 +930,7 @@ if (isset($_SESSION['user_id'])) {
                 </a>
                 <a href="division_management.php" class="mobile-submenu-item">
                     <i class="bi bi-diagram-3"></i>
-                    <span>राज्य व्यवस्थापन</span>
+                    <span>विभाग व्यवस्थापन</span>
                 </a>
                 <a href="district_management.php" class="mobile-submenu-item">
                     <i class="bi bi-geo-alt"></i>
@@ -852,7 +970,32 @@ if (isset($_SESSION['user_id'])) {
                     if (profileModal.classList.contains('show')) {
                         profileModal.classList.remove('show');
                     }
-                    // Close user management dropdown if open
+                    // Close other dropdowns
+                    if (adDropdown && adDropdown.classList.contains('open')) {
+                        adDropdown.classList.remove('open');
+                    }
+                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                        userMgmtDropdown.classList.remove('open');
+                    }
+                });
+            }
+            
+            // Desktop dropdown for Advertisement
+            const adDropdown = document.getElementById('adDropdown');
+            const adBtn = document.getElementById('adBtn');
+            
+            if (adDropdown && adBtn) {
+                adBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    adDropdown.classList.toggle('open');
+                    // Close profile modal if open
+                    if (profileModal.classList.contains('show')) {
+                        profileModal.classList.remove('show');
+                    }
+                    // Close other dropdowns
+                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                        dashboardDropdown.classList.remove('open');
+                    }
                     if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
                         userMgmtDropdown.classList.remove('open');
                     }
@@ -871,9 +1014,12 @@ if (isset($_SESSION['user_id'])) {
                     if (profileModal.classList.contains('show')) {
                         profileModal.classList.remove('show');
                     }
-                    // Close dashboard dropdown if open
+                    // Close other dropdowns
                     if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
                         dashboardDropdown.classList.remove('open');
+                    }
+                    if (adDropdown && adDropdown.classList.contains('open')) {
+                        adDropdown.classList.remove('open');
                     }
                 });
             }
@@ -887,6 +1033,18 @@ if (isset($_SESSION['user_id'])) {
                     e.stopPropagation();
                     this.classList.toggle('open');
                     mobileDashboardSubmenu.classList.toggle('show');
+                });
+            }
+            
+            // Mobile submenu for Advertisement
+            const mobileAdParent = document.getElementById('mobileAdParent');
+            const mobileAdSubmenu = document.getElementById('mobileAdSubmenu');
+            
+            if (mobileAdParent && mobileAdSubmenu) {
+                mobileAdParent.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    this.classList.toggle('open');
+                    mobileAdSubmenu.classList.toggle('show');
                 });
             }
             
@@ -911,6 +1069,9 @@ if (isset($_SESSION['user_id'])) {
                     if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
                         dashboardDropdown.classList.remove('open');
                     }
+                    if (adDropdown && adDropdown.classList.contains('open')) {
+                        adDropdown.classList.remove('open');
+                    }
                     if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
                         userMgmtDropdown.classList.remove('open');
                     }
@@ -934,6 +1095,9 @@ if (isset($_SESSION['user_id'])) {
                     if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
                         dashboardDropdown.classList.remove('open');
                     }
+                    if (adDropdown && adDropdown.classList.contains('open')) {
+                        adDropdown.classList.remove('open');
+                    }
                     if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
                         userMgmtDropdown.classList.remove('open');
                     }
@@ -956,6 +1120,10 @@ if (isset($_SESSION['user_id'])) {
                 // Close desktop dashboard dropdown
                 if (dashboardDropdown && dashboardBtn && !dashboardBtn.contains(e.target) && !dashboardDropdown.contains(e.target)) {
                     dashboardDropdown.classList.remove('open');
+                }
+                // Close desktop advertisement dropdown
+                if (adDropdown && adBtn && !adBtn.contains(e.target) && !adDropdown.contains(e.target)) {
+                    adDropdown.classList.remove('open');
                 }
                 // Close desktop user management dropdown
                 if (userMgmtDropdown && userMgmtBtn && !userMgmtBtn.contains(e.target) && !userMgmtDropdown.contains(e.target)) {
