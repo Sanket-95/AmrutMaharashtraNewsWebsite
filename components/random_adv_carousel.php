@@ -103,7 +103,7 @@ $default_image = 'photos/noimg.jpeg';
     animation-play-state: paused;
 }
 
-/* Card Styles */
+/* Card Styles - FIXED HEIGHT & WIDTH, NO CROPPING */
 .ad-scroll-card {
     flex: 0 0 auto;
     width: 300px;
@@ -123,62 +123,33 @@ $default_image = 'photos/noimg.jpeg';
     text-decoration: none;
 }
 
-/* Card Image */
+/* Card Image - FIXED HEIGHT, CONTAIN TO PREVENT CROPPING */
 .scroll-card-image {
     width: 100%;
-    height: 180px;
+    height: 200px;
     background-color: #f8f9fa;
     display: flex;
     align-items: center;
     justify-content: center;
+    text-align: center;
     overflow: hidden;
 }
 
 .scroll-card-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.5s ease;
+    background-color: #f8f9fa;
 }
 
 .ad-scroll-card:hover .scroll-card-image img {
-    transform: scale(1.05);
+    transform: scale(1.02);
 }
 
-/* Card Content */
+/* No content section - hidden */
 .scroll-card-content {
-    padding: 15px;
-    text-align: center;
-}
-
-.scroll-card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #2c3e50;
-    line-height: 1.4;
-    margin-bottom: 5px;
-    font-family: 'Mukta', sans-serif;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.scroll-card-link {
-    display: inline-block;
-    background: #ff6600;
-    color: white;
-    padding: 5px 15px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 500;
-    margin-top: 8px;
-    text-decoration: none;
-}
-
-.scroll-card-link:hover {
-    background: #e05500;
-    color: white;
+    display: none;
 }
 
 /* Animation - Right to Left */
@@ -196,12 +167,18 @@ $default_image = 'photos/noimg.jpeg';
     .ad-scroll-card {
         width: 320px;
     }
+    .scroll-card-image {
+        height: 220px;
+    }
 }
 
 /* Tablet: 2 cards */
 @media (min-width: 768px) and (max-width: 991px) {
     .ad-scroll-card {
         width: 280px;
+    }
+    .scroll-card-image {
+        height: 190px;
     }
 }
 
@@ -210,13 +187,8 @@ $default_image = 'photos/noimg.jpeg';
     .ad-scroll-card {
         width: 260px;
     }
-    
     .scroll-card-image {
-        height: 150px;
-    }
-    
-    .scroll-card-title {
-        font-size: 13px;
+        height: 170px;
     }
     
     .ad-carousel-title-section h3 {
@@ -230,6 +202,16 @@ $default_image = 'photos/noimg.jpeg';
     .ad-carousel {
         margin: 20px 0;
         padding: 15px 0;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+    .ad-scroll-card {
+        width: 240px;
+    }
+    .scroll-card-image {
+        height: 150px;
     }
 }
 
@@ -283,12 +265,6 @@ $default_image = 'photos/noimg.jpeg';
                              loading="lazy"
                              onerror="this.src='<?php echo $default_image; ?>'; this.onerror=null;">
                     </div>
-                    <div class="scroll-card-content">
-                        <div class="scroll-card-title">
-                            <?php echo htmlspecialchars(mb_substr($ad['alt'], 0, 60)) . (mb_strlen($ad['alt']) > 60 ? '...' : ''); ?>
-                        </div>
-                        <span class="scroll-card-link">तपशीलासाठी क्लिक करा →</span>
-                    </div>
                 </a>
             <?php endforeach; ?>
             
@@ -303,12 +279,6 @@ $default_image = 'photos/noimg.jpeg';
                              alt="<?php echo htmlspecialchars($ad['alt']); ?>"
                              loading="lazy"
                              onerror="this.src='<?php echo $default_image; ?>'; this.onerror=null;">
-                    </div>
-                    <div class="scroll-card-content">
-                        <div class="scroll-card-title">
-                            <?php echo htmlspecialchars(mb_substr($ad['alt'], 0, 60)) . (mb_strlen($ad['alt']) > 60 ? '...' : ''); ?>
-                        </div>
-                        <span class="scroll-card-link">तपशीलासाठी क्लिक करा →</span>
                     </div>
                 </a>
             <?php endforeach; ?>
