@@ -731,6 +731,11 @@ $show_search = ($current_script === 'index.php');
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                  alt="National Emblem of India" 
                                  class="emblem-logo img-fluid">
+
+
+                                 <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                 alt="National Emblem of India" 
+                                 class="emblem-logo img-fluid"> -->
                             <h2 class="main-heading mb-0">
                                 महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
                             </h2>
@@ -740,9 +745,13 @@ $show_search = ($current_script === 'index.php');
                         <div class="d-md-none mobile-heading-wrapper">
                             <!-- First line: Logo + Main text combined -->
                             <div class="mobile-first-row">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                      alt="National Emblem of India" 
-                                     class="emblem-logo img-fluid">
+                                     class="emblem-logo img-fluid"> -->
+
+                                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                 alt="National Emblem of India" 
+                                 class="emblem-logo img-fluid">
                                 <div class="mobile-heading-line-2">
                                     महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span>
                                 </div>
