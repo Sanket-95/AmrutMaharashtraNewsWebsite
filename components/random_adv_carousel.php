@@ -1,61 +1,45 @@
 <?php
-// components/random_news_carousel.php
-// Random news carousel - horizontal infinite scrolling
+// components/ad_carousel.php
+// Horizontal scrolling carousel for ads (replaces popup ad)
 
-// Get 10 random approved news articles
-$random_news_query = "SELECT 
-    news_id,
-    title,
-    cover_photo_url,
-    category_name,
-    published_date,
-    summary
-FROM news_articles 
-WHERE is_approved = 1 
-AND '$current_date' BETWEEN start_date AND end_date
-ORDER BY RAND() 
-LIMIT 10";
+// Base path for ad images
+$base_primary = "components/primary_advertised/";
 
-$random_news_result = $conn->query($random_news_query);
+$current_date = date('Y-m-d');
 
-$random_news = [];
-if ($random_news_result && $random_news_result->num_rows > 0) {
-    while ($row = $random_news_result->fetch_assoc()) {
-        $random_news[] = $row;
+// Fetch MULTIPLE random active ads (LIMIT 10 instead of 1)
+$query_ads = "SELECT * FROM ads_management 
+              WHERE ad_type = 1
+              AND is_active = 1
+              AND '$current_date' BETWEEN start_date AND end_date
+              ORDER BY RAND()
+              LIMIT 10";
+
+$result_ads = mysqli_query($conn, $query_ads);
+
+$ads = [];
+
+if ($result_ads && mysqli_num_rows($result_ads) > 0) {
+    while ($row = mysqli_fetch_assoc($result_ads)) {
+        $ads[] = [
+            'image' => $base_primary . $row['image_name'],
+            'link'  => $row['ad_link'],
+            'alt'   => $row['ad_title']
+        ];
     }
 }
 
-// If less than 3 news, duplicate to have at least 3
-while (count($random_news) < 6) {
-    $random_news = array_merge($random_news, $random_news);
+// If no ads found, don't display anything
+if (empty($ads)) {
+    return;
 }
 
-// Marathi category mapping
-$marathi_categories = [
-    'Today special' => 'दिनविशेष',
-    'Amrut Events' => 'अमृत घडामोडी',
-    'Beneficiary Story' => 'लाभार्थी स्टोरी',
-    'Blog' => 'ब्लॉग',
-    'Successful Entrepreneur' => 'यशस्वी उद्योजक',
-    'Words Amrut' => 'शब्दामृत',
-    'Smart Farmer' => 'स्मार्ट शेतकरी',
-    'Capable Student' => 'सक्षम विद्यार्थी',
-    'Spirituality' => 'अध्यात्म',
-    'Social Situation' => 'सामाजिक परिस्थिती',
-    'Women Power' => 'स्त्रीशक्ती',
-    'Tourism' => 'पर्यटन',
-    'Amrut Service' => 'अमृत सेवा कार्य',
-    'News' => 'वार्ता',
-    'Articles' => 'लेख'
-];
-
-// Default image
 $default_image = 'photos/noimg.jpeg';
 ?>
 
 <style>
 /* Carousel Container */
-.random-news-carousel {
+.ad-carousel {
     width: 100%;
     overflow: hidden;
     background: linear-gradient(135deg, #fff8f0, #fff3e6);
@@ -66,13 +50,13 @@ $default_image = 'photos/noimg.jpeg';
     box-shadow: 0 5px 15px rgba(0,0,0,0.05);
 }
 
-.random-news-title-section {
+.ad-carousel-title-section {
     text-align: center;
     margin-bottom: 20px;
     padding: 0 20px;
 }
 
-.random-news-title-section h3 {
+.ad-carousel-title-section h3 {
     color: #ff6600;
     font-family: 'Khand', sans-serif;
     font-weight: 700;
@@ -82,7 +66,7 @@ $default_image = 'photos/noimg.jpeg';
     margin-bottom: 10px;
 }
 
-.random-news-title-section h3:after {
+.ad-carousel-title-section h3:after {
     content: '';
     position: absolute;
     bottom: -8px;
@@ -94,7 +78,7 @@ $default_image = 'photos/noimg.jpeg';
     border-radius: 2px;
 }
 
-.random-news-title-section p {
+.ad-carousel-title-section p {
     color: #666;
     font-size: 0.9rem;
     margin-top: 15px;
@@ -120,7 +104,7 @@ $default_image = 'photos/noimg.jpeg';
 }
 
 /* Card Styles */
-.news-scroll-card {
+.ad-scroll-card {
     flex: 0 0 auto;
     width: 300px;
     background: white;
@@ -133,9 +117,10 @@ $default_image = 'photos/noimg.jpeg';
     display: block;
 }
 
-.news-scroll-card:hover {
+.ad-scroll-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    text-decoration: none;
 }
 
 /* Card Image */
@@ -156,49 +141,44 @@ $default_image = 'photos/noimg.jpeg';
     transition: transform 0.5s ease;
 }
 
-.news-scroll-card:hover .scroll-card-image img {
+.ad-scroll-card:hover .scroll-card-image img {
     transform: scale(1.05);
 }
 
 /* Card Content */
 .scroll-card-content {
     padding: 15px;
+    text-align: center;
 }
 
 .scroll-card-title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: #2c3e50;
     line-height: 1.4;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
+    font-family: 'Mukta', sans-serif;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-family: 'Mukta', sans-serif;
 }
 
-.scroll-card-category {
+.scroll-card-link {
     display: inline-block;
     background: #ff6600;
     color: white;
-    padding: 3px 12px;
+    padding: 5px 15px;
     border-radius: 20px;
     font-size: 11px;
     font-weight: 500;
-    margin-bottom: 8px;
+    margin-top: 8px;
+    text-decoration: none;
 }
 
-.scroll-card-date {
-    font-size: 11px;
-    color: #999;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.scroll-card-date i {
-    font-size: 10px;
+.scroll-card-link:hover {
+    background: #e05500;
+    color: white;
 }
 
 /* Animation - Right to Left */
@@ -211,27 +191,23 @@ $default_image = 'photos/noimg.jpeg';
     }
 }
 
-/* Mobile: 1 card at a time */
-@media (max-width: 768px) {
-    .news-scroll-card {
-        width: 280px;
-    }
-    
-    .scroll-card-image {
-        height: 160px;
-    }
-    
-    .scroll-card-title {
-        font-size: 14px;
-    }
-    
-    .random-news-title-section h3 {
-        font-size: 1.4rem;
+/* Desktop: 3 cards */
+@media (min-width: 992px) {
+    .ad-scroll-card {
+        width: 320px;
     }
 }
 
-@media (max-width: 576px) {
-    .news-scroll-card {
+/* Tablet: 2 cards */
+@media (min-width: 768px) and (max-width: 991px) {
+    .ad-scroll-card {
+        width: 280px;
+    }
+}
+
+/* Mobile: 1 card */
+@media (max-width: 767px) {
+    .ad-scroll-card {
         width: 260px;
     }
     
@@ -239,19 +215,27 @@ $default_image = 'photos/noimg.jpeg';
         height: 150px;
     }
     
+    .scroll-card-title {
+        font-size: 13px;
+    }
+    
+    .ad-carousel-title-section h3 {
+        font-size: 1.4rem;
+    }
+    
     .scrolling-content {
         gap: 15px;
     }
     
-    .random-news-carousel {
+    .ad-carousel {
         margin: 20px 0;
         padding: 15px 0;
     }
 }
 
-/* Optional: Add gradient fade on edges for better visual */
-.random-news-carousel::before,
-.random-news-carousel::after {
+/* Edge fade effect */
+.ad-carousel::before,
+.ad-carousel::after {
     content: '';
     position: absolute;
     top: 0;
@@ -261,82 +245,70 @@ $default_image = 'photos/noimg.jpeg';
     pointer-events: none;
 }
 
-.random-news-carousel::before {
+.ad-carousel::before {
     left: 0;
     background: linear-gradient(to right, rgba(255,248,240,1), rgba(255,248,240,0));
 }
 
-.random-news-carousel::after {
+.ad-carousel::after {
     right: 0;
     background: linear-gradient(to left, rgba(255,248,240,1), rgba(255,248,240,0));
 }
 
-@media (max-width: 768px) {
-    .random-news-carousel::before,
-    .random-news-carousel::after {
+@media (max-width: 767px) {
+    .ad-carousel::before,
+    .ad-carousel::after {
         width: 30px;
     }
 }
 </style>
 
-<div class="random-news-carousel">
-    <div class="random-news-title-section">
-        <h3><i class="bi bi-newspaper"></i> ताज्या बातम्या</h3>
-        <p>इतर महत्त्वाच्या बातम्या वाचा</p>
+<div class="ad-carousel">
+    <div class="ad-carousel-title-section">
+        <h3><i class="bi bi-megaphone"></i> प्रायोजित जाहिराती</h3>
+        <p>विशेष प्रायोजित माहितीसाठी येथे क्लिक करा</p>
     </div>
     
     <div class="scrolling-wrapper">
         <div class="scrolling-content">
-            <!-- Duplicate news for infinite effect -->
-            <?php foreach ($random_news as $news): ?>
-                <a href="news.php?id=<?php echo $news['news_id']; ?>" class="news-scroll-card">
+            <!-- First set of ads -->
+            <?php foreach ($ads as $ad): ?>
+                <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                   class="ad-scroll-card"
+                   target="_blank" 
+                   rel="noopener noreferrer">
                     <div class="scroll-card-image">
-                        <?php 
-                        $img_url = !empty($news['cover_photo_url']) ? $news['cover_photo_url'] : $default_image;
-                        ?>
-                        <img src="<?php echo htmlspecialchars($img_url); ?>" 
-                             alt="<?php echo htmlspecialchars($news['title']); ?>"
+                        <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                             alt="<?php echo htmlspecialchars($ad['alt']); ?>"
                              loading="lazy"
-                             onerror="this.onerror=null; this.src='<?php echo $default_image; ?>';">
+                             onerror="this.src='<?php echo $default_image; ?>'; this.onerror=null;">
                     </div>
                     <div class="scroll-card-content">
-                        <span class="scroll-card-category">
-                            <?php echo $marathi_categories[$news['category_name']] ?? 'बातमी'; ?>
-                        </span>
-                        <h4 class="scroll-card-title">
-                            <?php echo htmlspecialchars(mb_substr($news['title'], 0, 60)) . (mb_strlen($news['title']) > 60 ? '...' : ''); ?>
-                        </h4>
-                        <div class="scroll-card-date">
-                            <i class="bi bi-calendar3"></i>
-                            <?php echo date('d-m-Y', strtotime($news['published_date'])); ?>
+                        <div class="scroll-card-title">
+                            <?php echo htmlspecialchars(mb_substr($ad['alt'], 0, 60)) . (mb_strlen($ad['alt']) > 60 ? '...' : ''); ?>
                         </div>
+                        <span class="scroll-card-link">तपशीलासाठी क्लिक करा →</span>
                     </div>
                 </a>
             <?php endforeach; ?>
             
             <!-- Duplicate for seamless infinite scrolling -->
-            <?php foreach ($random_news as $news): ?>
-                <a href="news.php?id=<?php echo $news['news_id']; ?>" class="news-scroll-card">
+            <?php foreach ($ads as $ad): ?>
+                <a href="<?php echo htmlspecialchars($ad['link']); ?>" 
+                   class="ad-scroll-card"
+                   target="_blank" 
+                   rel="noopener noreferrer">
                     <div class="scroll-card-image">
-                        <?php 
-                        $img_url = !empty($news['cover_photo_url']) ? $news['cover_photo_url'] : $default_image;
-                        ?>
-                        <img src="<?php echo htmlspecialchars($img_url); ?>" 
-                             alt="<?php echo htmlspecialchars($news['title']); ?>"
+                        <img src="<?php echo htmlspecialchars($ad['image']); ?>" 
+                             alt="<?php echo htmlspecialchars($ad['alt']); ?>"
                              loading="lazy"
-                             onerror="this.onerror=null; this.src='<?php echo $default_image; ?>';">
+                             onerror="this.src='<?php echo $default_image; ?>'; this.onerror=null;">
                     </div>
                     <div class="scroll-card-content">
-                        <span class="scroll-card-category">
-                            <?php echo $marathi_categories[$news['category_name']] ?? 'बातमी'; ?>
-                        </span>
-                        <h4 class="scroll-card-title">
-                            <?php echo htmlspecialchars(mb_substr($news['title'], 0, 60)) . (mb_strlen($news['title']) > 60 ? '...' : ''); ?>
-                        </h4>
-                        <div class="scroll-card-date">
-                            <i class="bi bi-calendar3"></i>
-                            <?php echo date('d-m-Y', strtotime($news['published_date'])); ?>
+                        <div class="scroll-card-title">
+                            <?php echo htmlspecialchars(mb_substr($ad['alt'], 0, 60)) . (mb_strlen($ad['alt']) > 60 ? '...' : ''); ?>
                         </div>
+                        <span class="scroll-card-link">तपशीलासाठी क्लिक करा →</span>
                     </div>
                 </a>
             <?php endforeach; ?>
