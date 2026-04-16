@@ -738,7 +738,7 @@ $show_search = ($current_script === 'index.php');
                                  class="emblem-logo img-fluid"> -->
 
 
-                                 <img src="components/assets/india.jpeg" 
+                                 <img src="components/assets/india_transperent.png" 
                                     alt="National Emblem of India" 
                                     class="emblem-logo img-fluid">
                             <h2 class="main-heading mb-0">
@@ -759,7 +759,7 @@ $show_search = ($current_script === 'index.php');
                                  class="emblem-logo img-fluid">
                                 <div class="mobile-heading-line-2"> -->
 
-                                <img src="components/assets/india.jpeg" 
+                                <img src="components/assets/india_transperent.png" 
                                 alt="National Emblem of India" 
                                 class="emblem-logo img-fluid">
 
