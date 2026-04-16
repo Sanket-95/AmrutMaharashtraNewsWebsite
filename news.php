@@ -5,7 +5,7 @@ session_start();
 // Database connection
 include 'components/db_config.php';
 include 'components/increment_views.php';
-include 'components/popup_ad.php';
+// include 'components/popup_ad.php';
 
 // Get news ID from URL
 $news_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -1798,6 +1798,10 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
                 </small>
             </div>
         </div>
+         
+        <!-- ========== RANDOM NEWS CAROUSEL COMPONENT ========== -->
+        <?php include 'components/random_adv_carousel.php'; ?>
+        <!-- ========== END RANDOM NEWS CAROUSEL ========== -->
 
         <!-- Comments Section -->
         <div class="comments-section">
