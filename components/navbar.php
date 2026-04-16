@@ -728,14 +728,19 @@ $show_search = ($current_script === 'index.php');
                     <div class="heading-container">
                         <!-- Desktop View with Logo -->
                         <div class="d-none d-md-flex align-items-center justify-content-center w-100">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                            <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                  alt="National Emblem of India" 
-                                 class="emblem-logo img-fluid">
+                                 class="emblem-logo img-fluid"> -->
 
 
                                  <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                  alt="National Emblem of India" 
                                  class="emblem-logo img-fluid"> -->
+
+
+                                 <img src="components/assets/india.jpeg" 
+                                    alt="National Emblem of India" 
+                                    class="emblem-logo img-fluid">
                             <h2 class="main-heading mb-0">
                                 महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span> - महाराष्ट्र शासनाची स्वायत्त संस्था
                             </h2>
@@ -749,10 +754,16 @@ $show_search = ($current_script === 'index.php');
                                      alt="National Emblem of India" 
                                      class="emblem-logo img-fluid"> -->
 
-                                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
+                                     <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/200px-Emblem_of_India.svg.png" 
                                  alt="National Emblem of India" 
                                  class="emblem-logo img-fluid">
-                                <div class="mobile-heading-line-2">
+                                <div class="mobile-heading-line-2"> -->
+
+                                <img src="components/assets/india.jpeg" 
+                                alt="National Emblem of India" 
+                                class="emblem-logo img-fluid">
+
+
                                     महाराष्ट्र संशोधन उन्नती व प्रशिक्षण प्रबोधिनी <span class="amrut-orange">(अमृत)</span>
                                 </div>
                             </div>
