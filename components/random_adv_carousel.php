@@ -43,7 +43,7 @@ $default_image = 'photos/noimg.jpeg';
     width: 100%;
     overflow: hidden;
     background: linear-gradient(135deg, #fff8f0, #fff3e6);
-    padding: 20px 0;
+    padding: 0;
     margin: 30px 0;
     border-radius: 15px;
     position: relative;
@@ -52,8 +52,8 @@ $default_image = 'photos/noimg.jpeg';
 
 .ad-carousel-title-section {
     text-align: center;
-    margin-bottom: 20px;
-    padding: 0 20px;
+    margin-bottom: 15px;
+    padding: 15px 20px 0 20px;
 }
 
 .ad-carousel-title-section h3 {
@@ -94,7 +94,7 @@ $default_image = 'photos/noimg.jpeg';
 .scrolling-content {
     display: flex;
     gap: 20px;
-    animation: scrollLeft 30s linear infinite;
+    animation: scrollLeft 35s linear infinite;
     width: fit-content;
 }
 
@@ -103,14 +103,14 @@ $default_image = 'photos/noimg.jpeg';
     animation-play-state: paused;
 }
 
-/* Card Styles - FIXED HEIGHT & WIDTH, NO CROPPING */
+/* Card Styles - LARGER SIZE */
 .ad-scroll-card {
     flex: 0 0 auto;
-    width: 300px;
+    width: 320px;
     background: white;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 3px 12px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     text-decoration: none;
     color: inherit;
@@ -119,14 +119,14 @@ $default_image = 'photos/noimg.jpeg';
 
 .ad-scroll-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    box-shadow: 0 15px 25px rgba(0,0,0,0.15);
     text-decoration: none;
 }
 
-/* Card Image - FIXED HEIGHT, CONTAIN TO PREVENT CROPPING */
+/* Card Image - PROPORTIONAL HEIGHT FOR 1500x600 RATIO (2.5:1) */
 .scroll-card-image {
     width: 100%;
-    height: 200px;
+    height: 128px;  /* 320 / 2.5 = 128 */
     background-color: #f8f9fa;
     display: flex;
     align-items: center;
@@ -162,33 +162,62 @@ $default_image = 'photos/noimg.jpeg';
     }
 }
 
-/* Desktop: 3 cards */
-@media (min-width: 992px) {
+/* Desktop: 4 cards visible (1200px / 320px = 3.75 ≈ 4 cards) */
+@media (min-width: 1400px) {
     .ad-scroll-card {
-        width: 320px;
+        width: 340px;
     }
     .scroll-card-image {
-        height: 220px;
+        height: 136px;
+    }
+    .scrolling-content {
+        gap: 22px;
     }
 }
 
-/* Tablet: 2 cards */
+/* Desktop large */
+@media (min-width: 1200px) and (max-width: 1399px) {
+    .ad-scroll-card {
+        width: 300px;
+    }
+    .scroll-card-image {
+        height: 120px;
+    }
+}
+
+/* Desktop medium - 4 cards */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .ad-scroll-card {
+        width: 270px;
+    }
+    .scroll-card-image {
+        height: 108px;
+    }
+    .scrolling-content {
+        gap: 18px;
+    }
+}
+
+/* Tablet: 2-3 cards */
 @media (min-width: 768px) and (max-width: 991px) {
     .ad-scroll-card {
         width: 280px;
     }
     .scroll-card-image {
-        height: 190px;
+        height: 112px;
+    }
+    .scrolling-content {
+        gap: 18px;
     }
 }
 
 /* Mobile: 1 card */
 @media (max-width: 767px) {
     .ad-scroll-card {
-        width: 260px;
+        width: 280px;
     }
     .scroll-card-image {
-        height: 170px;
+        height: 112px;
     }
     
     .ad-carousel-title-section h3 {
@@ -201,17 +230,16 @@ $default_image = 'photos/noimg.jpeg';
     
     .ad-carousel {
         margin: 20px 0;
-        padding: 15px 0;
     }
 }
 
 /* Small mobile */
 @media (max-width: 480px) {
     .ad-scroll-card {
-        width: 240px;
+        width: 260px;
     }
     .scroll-card-image {
-        height: 150px;
+        height: 104px;
     }
 }
 
