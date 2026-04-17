@@ -616,7 +616,7 @@ $form_data = $_SESSION['form_data'] ?? [];
         </div>
         
         <div class="info-row">
-            <p><i class="fas fa-info-circle"></i> अमृत संस्थेच्या योजना तसेच इतर शासकीय योजनांची माहिती आपल्या पर्यन्त पोहोचविण्यासाठी अमृत परिवार सर्वेक्षण २०२६</p>
+            <p><i class="fas fa-info-circle"></i> अमृत संस्थेच्या योजना तसेच इतर शासकीय योजनांची माहिती आपल्या पर्यंत पोहोचविण्यासाठी अमृत परिवार सर्वेक्षण २०२६</p>
         </div>
         
         <div class="form-body">
@@ -690,22 +690,12 @@ $form_data = $_SESSION['form_data'] ?? [];
                         
                         <div class="form-group">
                             <label>लिंग <span class="required">*</span></label>
-                            <div class="gender-section">
-                                <div class="radio-group">
-                                    <label class="radio-option">
-                                        <input type="radio" name="gender" value="स्त्री" <?php echo (($form_data['gender'] ?? '') == 'स्त्री') ? 'checked' : ''; ?> required>
-                                        <span>स्त्री</span>
-                                    </label>
-                                    <label class="radio-option">
-                                        <input type="radio" name="gender" value="पुरुष" <?php echo (($form_data['gender'] ?? '') == 'पुरुष') ? 'checked' : ''; ?>>
-                                        <span>पुरुष</span>
-                                    </label>
-                                    <label class="radio-option">
-                                        <input type="radio" name="gender" value="Other" <?php echo (($form_data['gender'] ?? '') == 'Other') ? 'checked' : ''; ?>>
-                                        <span>Other</span>
-                                    </label>
-                                </div>
-                            </div>
+                            <select class="form-select" name="gender" required>
+                                <option value="">-- लिंग निवडा --</option>
+                                <option value="स्त्री" <?php echo (($form_data['gender'] ?? '') == 'स्त्री') ? 'selected' : ''; ?>>स्त्री</option>
+                                <option value="पुरुष" <?php echo (($form_data['gender'] ?? '') == 'पुरुष') ? 'selected' : ''; ?>>पुरुष</option>
+                                <option value="Other" <?php echo (($form_data['gender'] ?? '') == 'Other') ? 'selected' : ''; ?>>Other</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -771,52 +761,29 @@ $form_data = $_SESSION['form_data'] ?? [];
                 <div class="form-section">
                     <h3><i class="fas fa-briefcase"></i> व्यावसायिक माहिती</h3>
                     
-                    <div class="form-group full-width">
-                        <label>सध्या काय करता ? <span class="required">*</span></label>
-                        <div class="radio-group" id="occupation_group">
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="खाजगी नोकरी" <?php echo (($form_data['current_occupation'] ?? '') == 'खाजगी नोकरी') ? 'checked' : ''; ?> required>
-                                <span>खाजगी नोकरी</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="सरकारी नोकरी" <?php echo (($form_data['current_occupation'] ?? '') == 'सरकारी नोकरी') ? 'checked' : ''; ?>>
-                                <span>सरकारी नोकरी</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="व्यवसाय" <?php echo (($form_data['current_occupation'] ?? '') == 'व्यवसाय') ? 'checked' : ''; ?>>
-                                <span>व्यवसाय</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="शेती" <?php echo (($form_data['current_occupation'] ?? '') == 'शेती') ? 'checked' : ''; ?>>
-                                <span>शेती</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="शिक्षण" <?php echo (($form_data['current_occupation'] ?? '') == 'शिक्षण') ? 'checked' : ''; ?>>
-                                <span>शिक्षण</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="गृहिणी" <?php echo (($form_data['current_occupation'] ?? '') == 'गृहिणी') ? 'checked' : ''; ?>>
-                                <span>गृहिणी</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="current_occupation" value="इतर" id="occupation_other_radio" <?php echo (($form_data['current_occupation'] ?? '') == 'इतर' || !in_array(($form_data['current_occupation'] ?? ''), ['खाजगी नोकरी', 'सरकारी नोकरी', 'व्यवसाय', 'शेती', 'शिक्षण', 'गृहिणी'])) ? 'checked' : ''; ?>>
-                                <span>इतर</span>
-                            </label>
+                    <div class="row-2cols">
+                        <div class="form-group">
+                            <label>सध्या काय करता ? <span class="required">*</span></label>
+                            <select class="form-select" name="current_occupation" id="current_occupation" required onchange="toggleOccupationOtherDropdown()">
+                                <option value="">-- निवडा --</option>
+                                <option value="खाजगी नोकरी" <?php echo (($form_data['current_occupation'] ?? '') == 'खाजगी नोकरी') ? 'selected' : ''; ?>>खाजगी नोकरी</option>
+                                <option value="सरकारी नोकरी" <?php echo (($form_data['current_occupation'] ?? '') == 'सरकारी नोकरी') ? 'selected' : ''; ?>>सरकारी नोकरी</option>
+                                <option value="व्यवसाय" <?php echo (($form_data['current_occupation'] ?? '') == 'व्यवसाय') ? 'selected' : ''; ?>>व्यवसाय</option>
+                                <option value="शेती" <?php echo (($form_data['current_occupation'] ?? '') == 'शेती') ? 'selected' : ''; ?>>शेती</option>
+                                <option value="शिक्षण" <?php echo (($form_data['current_occupation'] ?? '') == 'शिक्षण') ? 'selected' : ''; ?>>शिक्षण</option>
+                                <option value="गृहिणी" <?php echo (($form_data['current_occupation'] ?? '') == 'गृहिणी') ? 'selected' : ''; ?>>गृहिणी</option>
+                                <option value="इतर" <?php echo (($form_data['current_occupation'] ?? '') == 'इतर') ? 'selected' : ''; ?>>इतर</option>
+                            </select>
+                            <input type="text" class="form-control mt-2" id="occupation_other" name="current_occupation_other" style="display:none;" placeholder="कृपया आपले कार्य नमूद करा" value="<?php echo htmlspecialchars((!in_array($form_data['current_occupation'] ?? '', ['खाजगी नोकरी', 'सरकारी नोकरी', 'व्यवसाय', 'शेती', 'शिक्षण', 'गृहिणी', 'इतर']) ? ($form_data['current_occupation'] ?? '') : '')); ?>">
                         </div>
-                        <input type="text" class="form-control mt-2" id="occupation_other" name="current_occupation_other" style="display:none;" placeholder="कृपया आपले कार्य नमूद करा" value="<?php echo htmlspecialchars((!in_array($form_data['current_occupation'] ?? '', ['खाजगी नोकरी', 'सरकारी नोकरी', 'व्यवसाय', 'शेती', 'शिक्षण', 'गृहिणी', 'इतर']) ? ($form_data['current_occupation'] ?? '') : '')); ?>">
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label>कुटुंबाचे वार्षिक उत्पन्न</label>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="annual_income" value="रुपये आठ लाख पेक्षा जास्त" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा जास्त') ? 'checked' : ''; ?>>
-                                <span>रुपये आठ लाख पेक्षा जास्त</span>
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="annual_income" value="रुपये आठ लाख पेक्षा कमी" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा कमी') ? 'checked' : ''; ?>>
-                                <span>रुपये आठ लाख पेक्षा कमी</span>
-                            </label>
+                        
+                        <div class="form-group">
+                            <label>कुटुंबाचे वार्षिक उत्पन्न</label>
+                            <select class="form-select" name="annual_income">
+                                <option value="">-- उत्पन्न निवडा --</option>
+                                <option value="रुपये आठ लाख पेक्षा जास्त" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा जास्त') ? 'selected' : ''; ?>>रुपये आठ लाख पेक्षा जास्त</option>
+                                <option value="रुपये आठ लाख पेक्षा कमी" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा कमी') ? 'selected' : ''; ?>>रुपये आठ लाख पेक्षा कमी</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -960,7 +927,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                     <h3><i class="fas fa-hands-helping"></i> स्वयंसेवक माहिती</h3>
                     
                     <div class="alert alert-info" style="background: #e7f3ff; border: 1px solid #b8daff; color: #004085; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
-                        <i class="fas fa-info-circle"></i> अमृत या महाराष्ट्र शासनाच्या स्वायत्त संस्थेच्या ध्येय आणि उद्दिष्टांसाठी तसेच अमृत च्या सामाजिक उपक्रमात स्वेछेने स्वयंसेवक म्हणून सहभागी होवू इच्छिणाऱ्यानी पुढील माहिती भरावी.
+                        <i class="fas fa-info-circle"></i> अमृत या महाराष्ट्र शासनाच्या स्वायत्त संस्थेच्या ध्येय आणि उद्दिष्टांसाठी तसेच अमृत च्या सामाजिक उपक्रमात स्वेच्छेने स्वयंसेवक म्हणून सहभागी होवू इच्छिणाऱ्यानी पुढील माहिती भरावी.
                     </div>
                     
                     <div class="form-group full-width">
@@ -1127,13 +1094,12 @@ $form_data = $_SESSION['form_data'] ?? [];
         }
     }
     
-    // Toggle occupation other field
-    const occupationRadios = document.querySelectorAll('input[name="current_occupation"]');
-    const occupationOther = document.getElementById('occupation_other');
-    const occupationOtherRadio = document.getElementById('occupation_other_radio');
-    
-    function toggleOccupationOther() {
-        if (occupationOtherRadio && occupationOtherRadio.checked) {
+    // Toggle occupation other field for dropdown
+    function toggleOccupationOtherDropdown() {
+        const occupationSelect = document.getElementById('current_occupation');
+        const occupationOther = document.getElementById('occupation_other');
+        
+        if (occupationSelect.value === 'इतर') {
             occupationOther.style.display = 'block';
             occupationOther.required = true;
         } else {
@@ -1143,20 +1109,19 @@ $form_data = $_SESSION['form_data'] ?? [];
         }
     }
     
-    if (occupationRadios.length) {
-        occupationRadios.forEach(radio => {
-            radio.addEventListener('change', toggleOccupationOther);
-        });
-    }
-    
     // Initialize toggle on page load
     document.addEventListener('DOMContentLoaded', function() {
         toggleOtherField('caste');
-        toggleOccupationOther();
+        toggleOccupationOtherDropdown();
         
         const casteSelect = document.getElementById('caste_category');
         if (casteSelect && casteSelect.value === 'इतर') {
             document.getElementById('caste_other').style.display = 'block';
+        }
+        
+        const occupationSelect = document.getElementById('current_occupation');
+        if (occupationSelect && occupationSelect.value === 'इतर') {
+            document.getElementById('occupation_other').style.display = 'block';
         }
     });
 
@@ -1252,7 +1217,7 @@ $form_data = $_SESSION['form_data'] ?? [];
             return false;
         }
         
-        const genderSelected = document.querySelector('input[name="gender"]:checked');
+        const genderSelected = document.querySelector('select[name="gender"]').value;
         if (!genderSelected) {
             e.preventDefault();
             toastr.error('कृपया लिंग निवडा');
