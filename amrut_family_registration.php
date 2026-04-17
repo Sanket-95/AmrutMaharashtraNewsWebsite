@@ -1,8 +1,29 @@
+<!-- URL Format : http://localhost/AmrutMaharashtra/amrut_family_registration.php?ref=1 -->
 <?php
 // Start output buffering at the very beginning
 ob_start();
 
 session_start();
+// Get referral source from URL
+$referral_source_id = null;
+
+// Check for different URL patterns
+if (isset($_GET['ref'])) {
+    $referral_source_id = trim($_GET['ref']);
+} elseif (isset($_GET['source'])) {
+    $referral_source_id = trim($_GET['source']);
+} elseif (isset($_GET['id'])) {
+    $referral_source_id = trim($_GET['id']);
+} else {
+    // Pattern: ?123 (direct number after ?)
+    $query_string = $_SERVER['QUERY_STRING'];
+    if (preg_match('/^\d+$/', $query_string)) {
+        $referral_source_id = $query_string;
+    }
+}
+
+// Store in session to persist through form submission
+$_SESSION['referral_source_id'] = $referral_source_id;
 include 'components/db_config.php';
 include 'components/header.php';
 include 'components/formnavbar.php';
@@ -10,7 +31,7 @@ include 'components/formnavbar.php';
 // Set timezone to IST
 date_default_timezone_set('Asia/Kolkata');
 
-// Fetch districts from database (for Taluka dropdown - now जिल्हा)
+// Fetch districts from database
 $districts = [];
 $district_query = "SELECT district as division, dmarathi as marathiname FROM mdistrict ORDER BY distid DESC";
 $district_result = mysqli_query($conn, $district_query);
@@ -30,21 +51,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $age = intval($_POST['age'] ?? 0);
     $gender = mysqli_real_escape_string($conn, $_POST['gender'] ?? '');
     $caste_category = mysqli_real_escape_string($conn, $_POST['caste_category'] ?? '');
+    $caste_other = ($caste_category === 'इतर') ? mysqli_real_escape_string($conn, $_POST['caste_other'] ?? '') : '';
+    if ($caste_category === 'इतर' && !empty($caste_other)) {
+        $caste_category = $caste_other;
+    }
     $village_name = mysqli_real_escape_string($conn, $_POST['village_name'] ?? '');
-    $address = mysqli_real_escape_string($conn, $_POST['address'] ?? '');
-    $taluka = mysqli_real_escape_string($conn, $_POST['taluka'] ?? ''); // Text box - Taluka
-    $district = mysqli_real_escape_string($conn, $_POST['district'] ?? ''); // Dropdown - District
+    $taluka = mysqli_real_escape_string($conn, $_POST['taluka'] ?? '');
+    $district = mysqli_real_escape_string($conn, $_POST['district'] ?? '');
     $mobile_number = mysqli_real_escape_string($conn, $_POST['mobile_number'] ?? '');
     $email = mysqli_real_escape_string($conn, $_POST['email'] ?? '');
     $current_occupation = mysqli_real_escape_string($conn, $_POST['current_occupation'] ?? '');
-    $annual_income = mysqli_real_escape_string($conn, $_POST['annual_income'] ?? '');
-    $want_amrut_benefit = mysqli_real_escape_string($conn, $_POST['want_amrut_benefit'] ?? '');
+    $current_occupation_other = ($current_occupation === 'इतर') ? mysqli_real_escape_string($conn, $_POST['current_occupation_other'] ?? '') : '';
+    if ($current_occupation === 'इतर' && !empty($current_occupation_other)) {
+        $current_occupation = $current_occupation_other;
+    }
+    $annual_income = !empty($_POST['annual_income']) ? mysqli_real_escape_string($conn, $_POST['annual_income']) : null;
+    $want_amrut_benefit = !empty($_POST['want_amrut_benefit']) ? mysqli_real_escape_string($conn, $_POST['want_amrut_benefit']) : null;
     $social_media_follow = isset($_POST['social_media_follow']) ? implode(', ', $_POST['social_media_follow']) : '';
-    $volunteer_interest = mysqli_real_escape_string($conn, $_POST['volunteer_interest'] ?? '');
-    $nation_building_participation = mysqli_real_escape_string($conn, $_POST['nation_building_participation'] ?? '');
-    $promotion_method = mysqli_real_escape_string($conn, $_POST['promotion_method'] ?? '');
-    $migration_status = mysqli_real_escape_string($conn, $_POST['migration_status'] ?? '');
-    $form_filler_name = mysqli_real_escape_string($conn, $_POST['form_filler_name'] ?? '');
+    $volunteer_interest = !empty($_POST['volunteer_interest']) ? mysqli_real_escape_string($conn, $_POST['volunteer_interest']) : null;
+    $nation_building_participation = !empty($_POST['nation_building_participation']) ? mysqli_real_escape_string($conn, $_POST['nation_building_participation']) : null;
+    $promotion_method = !empty($_POST['promotion_method']) ? mysqli_real_escape_string($conn, $_POST['promotion_method']) : null;
+    $migration_status = !empty($_POST['migration_status']) ? mysqli_real_escape_string($conn, $_POST['migration_status']) : null;
+    $form_filler_name = !empty($_POST['form_filler_name']) ? mysqli_real_escape_string($conn, $_POST['form_filler_name']) : null;
+    $amrut_scheme_benefit = mysqli_real_escape_string($conn, $_POST['amrut_scheme_benefit'] ?? '');
+    $govt_scheme_interest = mysqli_real_escape_string($conn, $_POST['govt_scheme_interest'] ?? '');
+    $survey_info_source = mysqli_real_escape_string($conn, $_POST['survey_info_source'] ?? '');
+    $terms_accepted = isset($_POST['terms_accepted']) ? 1 : 0;
     
     // Get IP address and user agent
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? '';
@@ -57,68 +89,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($gender)) $errors[] = "लिंग निवडा";
     if (empty($caste_category)) $errors[] = "जातीचा प्रवर्ग निवडा";
     if (empty($village_name)) $errors[] = "गावाचे नाव आवश्यक आहे";
-    if (empty($address)) $errors[] = "पत्ता आवश्यक आहे";
     if (empty($taluka)) $errors[] = "तालुका आवश्यक आहे";
     if (empty($district)) $errors[] = "जिल्हा निवडा";
     if (!preg_match('/^[0-9]{10}$/', $mobile_number)) $errors[] = "वैध 10 अंकी मोबाईल नंबर आवश्यक आहे";
     if (empty($current_occupation)) $errors[] = "सध्याचे काम निवडा";
-    if (empty($annual_income)) $errors[] = "वार्षिक उत्पन्न निवडा";
-    if (empty($want_amrut_benefit)) $errors[] = "अमृत योजनेचा लाभ हवा आहे का निवडा";
     if (empty($social_media_follow)) $errors[] = "सोशल मीडिया पेज निवडा";
-    if (empty($volunteer_interest)) $errors[] = "स्वयंसेवक स्वारस्य निवडा";
-    if (empty($nation_building_participation)) $errors[] = "राष्ट्रनिर्माण सहभाग निवडा";
-    if (empty($promotion_method)) $errors[] = "प्रचार पद्धत निवडा";
-    if (empty($migration_status)) $errors[] = "स्थलांतर स्थिती निवडा";
-    if (empty($form_filler_name)) $errors[] = "माहिती भरून घेणाऱ्याचे नाव आवश्यक आहे";
+    if (empty($survey_info_source)) $errors[] = "सर्वेक्षणाची माहिती कोठून मिळाली ते निवडा";
+    if ($terms_accepted != 1) $errors[] = "कृपया नियम व अटी मान्य करा";
     
     if (empty($errors)) {
         // Start transaction
         mysqli_begin_transaction($conn);
         
         try {
+            // Get referral source from session
+            $referral_source_id = isset($_SESSION['referral_source_id']) ? mysqli_real_escape_string($conn, $_SESSION['referral_source_id']) : null;
+           
             // Insert main registration
             $insert_query = "INSERT INTO amrut_family_registration (
                 family_head_name, age, gender, caste_category, village_name, address, 
                 taluka, district, mobile_number, email, current_occupation, annual_income, 
                 want_amrut_benefit, social_media_follow, volunteer_interest, 
                 nation_building_participation, promotion_method, migration_status, 
-                form_filler_name, ip_address, user_agent
+                form_filler_name, ip_address, user_agent, amrut_scheme_benefit, 
+                govt_scheme_interest, survey_info_source, terms_accepted, referral_source_id
             ) VALUES (
-                '$family_head_name', $age, '$gender', '$caste_category', '$village_name', '$address',
-                '$taluka', '$district', '$mobile_number', " . ($email ? "'$email'" : "NULL") . ", '$current_occupation', '$annual_income',
-                '$want_amrut_benefit', '$social_media_follow', '$volunteer_interest',
-                '$nation_building_participation', '$promotion_method', '$migration_status',
-                '$form_filler_name', '$ip_address', '$user_agent'
+                '$family_head_name', $age, '$gender', '$caste_category', '$village_name', NULL,
+                '$taluka', '$district', '$mobile_number', " . ($email ? "'$email'" : "NULL") . ", '$current_occupation', " . ($annual_income ? "'$annual_income'" : "NULL") . ",
+                " . ($want_amrut_benefit ? "'$want_amrut_benefit'" : "NULL") . ", '$social_media_follow', " . ($volunteer_interest ? "'$volunteer_interest'" : "NULL") . ",
+                " . ($nation_building_participation ? "'$nation_building_participation'" : "NULL") . ", " . ($promotion_method ? "'$promotion_method'" : "NULL") . ", " . ($migration_status ? "'$migration_status'" : "NULL") . ",
+                " . ($form_filler_name ? "'$form_filler_name'" : "NULL") . ", '$ip_address', '$user_agent', '$amrut_scheme_benefit',
+                '$govt_scheme_interest', '$survey_info_source', $terms_accepted,
+                " . ($referral_source_id ? "'$referral_source_id'" : "NULL") . "
             )";
             
             if (mysqli_query($conn, $insert_query)) {
                 $registration_id = mysqli_insert_id($conn);
                 
                 // Insert family members
-                $member_names = $_POST['member_name'] ?? [];
-                $member_ages = $_POST['member_age'] ?? [];
-                $member_genders = $_POST['member_gender'] ?? [];
-                $member_relationships = $_POST['member_relationship'] ?? [];
-                $member_occupations = $_POST['member_occupation'] ?? [];
-                
-                for ($i = 0; $i < count($member_names); $i++) {
-                    if (!empty($member_names[$i]) && !empty($member_ages[$i])) {
-                        $member_name = mysqli_real_escape_string($conn, $member_names[$i]);
-                        $member_age = intval($member_ages[$i]);
-                        $member_gender = mysqli_real_escape_string($conn, $member_genders[$i] ?? '');
-                        $member_relationship = mysqli_real_escape_string($conn, $member_relationships[$i] ?? '');
-                        $member_occupation = mysqli_real_escape_string($conn, $member_occupations[$i] ?? '');
-                        $member_number = $i + 1;
-                        
-                        $member_query = "INSERT INTO amrut_family_members (
-                            registration_id, member_number, member_name, age, gender, relationship, occupation
-                        ) VALUES (
-                            $registration_id, $member_number, '$member_name', $member_age, '$member_gender', 
-                            '$member_relationship', '$member_occupation'
-                        )";
-                        
-                        if (!mysqli_query($conn, $member_query)) {
-                            throw new Exception("Error inserting family member: " . mysqli_error($conn));
+                if (isset($_POST['member_name']) && is_array($_POST['member_name'])) {
+                    $member_names = $_POST['member_name'] ?? [];
+                    $member_ages = $_POST['member_age'] ?? [];
+                    $member_genders = $_POST['member_gender'] ?? [];
+                    $member_relationships = $_POST['member_relationship'] ?? [];
+                    $member_occupations = $_POST['member_occupation'] ?? [];
+                    
+                    for ($i = 0; $i < count($member_names); $i++) {
+                        if (!empty($member_names[$i]) && !empty($member_ages[$i])) {
+                            $member_name = mysqli_real_escape_string($conn, $member_names[$i]);
+                            $member_age = intval($member_ages[$i]);
+                            $member_gender = mysqli_real_escape_string($conn, $member_genders[$i] ?? '');
+                            $member_relationship = mysqli_real_escape_string($conn, $member_relationships[$i] ?? '');
+                            $member_occupation = mysqli_real_escape_string($conn, $member_occupations[$i] ?? '');
+                            $member_number = $i + 1;
+                            
+                            $member_query = "INSERT INTO amrut_family_members (
+                                registration_id, member_number, member_name, age, gender, relationship, occupation
+                            ) VALUES (
+                                $registration_id, $member_number, '$member_name', $member_age, '$member_gender', 
+                                '$member_relationship', '$member_occupation'
+                            )";
+                            
+                            if (!mysqli_query($conn, $member_query)) {
+                                throw new Exception("Error inserting family member: " . mysqli_error($conn));
+                            }
                         }
                     }
                 }
@@ -190,6 +224,20 @@ $form_data = $_SESSION['form_data'] ?? [];
     font-size: 0.8rem;
     opacity: 0.95;
     margin-bottom: 0;
+}
+
+.info-row {
+    background: #fff3e6;
+    padding: 12px 20px;
+    text-align: center;
+    border-bottom: 1px solid #ffe0cc;
+}
+
+.info-row p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #cc5200;
+    font-weight: 500;
 }
 
 .form-body {
@@ -386,12 +434,6 @@ $form_data = $_SESSION['form_data'] ?? [];
     padding: 0;
 }
 
-.helper-text {
-    font-size: 0.7rem;
-    color: #6c757d;
-    margin-top: 3px;
-}
-
 .alert-success, .alert-error {
     padding: 10px;
     margin-bottom: 15px;
@@ -431,6 +473,32 @@ $form_data = $_SESSION['form_data'] ?? [];
     color: #FF6600;
     margin: 0;
     font-weight: 600;
+}
+
+.terms-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+}
+
+.terms-text {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+    border: 1px solid #eee;
+}
+
+.mobile-number-hint {
+    font-size: 0.7rem;
+    color: #6c757d;
+    margin-top: 3px;
 }
 
 /* Loading Spinner */
@@ -521,6 +589,10 @@ $form_data = $_SESSION['form_data'] ?? [];
         font-size: 0.7rem;
     }
     
+    .info-row p {
+        font-size: 0.75rem;
+    }
+    
     .form-section h3 {
         font-size: 0.85rem;
     }
@@ -539,8 +611,12 @@ $form_data = $_SESSION['form_data'] ?? [];
 <div class="container-fluid">
     <div class="form-container">
         <div class="form-header">
-            <h2><i class="fas fa-pen-alt"></i> अमृत परिवार नोंदणी फॉर्म</h2>
+            <h2><i class="fas fa-pen-alt"></i> अमृत परिवार सर्वेक्षण २०२६</h2>
             <p>कृपया सर्व माहिती अचूकपणे भरा</p>
+        </div>
+        
+        <div class="info-row">
+            <p><i class="fas fa-info-circle"></i> अमृत संस्थेच्या योजना तसेच इतर शासकीय योजनांची माहिती आपल्या पर्यन्त पोहोचविण्यासाठी अमृत परिवार सर्वेक्षण २०२६</p>
         </div>
         
         <div class="form-body">
@@ -571,7 +647,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                         
                         <div class="form-group">
                             <label>जातीचा प्रवर्ग <span class="required">*</span></label>
-                            <select class="form-select" name="caste_category" required>
+                            <select class="form-select" name="caste_category" id="caste_category" required onchange="toggleOtherField('caste')">
                                 <option value="">-- निवडा --</option>
                                 <option value="ब्राह्मण" <?php echo (($form_data['caste_category'] ?? '') == 'ब्राह्मण') ? 'selected' : ''; ?>>ब्राह्मण</option>
                                 <option value="कायस्थ" <?php echo (($form_data['caste_category'] ?? '') == 'कायस्थ') ? 'selected' : ''; ?>>कायस्थ</option>
@@ -598,8 +674,9 @@ $form_data = $_SESSION['form_data'] ?? [];
                                 <option value="लोहाना" <?php echo (($form_data['caste_category'] ?? '') == 'लोहाना') ? 'selected' : ''; ?>>लोहाना</option>
                                 <option value="हिंदू नेपाळी" <?php echo (($form_data['caste_category'] ?? '') == 'हिंदू नेपाळी') ? 'selected' : ''; ?>>हिंदू नेपाळी</option>
                                 <option value="भूमिहार" <?php echo (($form_data['caste_category'] ?? '') == 'भूमिहार') ? 'selected' : ''; ?>>भूमिहार</option>
-                                <!-- <option value="इतर" <?php echo (($form_data['caste_category'] ?? '') == 'इतर') ? 'selected' : ''; ?>>इतर</option> -->
+                                <option value="इतर" <?php echo (($form_data['caste_category'] ?? '') == 'इतर') ? 'selected' : ''; ?>>इतर</option>
                             </select>
+                            <input type="text" class="form-control mt-2" id="caste_other" name="caste_other" style="display:none;" placeholder="कृपया जात प्रवर्ग नमूद करा" value="<?php echo htmlspecialchars($form_data['caste_other'] ?? ''); ?>">
                         </div>
                     </div>
                     
@@ -644,23 +721,6 @@ $form_data = $_SESSION['form_data'] ?? [];
                                    value="<?php echo htmlspecialchars($form_data['village_name'] ?? ''); ?>"
                                    placeholder="गावाचे नाव">
                         </div>
-                        
-                        <div class="form-group">
-                            <label>पत्ता <span class="required">*</span></label>
-                            <input type="text" class="form-control" name="address" required
-                                   value="<?php echo htmlspecialchars($form_data['address'] ?? ''); ?>"
-                                   placeholder="वॉर्ड नंबर, पोस्ट ऑफिस">
-                        </div>
-                    </div>
-                    
-                    <div class="row-2cols">
-                        <div class="form-group">
-                            <label>तालुका <span class="required">*</span></label>
-                            <input type="text" class="form-control" name="taluka" required
-                                   value="<?php echo htmlspecialchars($form_data['taluka'] ?? ''); ?>"
-                                   placeholder="तालुक्याचे नाव प्रविष्ट करा">
-                        </div>
-                        
                         <div class="form-group">
                             <label>जिल्हा <span class="required">*</span></label>
                             <select class="form-select" name="district" required>
@@ -674,6 +734,15 @@ $form_data = $_SESSION['form_data'] ?? [];
                             </select>
                         </div>
                     </div>
+                    
+                    <div class="row-2cols">
+                        <div class="form-group">
+                            <label>तालुका <span class="required">*</span></label>
+                            <input type="text" class="form-control" name="taluka" required
+                                   value="<?php echo htmlspecialchars($form_data['taluka'] ?? ''); ?>"
+                                   placeholder="तालुक्याचे नाव प्रविष्ट करा">
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Section 3: Contact Information -->
@@ -683,17 +752,17 @@ $form_data = $_SESSION['form_data'] ?? [];
                     <div class="row-2cols">
                         <div class="form-group">
                             <label>मोबाईल नंबर <span class="required">*</span></label>
-                            <input type="tel" class="form-control" name="mobile_number" required pattern="[0-9]{10}"
+                            <input type="tel" class="form-control" name="mobile_number" required pattern="[0-9]{10}" maxlength="10"
                                    value="<?php echo htmlspecialchars($form_data['mobile_number'] ?? ''); ?>"
-                                   placeholder="१० अंकी मोबाईल नंबर">
+                                   placeholder="१० अंकी मोबाईल नंबर" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0,10)">
+                            <div class="mobile-number-hint">कृपया फक्त 10 अंकी नंबर प्रविष्ट करा</div>
                         </div>
                         
                         <div class="form-group">
                             <label>ईमेल</label>
                             <input type="email" class="form-control" name="email"
                                    value="<?php echo htmlspecialchars($form_data['email'] ?? ''); ?>"
-                                   placeholder="example@email.com (ऐच्छिक)">
-                            <div class="helper-text">ईमेल ऐच्छिक आहे</div>
+                                   placeholder="example@email.com">
                         </div>
                     </div>
                 </div>
@@ -704,7 +773,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                     
                     <div class="form-group full-width">
                         <label>सध्या काय करता ? <span class="required">*</span></label>
-                        <div class="radio-group">
+                        <div class="radio-group" id="occupation_group">
                             <label class="radio-option">
                                 <input type="radio" name="current_occupation" value="खाजगी नोकरी" <?php echo (($form_data['current_occupation'] ?? '') == 'खाजगी नोकरी') ? 'checked' : ''; ?> required>
                                 <span>खाजगी नोकरी</span>
@@ -729,14 +798,19 @@ $form_data = $_SESSION['form_data'] ?? [];
                                 <input type="radio" name="current_occupation" value="गृहिणी" <?php echo (($form_data['current_occupation'] ?? '') == 'गृहिणी') ? 'checked' : ''; ?>>
                                 <span>गृहिणी</span>
                             </label>
+                            <label class="radio-option">
+                                <input type="radio" name="current_occupation" value="इतर" id="occupation_other_radio" <?php echo (($form_data['current_occupation'] ?? '') == 'इतर' || !in_array(($form_data['current_occupation'] ?? ''), ['खाजगी नोकरी', 'सरकारी नोकरी', 'व्यवसाय', 'शेती', 'शिक्षण', 'गृहिणी'])) ? 'checked' : ''; ?>>
+                                <span>इतर</span>
+                            </label>
                         </div>
+                        <input type="text" class="form-control mt-2" id="occupation_other" name="current_occupation_other" style="display:none;" placeholder="कृपया आपले कार्य नमूद करा" value="<?php echo htmlspecialchars((!in_array($form_data['current_occupation'] ?? '', ['खाजगी नोकरी', 'सरकारी नोकरी', 'व्यवसाय', 'शेती', 'शिक्षण', 'गृहिणी', 'इतर']) ? ($form_data['current_occupation'] ?? '') : '')); ?>">
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>कुटुंबाचे वार्षिक उत्पन्न <span class="required">*</span></label>
+                        <label>कुटुंबाचे वार्षिक उत्पन्न</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="annual_income" value="रुपये आठ लाख पेक्षा जास्त" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा जास्त') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="annual_income" value="रुपये आठ लाख पेक्षा जास्त" <?php echo (($form_data['annual_income'] ?? '') == 'रुपये आठ लाख पेक्षा जास्त') ? 'checked' : ''; ?>>
                                 <span>रुपये आठ लाख पेक्षा जास्त</span>
                             </label>
                             <label class="radio-option">
@@ -751,7 +825,6 @@ $form_data = $_SESSION['form_data'] ?? [];
                 <div class="form-section">
                     <h3><i class="fas fa-users"></i> कुटुंबातील सदस्यांची माहिती</h3>
                     <div id="family-members-container">
-                        <!-- Family Member 1 (Always visible but optional) -->
                         <div class="member-section" id="member-1">
                             <div class="member-header">
                                 <h4><i class="fas fa-user"></i> सदस्य 1</h4>
@@ -779,19 +852,15 @@ $form_data = $_SESSION['form_data'] ?? [];
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>कुटुंब प्रमुखाशी आपले नाते</label>
+                                    <label>कुटुंब प्रमुखाशी नाते</label>
                                     <select class="form-select" name="member_relationship[]">
                                         <option value="">-- निवडा --</option>
                                         <option value="आई" <?php echo (($form_data['member_relationship'][0] ?? '') == 'आई') ? 'selected' : ''; ?>>आई</option>
                                         <option value="बाबा" <?php echo (($form_data['member_relationship'][0] ?? '') == 'बाबा') ? 'selected' : ''; ?>>बाबा</option>
                                         <option value="मुलगा" <?php echo (($form_data['member_relationship'][0] ?? '') == 'मुलगा') ? 'selected' : ''; ?>>मुलगा</option>
                                         <option value="मुलगी" <?php echo (($form_data['member_relationship'][0] ?? '') == 'मुलगी') ? 'selected' : ''; ?>>मुलगी</option>
-                                        <option value="नातू" <?php echo (($form_data['member_relationship'][0] ?? '') == 'नातू') ? 'selected' : ''; ?>>नातू</option>
-                                        <option value="नात" <?php echo (($form_data['member_relationship'][0] ?? '') == 'नात') ? 'selected' : ''; ?>>नात</option>
                                         <option value="भाऊ" <?php echo (($form_data['member_relationship'][0] ?? '') == 'भाऊ') ? 'selected' : ''; ?>>भाऊ</option>
                                         <option value="बहीण" <?php echo (($form_data['member_relationship'][0] ?? '') == 'बहीण') ? 'selected' : ''; ?>>बहीण</option>
-                                        <option value="काका" <?php echo (($form_data['member_relationship'][0] ?? '') == 'काका') ? 'selected' : ''; ?>>काका</option>
-                                        <option value="काकू" <?php echo (($form_data['member_relationship'][0] ?? '') == 'काकू') ? 'selected' : ''; ?>>काकू</option>
                                         <option value="पती" <?php echo (($form_data['member_relationship'][0] ?? '') == 'पती') ? 'selected' : ''; ?>>पती</option>
                                         <option value="पत्नी" <?php echo (($form_data['member_relationship'][0] ?? '') == 'पत्नी') ? 'selected' : ''; ?>>पत्नी</option>
                                     </select>
@@ -821,10 +890,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                     <h3><i class="fas fa-hand-holding-heart"></i> अमृत योजना माहिती</h3>
                     
                     <div class="form-group full-width">
-                        <label>अमृत योजनेचा लाभ हवा आहे का ? <span class="required">*</span></label>
+                        <label>अमृत योजनेचा लाभ हवा आहे का ?</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="want_amrut_benefit" value="हो" <?php echo (($form_data['want_amrut_benefit'] ?? '') == 'हो') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="want_amrut_benefit" value="हो" <?php echo (($form_data['want_amrut_benefit'] ?? '') == 'हो') ? 'checked' : ''; ?>>
                                 <span>हो</span>
                             </label>
                             <label class="radio-option">
@@ -859,17 +928,46 @@ $form_data = $_SESSION['form_data'] ?? [];
                             </label>
                         </div>
                     </div>
+                    
+                    <div class="form-group full-width">
+                        <label>आपला गृह उद्योग/ लघु उद्योग वाढीसाठी अमृत च्या कोणत्या योजनेचा लाभ हवा आहे?</label>
+                        <select class="form-select" name="amrut_scheme_benefit">
+                            <option value="">-- योजना निवडा --</option>
+                            <option value="कौशल्य विकास प्रशिक्षण" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'कौशल्य विकास प्रशिक्षण') ? 'selected' : ''; ?>>कौशल्य विकास प्रशिक्षण</option>
+                            <option value="वैयक्तिक व्याज परतावा" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'वैयक्तिक व्याज परतावा') ? 'selected' : ''; ?>>वैयक्तिक व्याज परतावा</option>
+                            <option value="अमृत पेठ E commerce platform" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'अमृत पेठ E commerce platform') ? 'selected' : ''; ?>>अमृत पेठ E commerce platform</option>
+                            <option value="अमृत पेठ थेट बाजारपेठ" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'अमृत पेठ थेट बाजारपेठ') ? 'selected' : ''; ?>>अमृत पेठ थेट बाजारपेठ</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>इतर शासकीय योजनांची माहिती सोशल मीडिया माध्यमातून जाणून घेण्यास इच्छुक आहात का ?</label>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="govt_scheme_interest" value="हो" <?php echo (($form_data['govt_scheme_interest'] ?? '') == 'हो') ? 'checked' : ''; ?>>
+                                <span>हो</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="govt_scheme_interest" value="नाही" <?php echo (($form_data['govt_scheme_interest'] ?? '') == 'नाही') ? 'checked' : ''; ?>>
+                                <span>नाही</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Section 7: Volunteer Information -->
                 <div class="form-section">
                     <h3><i class="fas fa-hands-helping"></i> स्वयंसेवक माहिती</h3>
                     
+                    <div class="alert alert-info" style="background: #e7f3ff; border: 1px solid #b8daff; color: #004085; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
+                        <i class="fas fa-info-circle"></i> अमृत या महाराष्ट्र शासनाच्या स्वायत्त संस्थेच्या ध्येय आणि उद्दिष्टांसाठी तसेच अमृत च्या सामाजिक उपक्रमात स्वेछेने स्वयंसेवक म्हणून सहभागी होवू इच्छिणाऱ्यानी पुढील माहिती भरावी.
+                    </div>
+                    
                     <div class="form-group full-width">
-                        <label>तुम्हाला कीवा तुमच्या कुटुंबातील सदस्याला अमृत मित्र / अमृत सखी म्हणून स्वयंसेवी पद्धतीने काम करायचे आहे का? <span class="required">*</span></label>
+                        <label>तुम्हाला कीवा तुमच्या कुटुंबातील सदस्याला शासकीय संस्थेसोबत अमृत मित्र / अमृत सखी म्हणून स्वयंसेवी पद्धतीने काम करायचे आहे का?</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="volunteer_interest" value="होय" <?php echo (($form_data['volunteer_interest'] ?? '') == 'होय') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="volunteer_interest" value="होय" <?php echo (($form_data['volunteer_interest'] ?? '') == 'होय') ? 'checked' : ''; ?>>
                                 <span>होय</span>
                             </label>
                             <label class="radio-option">
@@ -880,10 +978,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत वर्गाच्या माध्यमातून राष्ट्रनिर्माण च्या कार्यात सहभागी होणार का ? <span class="required">*</span></label>
+                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत वर्गाच्या माध्यमातून राष्ट्रनिर्माण च्या कार्यात सहभागी होणार का ?</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="nation_building_participation" value="हो" <?php echo (($form_data['nation_building_participation'] ?? '') == 'हो') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="nation_building_participation" value="हो" <?php echo (($form_data['nation_building_participation'] ?? '') == 'हो') ? 'checked' : ''; ?>>
                                 <span>हो</span>
                             </label>
                             <label class="radio-option">
@@ -894,10 +992,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत च्या योजनांचा प्रचार प्रसार कसा करणार ? <span class="required">*</span></label>
+                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत च्या योजनांचा प्रचार प्रसार कसा करणार ?</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="promotion_method" value="सोशल मीडिया द्वारे" <?php echo (($form_data['promotion_method'] ?? '') == 'सोशल मीडिया द्वारे') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="promotion_method" value="सोशल मीडिया द्वारे" <?php echo (($form_data['promotion_method'] ?? '') == 'सोशल मीडिया द्वारे') ? 'checked' : ''; ?>>
                                 <span>सोशल मीडिया द्वारे</span>
                             </label>
                             <label class="radio-option">
@@ -908,10 +1006,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुमच्या कुटुंबातील नोकरी व्यवसाय निमित्त कोणी स्थलांतरित झाले आहे का? <span class="required">*</span></label>
+                        <label>तुमच्या कुटुंबातील नोकरी व्यवसाय निमित्त कोणी स्थलांतरित झाले आहे का?</label>
                         <div class="radio-group">
                             <label class="radio-option">
-                                <input type="radio" name="migration_status" value="हो" <?php echo (($form_data['migration_status'] ?? '') == 'हो') ? 'checked' : ''; ?> required>
+                                <input type="radio" name="migration_status" value="हो" <?php echo (($form_data['migration_status'] ?? '') == 'हो') ? 'checked' : ''; ?>>
                                 <span>हो</span>
                             </label>
                             <label class="radio-option">
@@ -920,6 +1018,20 @@ $form_data = $_SESSION['form_data'] ?? [];
                             </label>
                         </div>
                     </div>
+                    
+                    <div class="form-group full-width">
+                        <label>आपल्याला या सर्वेक्षणाची माहिती कोठून मिळाली ? <span class="required">*</span></label>
+                        <select class="form-select" name="survey_info_source" id="survey_info_source" required>
+                            <option value="">-- निवडा --</option>
+                            <option value="वर्तमानपत्र" <?php echo (($form_data['survey_info_source'] ?? '') == 'वर्तमानपत्र') ? 'selected' : ''; ?>>वर्तमानपत्र</option>
+                            <option value="WhatsApp" <?php echo (($form_data['survey_info_source'] ?? '') == 'WhatsApp') ? 'selected' : ''; ?>>WhatsApp</option>
+                            <option value="Facebook" <?php echo (($form_data['survey_info_source'] ?? '') == 'Facebook') ? 'selected' : ''; ?>>Facebook</option>
+                            <option value="Instagram" <?php echo (($form_data['survey_info_source'] ?? '') == 'Instagram') ? 'selected' : ''; ?>>Instagram</option>
+                            <option value="अमृत चे वेबसाईटवरून" <?php echo (($form_data['survey_info_source'] ?? '') == 'अमृत चे वेबसाईटवरून') ? 'selected' : ''; ?>>अमृत चे वेबसाईटवरून</option>
+                            <option value="अमृत जिल्हा टीम" <?php echo (($form_data['survey_info_source'] ?? '') == 'अमृत जिल्हा टीम') ? 'selected' : ''; ?>>अमृत जिल्हा टीम</option>
+                            <option value="इतर" <?php echo (($form_data['survey_info_source'] ?? '') == 'इतर') ? 'selected' : ''; ?>>इतर</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <!-- Section 8: Form Filler Information -->
@@ -927,10 +1039,24 @@ $form_data = $_SESSION['form_data'] ?? [];
                     <h3><i class="fas fa-user-check"></i> माहिती भरून घेणाऱ्याचे नाव</h3>
                     
                     <div class="form-group full-width">
-                        <label>माहिती भरून घेणाऱ्याचे नाव <span class="required">*</span></label>
-                        <input type="text" class="form-control" name="form_filler_name" required
+                        <label>माहिती भरून घेणाऱ्याचे नाव</label>
+                        <input type="text" class="form-control" name="form_filler_name"
                                value="<?php echo htmlspecialchars($form_data['form_filler_name'] ?? ''); ?>"
                                placeholder="माहिती भरून घेणाऱ्याचे संपूर्ण नाव">
+                    </div>
+                </div>
+                
+                <!-- Terms and Conditions -->
+                <div class="terms-section">
+                    <div class="terms-text">
+                        <strong>नियम व अटी:</strong><br>
+                        अमृत परिवार सर्वेक्षण 2026 मध्ये मी दिलेली माहिती ही पूर्णपणे स्वेच्छेने आणि जाणीवपूर्वक भरली आहे. ही सर्व माहिती अमृत संस्थेच्या कडे गोपनीय व सुरक्षित राहील, आणि ती फक्त संस्थेच्या अधिकृत हेतूंसाठी, म्हणजेच संस्थेच्या योजना पोहोचवण्यासाठी वापरली जाईल. मला संस्थेच्या सर्व योजना, उपक्रम, आणि सेवा यांची माहिती मिळावी, यासाठी मी माझ्या कुटुंबाची माहिती पुरवली आहे. मी या माहितीचा जबाबदारीने वापर होईल, याची खात्री देतो.
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="terms_accepted" id="terms_accepted" value="1" required>
+                        <label class="form-check-label" for="terms_accepted">
+                            <strong>मी वरील सर्व नियम व अटी वाचून समजून घेतल्या आहेत आणि त्या मान्य आहेत. <span class="required">*</span></strong>
+                        </label>
                     </div>
                 </div>
                 
@@ -949,6 +1075,9 @@ $form_data = $_SESSION['form_data'] ?? [];
 <div class="loading" id="loadingSpinner">
     <div class="spinner"></div>
 </div>
+
+<!-- jQuery (required for Toastr) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- Toastr JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
@@ -982,6 +1111,54 @@ $form_data = $_SESSION['form_data'] ?? [];
     function hideLoading() {
         document.getElementById('loadingSpinner').classList.remove('active');
     }
+    
+    function toggleOtherField(type) {
+        if (type === 'caste') {
+            const casteSelect = document.getElementById('caste_category');
+            const casteOther = document.getElementById('caste_other');
+            if (casteSelect.value === 'इतर') {
+                casteOther.style.display = 'block';
+                casteOther.required = true;
+            } else {
+                casteOther.style.display = 'none';
+                casteOther.required = false;
+                casteOther.value = '';
+            }
+        }
+    }
+    
+    // Toggle occupation other field
+    const occupationRadios = document.querySelectorAll('input[name="current_occupation"]');
+    const occupationOther = document.getElementById('occupation_other');
+    const occupationOtherRadio = document.getElementById('occupation_other_radio');
+    
+    function toggleOccupationOther() {
+        if (occupationOtherRadio && occupationOtherRadio.checked) {
+            occupationOther.style.display = 'block';
+            occupationOther.required = true;
+        } else {
+            occupationOther.style.display = 'none';
+            occupationOther.required = false;
+            occupationOther.value = '';
+        }
+    }
+    
+    if (occupationRadios.length) {
+        occupationRadios.forEach(radio => {
+            radio.addEventListener('change', toggleOccupationOther);
+        });
+    }
+    
+    // Initialize toggle on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleOtherField('caste');
+        toggleOccupationOther();
+        
+        const casteSelect = document.getElementById('caste_category');
+        if (casteSelect && casteSelect.value === 'इतर') {
+            document.getElementById('caste_other').style.display = 'block';
+        }
+    });
 
     function addFamilyMember() {
         memberCount++;
@@ -1015,19 +1192,15 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>कुटुंब प्रमुखाशी आपले नाते</label>
+                    <label>कुटुंब प्रमुखाशी नाते</label>
                     <select class="form-select" name="member_relationship[]">
                         <option value="">-- निवडा --</option>
                         <option value="आई">आई</option>
                         <option value="बाबा">बाबा</option>
                         <option value="मुलगा">मुलगा</option>
                         <option value="मुलगी">मुलगी</option>
-                        <option value="नातू">नातू</option>
-                        <option value="नात">नात</option>
                         <option value="भाऊ">भाऊ</option>
                         <option value="बहीण">बहीण</option>
-                        <option value="काका">काका</option>
-                        <option value="काकू">काकू</option>
                         <option value="पती">पती</option>
                         <option value="पत्नी">पत्नी</option>
                     </select>
@@ -1086,17 +1259,24 @@ $form_data = $_SESSION['form_data'] ?? [];
             return false;
         }
         
-        const formFillerName = document.querySelector('input[name="form_filler_name"]').value;
-        if (!formFillerName.trim()) {
+        const surveySource = document.querySelector('select[name="survey_info_source"]').value;
+        if (!surveySource) {
             e.preventDefault();
-            toastr.error('कृपया माहिती भरून घेणाऱ्याचे नाव प्रविष्ट करा');
+            toastr.error('कृपया सर्वेक्षणाची माहिती कोठून मिळाली ते निवडा');
+            return false;
+        }
+        
+        const termsAccepted = document.getElementById('terms_accepted').checked;
+        if (!termsAccepted) {
+            e.preventDefault();
+            toastr.error('कृपया नियम व अटी मान्य करा');
             return false;
         }
         
         showLoading();
     });
     
-    document.querySelector('.btn-reset').addEventListener('click', function(e) {
+    document.querySelector('.btn-reset')?.addEventListener('click', function(e) {
         if (!confirm('तुम्हाला खात्री आहे की तुम्हाला फॉर्म रीसेट करायचा आहे?')) {
             e.preventDefault();
         }
