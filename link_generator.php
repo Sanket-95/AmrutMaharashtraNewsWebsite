@@ -8,10 +8,10 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Only Super Admin can access this page
-if ($_SESSION['roll'] !== 'Super Admin') {
-    header('Location: index.php');
-    exit();
-}
+// if ($_SESSION['roll'] !== 'Super Admin') {
+//     header('Location: index.php');
+//     exit();
+// }
 
 include 'components/db_config.php';
 
