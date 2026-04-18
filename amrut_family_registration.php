@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $social_media_follow = isset($_POST['social_media_follow']) ? implode(', ', $_POST['social_media_follow']) : '';
     $volunteer_interest = !empty($_POST['volunteer_interest']) ? mysqli_real_escape_string($conn, $_POST['volunteer_interest']) : null;
     $nation_building_participation = !empty($_POST['nation_building_participation']) ? mysqli_real_escape_string($conn, $_POST['nation_building_participation']) : null;
-    $promotion_method = !empty($_POST['promotion_method']) ? mysqli_real_escape_string($conn, $_POST['promotion_method']) : null;
+    $promotion_method = isset($_POST['promotion_method']) ? implode(', ', $_POST['promotion_method']) : null;
     $migration_status = !empty($_POST['migration_status']) ? mysqli_real_escape_string($conn, $_POST['migration_status']) : null;
     $amrut_scheme_benefit = mysqli_real_escape_string($conn, $_POST['amrut_scheme_benefit'] ?? '');
     $amrut_scheme_interested = isset($_POST['amrut_scheme_interested']) ? implode(', ', $_POST['amrut_scheme_interested']) : '';
@@ -954,14 +954,14 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत च्या योजनांचा प्रचार प्रसार कसा करणार ?</label>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="promotion_method" value="सोशल मीडिया द्वारे" <?php echo (($form_data['promotion_method'] ?? '') == 'सोशल मीडिया द्वारे') ? 'checked' : ''; ?>>
+                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत च्या योजनांचा प्रचार प्रसार कसा करणार ? (ऐच्छिक)</label>
+                        <div class="checkbox-group-multiple">
+                            <label class="checkbox-option">
+                                   <input type="checkbox" name="promotion_method[]" value="सोशल मीडिया द्वारे" <?php echo (isset($form_data['promotion_method']) && in_array('सोशल मीडिया द्वारे', (array)$form_data['promotion_method'])) ? 'checked' : ''; ?>>
                                 <span>सोशल मीडिया द्वारे</span>
                             </label>
-                            <label class="radio-option">
-                                <input type="radio" name="promotion_method" value="प्रत्यक्ष लोक संपर्कामधून" <?php echo (($form_data['promotion_method'] ?? '') == 'प्रत्यक्ष लोक संपर्कामधून') ? 'checked' : ''; ?>>
+                            <label class="checkbox-option">
+                                <input type="checkbox" name="promotion_method[]" value="प्रत्यक्ष लोक संपर्कामधून" <?php echo (isset($form_data['promotion_method']) && in_array('प्रत्यक्ष लोक संपर्कामधून', (array)$form_data['promotion_method'])) ? 'checked' : ''; ?>>
                                 <span>प्रत्यक्ष लोक संपर्कामधून</span>
                             </label>
                         </div>
