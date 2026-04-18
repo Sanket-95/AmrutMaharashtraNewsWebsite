@@ -72,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nation_building_participation = !empty($_POST['nation_building_participation']) ? mysqli_real_escape_string($conn, $_POST['nation_building_participation']) : null;
     $promotion_method = !empty($_POST['promotion_method']) ? mysqli_real_escape_string($conn, $_POST['promotion_method']) : null;
     $migration_status = !empty($_POST['migration_status']) ? mysqli_real_escape_string($conn, $_POST['migration_status']) : null;
-    $form_filler_name = !empty($_POST['form_filler_name']) ? mysqli_real_escape_string($conn, $_POST['form_filler_name']) : null;
     $amrut_scheme_benefit = mysqli_real_escape_string($conn, $_POST['amrut_scheme_benefit'] ?? '');
+    $amrut_scheme_interested = isset($_POST['amrut_scheme_interested']) ? implode(', ', $_POST['amrut_scheme_interested']) : '';
     $govt_scheme_interest = mysqli_real_escape_string($conn, $_POST['govt_scheme_interest'] ?? '');
     $survey_info_source = mysqli_real_escape_string($conn, $_POST['survey_info_source'] ?? '');
     $terms_accepted = isset($_POST['terms_accepted']) ? 1 : 0;
@@ -106,20 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $referral_source_id = isset($_SESSION['referral_source_id']) ? mysqli_real_escape_string($conn, $_SESSION['referral_source_id']) : null;
            
             // Insert main registration
-            $insert_query = "INSERT INTO amrut_family_registration (
+           $insert_query = "INSERT INTO amrut_family_registration (
                 family_head_name, age, gender, caste_category, village_name, address, 
                 taluka, district, mobile_number, email, current_occupation, annual_income, 
                 want_amrut_benefit, social_media_follow, volunteer_interest, 
                 nation_building_participation, promotion_method, migration_status, 
                 form_filler_name, ip_address, user_agent, amrut_scheme_benefit, 
-                govt_scheme_interest, survey_info_source, terms_accepted, referral_source_id
+                amrut_scheme_interested, govt_scheme_interest, survey_info_source, terms_accepted, referral_source_id
             ) VALUES (
                 '$family_head_name', $age, '$gender', '$caste_category', '$village_name', NULL,
                 '$taluka', '$district', '$mobile_number', " . ($email ? "'$email'" : "NULL") . ", '$current_occupation', " . ($annual_income ? "'$annual_income'" : "NULL") . ",
                 " . ($want_amrut_benefit ? "'$want_amrut_benefit'" : "NULL") . ", '$social_media_follow', " . ($volunteer_interest ? "'$volunteer_interest'" : "NULL") . ",
                 " . ($nation_building_participation ? "'$nation_building_participation'" : "NULL") . ", " . ($promotion_method ? "'$promotion_method'" : "NULL") . ", " . ($migration_status ? "'$migration_status'" : "NULL") . ",
-                " . ($form_filler_name ? "'$form_filler_name'" : "NULL") . ", '$ip_address', '$user_agent', '$amrut_scheme_benefit',
-                '$govt_scheme_interest', '$survey_info_source', $terms_accepted,
+                NULL, '$ip_address', '$user_agent', '$amrut_scheme_benefit',
+                '$amrut_scheme_interested', '$govt_scheme_interest', '$survey_info_source', $terms_accepted,
                 " . ($referral_source_id ? "'$referral_source_id'" : "NULL") . "
             )";
             
@@ -424,16 +424,6 @@ $form_data = $_SESSION['form_data'] ?? [];
     background: #c82333;
 }
 
-.gender-section {
-    background: #f8f9fa;
-    padding: 8px 12px;
-    border-radius: 6px;
-}
-
-.gender-section .radio-group {
-    padding: 0;
-}
-
 .alert-success, .alert-error {
     padding: 10px;
     margin-bottom: 15px;
@@ -606,6 +596,15 @@ $form_data = $_SESSION['form_data'] ?? [];
         font-size: 0.8rem;
     }
 }
+
+/* Hide Amrut Benefit section when caste is 'इतर' */
+.amrut-benefit-section {
+    display: block;
+}
+
+.amrut-benefit-section.hide-section {
+    display: none;
+}
 </style>
 
 <div class="container-fluid">
@@ -647,7 +646,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                         
                         <div class="form-group">
                             <label>जातीचा प्रवर्ग <span class="required">*</span></label>
-                            <select class="form-select" name="caste_category" id="caste_category" required onchange="toggleOtherField('caste')">
+                            <select class="form-select" name="caste_category" id="caste_category" required onchange="toggleOtherField('caste'); toggleAmrutBenefitSection(); updateSchemeOptions();">
                                 <option value="">-- निवडा --</option>
                                 <option value="ब्राह्मण" <?php echo (($form_data['caste_category'] ?? '') == 'ब्राह्मण') ? 'selected' : ''; ?>>ब्राह्मण</option>
                                 <option value="कायस्थ" <?php echo (($form_data['caste_category'] ?? '') == 'कायस्थ') ? 'selected' : ''; ?>>कायस्थ</option>
@@ -853,10 +852,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                 </div>
                 
                 <!-- Section 6: Amrut Scheme Information -->
-                <div class="form-section">
+                <div class="form-section amrut-benefit-section" id="amrutBenefitSection">
                     <h3><i class="fas fa-hand-holding-heart"></i> अमृत योजना माहिती</h3>
                     
-                    <div class="form-group full-width">
+                    <div class="form-group full-width" id="wantAmrutBenefitDiv">
                         <label>अमृत योजनेचा लाभ हवा आहे का ?</label>
                         <div class="radio-group">
                             <label class="radio-option">
@@ -897,14 +896,10 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>आपला गृह उद्योग/ लघु उद्योग वाढीसाठी अमृत च्या कोणत्या योजनेचा लाभ हवा आहे?</label>
-                        <select class="form-select" name="amrut_scheme_benefit">
-                            <option value="">-- योजना निवडा --</option>
-                            <option value="कौशल्य विकास प्रशिक्षण" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'कौशल्य विकास प्रशिक्षण') ? 'selected' : ''; ?>>कौशल्य विकास प्रशिक्षण</option>
-                            <option value="वैयक्तिक व्याज परतावा" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'वैयक्तिक व्याज परतावा') ? 'selected' : ''; ?>>वैयक्तिक व्याज परतावा</option>
-                            <option value="अमृत पेठ E commerce platform" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'अमृत पेठ E commerce platform') ? 'selected' : ''; ?>>अमृत पेठ E commerce platform</option>
-                            <option value="अमृत पेठ थेट बाजारपेठ" <?php echo (($form_data['amrut_scheme_benefit'] ?? '') == 'अमृत पेठ थेट बाजारपेठ') ? 'selected' : ''; ?>>अमृत पेठ थेट बाजारपेठ</option>
-                        </select>
+                        <label>आपण अमृत च्या कोणत्या योजनेचा लाभ घेण्यास इच्छुक आहात ?</label>
+                        <div class="checkbox-group-multiple" id="schemeCheckboxes">
+                            <!-- All schemes will be shown/hidden based on caste -->
+                        </div>
                     </div>
                     
                     <div class="form-group full-width">
@@ -1001,18 +996,6 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                 </div>
                 
-                <!-- Section 8: Form Filler Information -->
-                <div class="form-section">
-                    <h3><i class="fas fa-user-check"></i> माहिती भरून घेणाऱ्याचे नाव</h3>
-                    
-                    <div class="form-group full-width">
-                        <label>माहिती भरून घेणाऱ्याचे नाव</label>
-                        <input type="text" class="form-control" name="form_filler_name"
-                               value="<?php echo htmlspecialchars($form_data['form_filler_name'] ?? ''); ?>"
-                               placeholder="माहिती भरून घेणाऱ्याचे संपूर्ण नाव">
-                    </div>
-                </div>
-                
                 <!-- Terms and Conditions -->
                 <div class="terms-section">
                     <div class="terms-text">
@@ -1094,6 +1077,63 @@ $form_data = $_SESSION['form_data'] ?? [];
         }
     }
     
+    // Toggle Amrut Benefit Section based on caste selection
+    function toggleAmrutBenefitSection() {
+        const casteSelect = document.getElementById('caste_category');
+        const wantAmrutBenefitDiv = document.getElementById('wantAmrutBenefitDiv');
+        
+        if (casteSelect.value === 'इतर') {
+            wantAmrutBenefitDiv.style.display = 'none';
+        } else {
+            wantAmrutBenefitDiv.style.display = 'block';
+        }
+    }
+    
+    // Update scheme options based on caste selection
+    function updateSchemeOptions() {
+        const casteSelect = document.getElementById('caste_category');
+        const schemeContainer = document.getElementById('schemeCheckboxes');
+        const isOtherCaste = casteSelect.value === 'इतर';
+        
+        // All schemes
+        const allSchemes = [
+            'कौशल्य विकास प्रशिक्षण',
+            'वैयक्तिक व्याज परतावा',
+            'अमृत ड्रोन पायलट प्रशिक्षण',
+            'अमृत पेठ E commerce platform',
+            'अमृत पेठ थेट बाजारपेठ',
+            'अमृत वर्ग',
+            'अमृत पर्यटन',
+            'अमृत मानस मित्र'
+        ];
+        
+        // Schemes for "इतर" caste only
+        const otherCasteSchemes = [
+            'अमृत पेठ E commerce platform',
+            'अमृत पेठ थेट बाजारपेठ',
+            'अमृत वर्ग',
+            'अमृत पर्यटन',
+            'अमृत मानस मित्र'
+        ];
+        
+        const schemesToShow = isOtherCaste ? otherCasteSchemes : allSchemes;
+        const savedValues = <?php echo isset($form_data['amrut_scheme_interested']) ? json_encode((array)$form_data['amrut_scheme_interested']) : '[]'; ?>;
+        
+        let html = '<div class="checkbox-group-multiple">';
+        schemesToShow.forEach(scheme => {
+            const isChecked = savedValues.includes(scheme);
+            html += `
+                <label class="checkbox-option">
+                    <input type="checkbox" name="amrut_scheme_interested[]" value="${scheme}" ${isChecked ? 'checked' : ''}>
+                    <span>${scheme}</span>
+                </label>
+            `;
+        });
+        html += '</div>';
+        
+        schemeContainer.innerHTML = html;
+    }
+    
     // Toggle occupation other field for dropdown
     function toggleOccupationOtherDropdown() {
         const occupationSelect = document.getElementById('current_occupation');
@@ -1113,6 +1153,8 @@ $form_data = $_SESSION['form_data'] ?? [];
     document.addEventListener('DOMContentLoaded', function() {
         toggleOtherField('caste');
         toggleOccupationOtherDropdown();
+        toggleAmrutBenefitSection();
+        updateSchemeOptions();
         
         const casteSelect = document.getElementById('caste_category');
         if (casteSelect && casteSelect.value === 'इतर') {
