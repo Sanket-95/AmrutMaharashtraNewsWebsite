@@ -931,7 +931,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुम्हाला कीवा तुमच्या कुटुंबातील सदस्याला शासकीय संस्थेसोबत अमृत मित्र / अमृत सखी म्हणून स्वयंसेवी पद्धतीने काम करायचे आहे का?</label>
+                        <label>तुम्हाला किंवा तुमच्या कुटुंबातील सदस्याला शासकीय संस्थेसोबत अमृत मित्र / अमृत सखी म्हणून स्वयंसेवी पद्धतीने काम करायचे आहे का?</label>
                         <div class="radio-group">
                             <label class="radio-option">
                                 <input type="radio" name="volunteer_interest" value="होय" <?php echo (($form_data['volunteer_interest'] ?? '') == 'होय') ? 'checked' : ''; ?>>
@@ -945,7 +945,7 @@ $form_data = $_SESSION['form_data'] ?? [];
                     </div>
                     
                     <div class="form-group full-width">
-                        <label>तुम्ही कीवा तुमच्या कुटुंबातील सदस्य अमृत वर्गाच्या माध्यमातून राष्ट्रनिर्माण च्या कार्यात सहभागी होणार का ?</label>
+                        <label>तुम्ही किंवा तुमच्या कुटुंबातील सदस्य अमृत वर्गाच्या माध्यमातून राष्ट्रपुनर्निर्माण च्या कार्यात सहभागी होवू इच्छिता का ?</label>
                         <div class="radio-group">
                             <label class="radio-option">
                                 <input type="radio" name="nation_building_participation" value="हो" <?php echo (($form_data['nation_building_participation'] ?? '') == 'हो') ? 'checked' : ''; ?>>
