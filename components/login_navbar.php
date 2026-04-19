@@ -45,7 +45,11 @@
         justify-content: flex-end;
     }
     
-    /* Dashboard Dropdown Styles */
+    /* Desktop Dropdown Styles */
+    .desktop-only {
+        display: flex;
+    }
+    
     .dashboard-dropdown {
         position: relative;
     }
@@ -478,7 +482,7 @@
         font-size: 18px;
     }
     
-    /* Mobile dropdown submenu for user management */
+    /* Mobile dropdown submenu */
     .mobile-submenu {
         margin-left: 30px;
         margin-top: 5px;
@@ -523,34 +527,27 @@
         transform: rotate(180deg);
     }
     
-    @media (max-width: 992px) {
-        .login-navbar-content {
-            padding: 0 12px;
+    /* Desktop styles */
+    @media (min-width: 769px) {
+        .mobile-only {
+            display: none !important;
         }
-        
-        .news-btn, .dashboard-btn, .ad-btn, .user-mgmt-btn {
-            padding: 5px 12px;
-            font-size: 13px;
-        }
-        
-        .nav-buttons-container {
-            gap: 6px;
-        }
-        
-        .dropdown-menu,
-        .dashboard-dropdown-menu,
-        .ad-dropdown-menu {
-            min-width: 180px;
+        .desktop-only {
+            display: flex !important;
         }
     }
     
+    /* Mobile styles */
     @media (max-width: 768px) {
-        .login-navbar-content {
-            padding: 0 10px;
+        .desktop-only {
+            display: none !important;
+        }
+        .mobile-only {
+            display: block;
         }
         
-        .desktop-buttons {
-            display: none;
+        .login-navbar-content {
+            padding: 0 10px;
         }
         
         .mobile-menu-toggle {
@@ -574,19 +571,6 @@
     }
     
     @media (max-width: 480px) {
-        .news-btn span, .dashboard-btn span, .ad-btn span, .user-mgmt-btn span {
-            display: none;
-        }
-        
-        .news-btn i, .dashboard-btn i, .ad-btn i, .user-mgmt-btn i {
-            font-size: 16px;
-            margin: 0;
-        }
-        
-        .news-btn, .dashboard-btn, .ad-btn, .user-mgmt-btn {
-            padding: 6px 10px;
-        }
-        
         .profile-btn {
             width: 32px;
             height: 32px;
@@ -595,13 +579,6 @@
         
         .mobile-menu-item span {
             font-size: 14px;
-        }
-        
-        .dropdown-menu,
-        .dashboard-dropdown-menu,
-        .ad-dropdown-menu {
-            right: 0;
-            left: auto;
         }
     }
 </style>
@@ -638,12 +615,11 @@ if (isset($_SESSION['user_id'])) {
     
     <div class="login-navbar">
         <div class="login-navbar-content">
-            <!-- Left side - News button (desktop) -->
-            <div class="desktop-buttons" style="display: flex; align-items: center;">
+            <!-- Left side - News button -->
+            <div class="desktop-only" style="display: flex; align-items: center;">
                 <?php 
                 // Check which button to show based on current page and user role
                 if ($user_roll === 'district_user') {
-                    // For district_user, show "नवीन बातमी" button only on approval pages
                     if ($is_news_approval_page) {
                         ?>
                         <a href="post_news.php" class="news-btn">
@@ -653,9 +629,7 @@ if (isset($_SESSION['user_id'])) {
                         <?php
                     }
                 } else {
-                    // For admin and division_head
                     if ($is_news_approval_page) {
-                        // On approval pages, show "नवीन बातमी" button
                         ?>
                         <a href="post_news.php" class="news-btn">
                             <i class="bi bi-plus-circle"></i>
@@ -663,7 +637,6 @@ if (isset($_SESSION['user_id'])) {
                         </a>
                         <?php
                     } elseif ($current_page === 'post_news.php') {
-                        // On post_news.php page, show "News" button (to go to approval page)
                         ?>
                         <a href="newsapproval.php" class="news-btn">
                             <i class="bi bi-newspaper"></i>
@@ -671,7 +644,45 @@ if (isset($_SESSION['user_id'])) {
                         </a>
                         <?php
                     } else {
-                        // On other pages, show "News" button
+                        ?>
+                        <a href="newsapproval.php" class="news-btn">
+                            <i class="bi bi-newspaper"></i>
+                            <span>बातमी</span>
+                        </a>
+                        <?php
+                    }
+                }
+                ?>
+            </div>
+            
+            <!-- Mobile news button -->
+            <div class="mobile-only">
+                <?php 
+                if ($user_roll === 'district_user') {
+                    if ($is_news_approval_page) {
+                        ?>
+                        <a href="post_news.php" class="news-btn">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>नवीन बातमी</span>
+                        </a>
+                        <?php
+                    }
+                } else {
+                    if ($is_news_approval_page) {
+                        ?>
+                        <a href="post_news.php" class="news-btn">
+                            <i class="bi bi-plus-circle"></i>
+                            <span>नवीन बातमी</span>
+                        </a>
+                        <?php
+                    } elseif ($current_page === 'post_news.php') {
+                        ?>
+                        <a href="newsapproval.php" class="news-btn">
+                            <i class="bi bi-newspaper"></i>
+                            <span>बातमी</span>
+                        </a>
+                        <?php
+                    } else {
                         ?>
                         <a href="newsapproval.php" class="news-btn">
                             <i class="bi bi-newspaper"></i>
@@ -685,8 +696,8 @@ if (isset($_SESSION['user_id'])) {
             
             <!-- Right side buttons -->
             <div class="nav-buttons-container">
-                <!-- Desktop buttons -->
-                <div class="desktop-buttons" style="display: flex; align-items: center; gap: 8px;">
+                <!-- DESKTOP BUTTONS (visible only on desktop) -->
+                <div class="desktop-only" style="display: flex; align-items: center; gap: 8px;">
                     
                     <!-- Dashboard Dropdown (Combined) -->
                     <?php if ($show_dashboard_dropdown): ?>
@@ -760,6 +771,10 @@ if (isset($_SESSION['user_id'])) {
                                 <i class="bi bi-list-ul"></i>
                                 <span>नेव्हिगेशन कॅटेगरी व्यवस्थापन</span>
                             </a>
+                            <a href="link_generator.php" class="dropdown-item">
+                                <i class="bi bi-link-45deg"></i>
+                                <span>लिंक जनरेटर</span>
+                            </a>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -822,7 +837,7 @@ if (isset($_SESSION['user_id'])) {
             </div>
         </div>
         
-        <!-- Mobile Menu -->
+        <!-- MOBILE MENU (visible only on mobile) -->
         <div class="mobile-menu" id="mobileMenu">
             <?php 
             // Mobile menu items based on user role and current page
@@ -940,6 +955,10 @@ if (isset($_SESSION['user_id'])) {
                     <i class="bi bi-list-ul"></i>
                     <span>नेव्हिगेशन कॅटेगरी व्यवस्थापन</span>
                 </a>
+                <a href="link_generator.php" class="mobile-submenu-item">
+                    <i class="bi bi-link-45deg"></i>
+                    <span>लिंक जनरेटर</span>
+                </a>
             </div>
             <?php endif; ?>
             
@@ -958,70 +977,106 @@ if (isset($_SESSION['user_id'])) {
             const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const mobileMenu = document.getElementById('mobileMenu');
             
-            // Desktop dropdown for Dashboard
-            const dashboardDropdown = document.getElementById('dashboardDropdown');
-            const dashboardBtn = document.getElementById('dashboardBtn');
-            
-            if (dashboardDropdown && dashboardBtn) {
-                dashboardBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    dashboardDropdown.classList.toggle('open');
-                    // Close profile modal if open
-                    if (profileModal.classList.contains('show')) {
-                        profileModal.classList.remove('show');
+            // Only initialize desktop dropdowns on desktop screens
+            function initDesktopDropdowns() {
+                if (window.innerWidth > 768) {
+                    // Desktop dropdown for Dashboard
+                    const dashboardDropdown = document.getElementById('dashboardDropdown');
+                    const dashboardBtn = document.getElementById('dashboardBtn');
+                    
+                    if (dashboardDropdown && dashboardBtn) {
+                        // Remove existing listeners to avoid duplicates
+                        const newDashboardBtn = dashboardBtn.cloneNode(true);
+                        dashboardBtn.parentNode.replaceChild(newDashboardBtn, dashboardBtn);
+                        const newDashboardDropdown = dashboardDropdown.cloneNode(true);
+                        dashboardDropdown.parentNode.replaceChild(newDashboardDropdown, dashboardDropdown);
+                        
+                        const finalDashboardBtn = document.getElementById('dashboardBtn');
+                        const finalDashboardDropdown = document.getElementById('dashboardDropdown');
+                        
+                        if (finalDashboardBtn && finalDashboardDropdown) {
+                            finalDashboardBtn.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                finalDashboardDropdown.classList.toggle('open');
+                                if (profileModal.classList.contains('show')) {
+                                    profileModal.classList.remove('show');
+                                }
+                                const adDropdown = document.getElementById('adDropdown');
+                                const userMgmtDropdown = document.getElementById('userMgmtDropdown');
+                                if (adDropdown && adDropdown.classList.contains('open')) {
+                                    adDropdown.classList.remove('open');
+                                }
+                                if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                                    userMgmtDropdown.classList.remove('open');
+                                }
+                            });
+                        }
                     }
-                    // Close other dropdowns
-                    if (adDropdown && adDropdown.classList.contains('open')) {
-                        adDropdown.classList.remove('open');
+                    
+                    // Desktop dropdown for Advertisement
+                    const adDropdown = document.getElementById('adDropdown');
+                    const adBtn = document.getElementById('adBtn');
+                    
+                    if (adDropdown && adBtn) {
+                        const newAdBtn = adBtn.cloneNode(true);
+                        adBtn.parentNode.replaceChild(newAdBtn, adBtn);
+                        const newAdDropdown = adDropdown.cloneNode(true);
+                        adDropdown.parentNode.replaceChild(newAdDropdown, adDropdown);
+                        
+                        const finalAdBtn = document.getElementById('adBtn');
+                        const finalAdDropdown = document.getElementById('adDropdown');
+                        
+                        if (finalAdBtn && finalAdDropdown) {
+                            finalAdBtn.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                finalAdDropdown.classList.toggle('open');
+                                if (profileModal.classList.contains('show')) {
+                                    profileModal.classList.remove('show');
+                                }
+                                const dashboardDropdown = document.getElementById('dashboardDropdown');
+                                const userMgmtDropdown = document.getElementById('userMgmtDropdown');
+                                if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                                    dashboardDropdown.classList.remove('open');
+                                }
+                                if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
+                                    userMgmtDropdown.classList.remove('open');
+                                }
+                            });
+                        }
                     }
-                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
-                        userMgmtDropdown.classList.remove('open');
+                    
+                    // Desktop dropdown for User Management
+                    const userMgmtDropdown = document.getElementById('userMgmtDropdown');
+                    const userMgmtBtn = document.getElementById('userMgmtBtn');
+                    
+                    if (userMgmtDropdown && userMgmtBtn) {
+                        const newUserMgmtBtn = userMgmtBtn.cloneNode(true);
+                        userMgmtBtn.parentNode.replaceChild(newUserMgmtBtn, userMgmtBtn);
+                        const newUserMgmtDropdown = userMgmtDropdown.cloneNode(true);
+                        userMgmtDropdown.parentNode.replaceChild(newUserMgmtDropdown, userMgmtDropdown);
+                        
+                        const finalUserMgmtBtn = document.getElementById('userMgmtBtn');
+                        const finalUserMgmtDropdown = document.getElementById('userMgmtDropdown');
+                        
+                        if (finalUserMgmtBtn && finalUserMgmtDropdown) {
+                            finalUserMgmtBtn.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                finalUserMgmtDropdown.classList.toggle('open');
+                                if (profileModal.classList.contains('show')) {
+                                    profileModal.classList.remove('show');
+                                }
+                                const dashboardDropdown = document.getElementById('dashboardDropdown');
+                                const adDropdown = document.getElementById('adDropdown');
+                                if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
+                                    dashboardDropdown.classList.remove('open');
+                                }
+                                if (adDropdown && adDropdown.classList.contains('open')) {
+                                    adDropdown.classList.remove('open');
+                                }
+                            });
+                        }
                     }
-                });
-            }
-            
-            // Desktop dropdown for Advertisement
-            const adDropdown = document.getElementById('adDropdown');
-            const adBtn = document.getElementById('adBtn');
-            
-            if (adDropdown && adBtn) {
-                adBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    adDropdown.classList.toggle('open');
-                    // Close profile modal if open
-                    if (profileModal.classList.contains('show')) {
-                        profileModal.classList.remove('show');
-                    }
-                    // Close other dropdowns
-                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
-                        dashboardDropdown.classList.remove('open');
-                    }
-                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
-                        userMgmtDropdown.classList.remove('open');
-                    }
-                });
-            }
-            
-            // Desktop dropdown for User Management
-            const userMgmtDropdown = document.getElementById('userMgmtDropdown');
-            const userMgmtBtn = document.getElementById('userMgmtBtn');
-            
-            if (userMgmtDropdown && userMgmtBtn) {
-                userMgmtBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    userMgmtDropdown.classList.toggle('open');
-                    // Close profile modal if open
-                    if (profileModal.classList.contains('show')) {
-                        profileModal.classList.remove('show');
-                    }
-                    // Close other dropdowns
-                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
-                        dashboardDropdown.classList.remove('open');
-                    }
-                    if (adDropdown && adDropdown.classList.contains('open')) {
-                        adDropdown.classList.remove('open');
-                    }
-                });
+                }
             }
             
             // Mobile submenu for Dashboard
@@ -1066,6 +1121,9 @@ if (isset($_SESSION['user_id'])) {
                     e.stopPropagation();
                     profileModal.classList.toggle('show');
                     // Close desktop dropdowns if open
+                    const dashboardDropdown = document.getElementById('dashboardDropdown');
+                    const adDropdown = document.getElementById('adDropdown');
+                    const userMgmtDropdown = document.getElementById('userMgmtDropdown');
                     if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
                         dashboardDropdown.classList.remove('open');
                     }
@@ -1091,16 +1149,6 @@ if (isset($_SESSION['user_id'])) {
                     if (profileModal.classList.contains('show')) {
                         profileModal.classList.remove('show');
                     }
-                    // Close desktop dropdowns if open
-                    if (dashboardDropdown && dashboardDropdown.classList.contains('open')) {
-                        dashboardDropdown.classList.remove('open');
-                    }
-                    if (adDropdown && adDropdown.classList.contains('open')) {
-                        adDropdown.classList.remove('open');
-                    }
-                    if (userMgmtDropdown && userMgmtDropdown.classList.contains('open')) {
-                        userMgmtDropdown.classList.remove('open');
-                    }
                 });
             }
             
@@ -1117,28 +1165,41 @@ if (isset($_SESSION['user_id'])) {
                 if (profileButton && !profileButton.contains(e.target) && profileModal && !profileModal.contains(e.target)) {
                     profileModal.classList.remove('show');
                 }
-                // Close desktop dashboard dropdown
-                if (dashboardDropdown && dashboardBtn && !dashboardBtn.contains(e.target) && !dashboardDropdown.contains(e.target)) {
-                    dashboardDropdown.classList.remove('open');
-                }
-                // Close desktop advertisement dropdown
-                if (adDropdown && adBtn && !adBtn.contains(e.target) && !adDropdown.contains(e.target)) {
-                    adDropdown.classList.remove('open');
-                }
-                // Close desktop user management dropdown
-                if (userMgmtDropdown && userMgmtBtn && !userMgmtBtn.contains(e.target) && !userMgmtDropdown.contains(e.target)) {
-                    userMgmtDropdown.classList.remove('open');
-                }
+                
                 // Close mobile menu
                 if (mobileMenuToggle && !mobileMenuToggle.contains(e.target) && mobileMenu && !mobileMenu.contains(e.target)) {
                     mobileMenu.classList.remove('show');
                 }
+                
+                // Close desktop dropdowns only on desktop
+                if (window.innerWidth > 768) {
+                    const dashboardDropdown = document.getElementById('dashboardDropdown');
+                    const dashboardBtn = document.getElementById('dashboardBtn');
+                    const adDropdown = document.getElementById('adDropdown');
+                    const adBtn = document.getElementById('adBtn');
+                    const userMgmtDropdown = document.getElementById('userMgmtDropdown');
+                    const userMgmtBtn = document.getElementById('userMgmtBtn');
+                    
+                    if (dashboardDropdown && dashboardBtn && !dashboardBtn.contains(e.target) && !dashboardDropdown.contains(e.target)) {
+                        dashboardDropdown.classList.remove('open');
+                    }
+                    if (adDropdown && adBtn && !adBtn.contains(e.target) && !adDropdown.contains(e.target)) {
+                        adDropdown.classList.remove('open');
+                    }
+                    if (userMgmtDropdown && userMgmtBtn && !userMgmtBtn.contains(e.target) && !userMgmtDropdown.contains(e.target)) {
+                        userMgmtDropdown.classList.remove('open');
+                    }
+                }
             });
             
-            // Close menus on window resize if above mobile breakpoint
+            // Initialize desktop dropdowns
+            initDesktopDropdowns();
+            
+            // Re-initialize on resize
             window.addEventListener('resize', function() {
                 if (window.innerWidth > 768) {
                     if (mobileMenu) mobileMenu.classList.remove('show');
+                    initDesktopDropdowns();
                 }
             });
         });

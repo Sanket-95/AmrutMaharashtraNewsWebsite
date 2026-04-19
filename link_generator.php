@@ -2,16 +2,16 @@
 session_start();
 
 // Check if user is logged in
-// if (!isset($_SESSION['user_id'])) {
-//     header('Location: login.php');
-//     exit();
-// }
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
 
 // Only Super Admin can access this page
-// if ($_SESSION['roll'] !== 'Super Admin') {
-//     header('Location: index.php');
-//     exit();
-// }
+if ($_SESSION['roll'] !== 'Super Admin') {
+    header('Location: index.php');
+    exit();
+}
 
 include 'components/db_config.php';
 
