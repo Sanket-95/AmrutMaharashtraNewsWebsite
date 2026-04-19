@@ -1074,11 +1074,11 @@ $default_secondary_image = 'https://images.unsplash.com/photo-1588681664899-f142
             left: 0;
             width: 100%;
             z-index: 9999;
-            background-color: rgba(0, 0, 0, 0.9);
+            /* background-color: rgba(0, 0, 0, 0.9); */
             text-align: center;
             padding: 8px 0;
             display: none;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+            /* box-shadow: 0 -2px 10px rgba(0,0,0,0.3); */
             transition: opacity 0.3s ease;
         }
         
