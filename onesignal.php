@@ -22,15 +22,15 @@
         }
     </style>
 
-    <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async=""></script>
-
+     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
-    window.OneSignal = window.OneSignal || [];
-    OneSignal.push(function() {
-    OneSignal.init({
-        appId: "YOUR_APP_ID"
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+        await OneSignal.init({
+        appId: "adcb3826-1ee5-4416-8e63-881e47eeaf42",
+        });
     });
-    });
+    </script>
 </script>
 </head>
 <body>
