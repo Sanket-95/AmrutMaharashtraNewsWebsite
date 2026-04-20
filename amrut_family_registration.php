@@ -523,6 +523,72 @@ $form_data = $_SESSION['form_data'] ?? [];
     100% { transform: rotate(360deg); }
 }
 
+/* Google Translate Styling */
+#google_translate_element {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+    background: white;
+    padding: 8px 12px;
+    border-radius: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    border: 1px solid #e0e0e0;
+}
+
+.goog-te-banner-frame.skiptranslate {
+    display: none !important;
+}
+
+body {
+    top: 0px !important;
+}
+
+.goog-te-gadget {
+    font-family: 'Mukta', sans-serif !important;
+    font-size: 14px !important;
+}
+
+.goog-te-gadget select {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #FF6600;
+    background: white;
+    font-family: 'Mukta', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Hide Google Translate branding */
+.goog-logo-link {
+    display: none !important;
+}
+
+.goog-te-gadget span {
+    display: none !important;
+}
+
+/* Responsive for Google Translate */
+@media (max-width: 768px) {
+    #google_translate_element {
+        top: 70px;
+        right: 10px;
+        padding: 4px 8px;
+    }
+    
+    .goog-te-gadget select {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    #google_translate_element {
+        top: 60px;
+        right: 5px;
+    }
+}
+
 /* Responsive */
 @media (max-width: 992px) {
     .row-4cols {
@@ -1021,6 +1087,9 @@ $form_data = $_SESSION['form_data'] ?? [];
     </div>
 </div>
 
+<!-- Google Translate Element -->
+<div id="google_translate_element"></div>
+
 <!-- Loading Spinner -->
 <div class="loading" id="loadingSpinner">
     <div class="spinner"></div>
@@ -1031,6 +1100,19 @@ $form_data = $_SESSION['form_data'] ?? [];
 
 <!-- Toastr JS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+<!-- Google Translate Script -->
+<script type="text/javascript">
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+            pageLanguage: 'mr',
+            includedLanguages: 'en,hi,mr,gu,kn,ta,te,bn,pa,ur,sd',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false
+        }, 'google_translate_element');
+    }
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <script>
     let memberCount = 1;
