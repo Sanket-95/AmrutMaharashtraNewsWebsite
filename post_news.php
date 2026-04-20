@@ -66,7 +66,12 @@ function getAllRegions($conn) {
  */
 function getAllCategories($conn) {
     $categories = [];
-    $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    // $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    $query = "SELECT value_name AS catagory, label_name AS marathi_name 
+              FROM nav_categories 
+              WHERE is_enable = 1 
+              AND type = 'category' 
+              ORDER BY display_order ASC";
     $result = mysqli_query($conn, $query);
     
     if ($result && mysqli_num_rows($result) > 0) {
