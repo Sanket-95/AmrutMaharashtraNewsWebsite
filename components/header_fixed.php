@@ -69,9 +69,16 @@ ob_clean();
     <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
+    await OneSignal.init({
         appId: "210aaacd-2369-4cb7-99c8-8b777f3d0f23",
-        });
+
+        promptOptions: {
+        slidedown: {
+            enabled: true,
+            autoPrompt: true
+        }
+        }
+    });
     });
     </script>
     
