@@ -61,7 +61,13 @@ function getAllDistricts($conn) {
  */
 function getAllCategories($conn) {
     $categories = [];
-    $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    // $query = "SELECT catagory, marathi_name FROM catagory_list WHERE is_enable = 1 ORDER BY catagory ASC";
+    $query = "SELECT value_name AS catagory, label_name AS marathi_name 
+              FROM nav_categories 
+              WHERE is_enable = 1 
+              AND type = 'category' 
+              ORDER BY display_order ASC";
+
     $result = mysqli_query($conn, $query);
     
     if ($result && mysqli_num_rows($result) > 0) {
@@ -160,7 +166,12 @@ function getMarathiRegionName($conn, $regionValue) {
  * @return string Marathi category name
  */
 function getMarathiCategoryName($conn, $categoryValue) {
-    $query = "SELECT marathi_name FROM catagory_list WHERE catagory = ? AND is_enable = 1";
+    // $query = "SELECT marathi_name FROM catagory_list WHERE catagory = ? AND is_enable = 1";
+        $query = "SELECT label_name AS marathi_name 
+                FROM nav_categories 
+                WHERE is_enable = 1 
+                AND type = 'category' 
+                AND value_name = ?";
     $stmt = mysqli_prepare($conn, $query);
     mysqli_stmt_bind_param($stmt, "s", $categoryValue);
     mysqli_stmt_execute($stmt);
