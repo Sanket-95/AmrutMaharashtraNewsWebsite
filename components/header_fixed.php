@@ -81,7 +81,16 @@ ob_clean();
     });
     });
     </script>
-    
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-JY8F36XFHG');
+    </script>
+
     <!-- CRITICAL: INLINE STYLES -->
     <style>
     * {
