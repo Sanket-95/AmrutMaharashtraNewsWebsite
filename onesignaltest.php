@@ -1,7 +1,7 @@
 <?php
 
 $app_id = "210aaacd-2369-4cb7-99c8-8b777f3d0f23";
-$rest_api_key = "bvpstnckseoufjqtmy6qifha2";
+$rest_api_key = "os_v2_app_eefkvtjdnfglpgoirn3x6pipembvpstnckseoufjqtmy6qifha2onpjogxefc6n45znj4ks5fsjseg6z7lhv6aj3xbagtxstsy6hjdy";
 
 $ch = curl_init();
 
