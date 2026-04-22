@@ -13,7 +13,7 @@ $url = "https://onesignal.com/api/v1/notifications";
 $data = [
     "app_id" => $app_id,
     "included_segments" => ["All"],
-    "contents" => ["en" => "Test notification from Hostinger"]
+    "contents" => ["en" => "Amrut Maharashtra"]
 ];
 
 // Initialize cURL
