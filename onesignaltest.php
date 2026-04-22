@@ -17,7 +17,7 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
 
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     "Content-Type: application/json; charset=utf-8",
-    "Authorization: Basic " . $rest_api_key
+    "Authorization: Key " . $rest_api_key
 ]);
 
 $response = curl_exec($ch);
