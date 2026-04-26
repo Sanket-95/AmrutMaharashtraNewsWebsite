@@ -92,38 +92,55 @@ ob_clean();
     </script>
 
     <!-- CRITICAL: INLINE STYLES -->
-    <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    
-    body {
-        font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif;
-        -webkit-text-size-adjust: 100%;
-        text-size-adjust: 100%;
-    }
-    
-    /* PROTECT ALL NAVBAR MARATHI TEXT */
-    .center-title, .subtitle, 
-    .main-heading, .mobile-heading-line-2, .mobile-heading-line-3,
-    .heading-main-part, .heading-secondary-part {
-        font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif !important;
-        text-transform: none !important;
-        letter-spacing: normal !important;
-    }
-    
-    /* Make ALL Marathi text unselectable to prevent changes */
-    .center-title, .subtitle, 
-    .main-heading, .mobile-heading-line-2, .mobile-heading-line-3 {
-        -webkit-user-select: none !important;
-        -moz-user-select: none !important;
-        -ms-user-select: none !important;
-        user-select: none !important;
-        pointer-events: none !important;
-    }
-    </style>
+   <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* PROTECT ALL NAVBAR MARATHI TEXT */
+.center-title, .subtitle, 
+.main-heading, .mobile-heading-line-2, .mobile-heading-line-3,
+.heading-main-part, .heading-secondary-part {
+    font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', sans-serif !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+/* Make ALL Marathi text unselectable to prevent changes */
+.center-title, .subtitle, 
+.main-heading, .mobile-heading-line-2, .mobile-heading-line-3 {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+/* ===== FIX: Devanagari conjunct rendering in carousel ===== */
+/* letter-spacing breaks virama-joined conjuncts e.g. ड्रोन becomes डरोंन */
+.carousel-item,
+.carousel-item *,
+.carousel-inner,
+.carousel-inner *,
+.card-title,
+.card-text,
+.news-content,
+.news-content * {
+    font-family: 'Segoe UI', 'Nirmala UI', 'Arial Unicode MS', Mangal, sans-serif !important;
+    letter-spacing: 0 !important;
+    word-spacing: normal !important;
+    text-transform: none !important;
+}
+
+</style>
     
     <!-- NUCLEAR OPTION: PROTECT ALL MARATHI TEXT -->
     <script>

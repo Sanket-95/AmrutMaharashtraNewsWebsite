@@ -123,7 +123,7 @@ $show_search = ($current_script === 'index.php');
     
     /* Row 2 styling - HORIZONTAL LAYOUT - ADDED LIGHT ORANGE BACKGROUND */
     .row-2 {
-        padding: 12px 0 12px 0;
+        padding: 2px 0 2px 0;
         /* background: linear-gradient(135deg, #fff, var(--light-orange)); */
          background:#f7f7f7;
         position: relative;
@@ -409,7 +409,7 @@ $show_search = ($current_script === 'index.php');
         
         /* Row 2 - MOBILE REARRANGEMENT */
         .row-2 {
-            padding: 8px 0;
+            padding: 2px 0;
             /* background: linear-gradient(135deg, #fff, var(--light-orange)); */
              background:#f7f7f7;
             border-bottom: 2px solid #fed7aa;
