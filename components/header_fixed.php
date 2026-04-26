@@ -83,12 +83,13 @@ ob_clean();
     </script>
 
     <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-JY8F36XFHG"></script>
+     <!-- G-JY8F36XFHG ss IT solution --> 
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJDRYT3WYN"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-JY8F36XFHG');
+        gtag('config', 'G-QJDRYT3WYN');
     </script>
 
     <!-- CRITICAL: INLINE STYLES -->
